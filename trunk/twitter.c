@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <glib/gi18n.h>
 #include <sys/types.h>
+#include <time.h>
 
 #ifndef G_GNUC_NULL_TERMINATED
 #  if __GNUC__ >= 4
@@ -60,6 +61,7 @@
 #include <request.h>
 #include <dnsquery.h>
 #include <accountopt.h>
+#include <xmlnode.h>
 #include <version.h>
 
 #ifdef _WIN32
@@ -70,6 +72,7 @@
 #	include <netinet/in.h>
 #endif
 
+
 #define LAST_MESSAGE_MAX 10
 #define TWITTER_HOST "twitter.com"
 #define TWITTER_PORT 443
@@ -77,9 +80,9 @@
 #define TW_MAXBUFF 10240
 #define TW_MAX_RETRY 3
 #define TW_INTERVAL 15
-#define TW_TIMELINE_COUNT 5
+#define TW_STATUS_COUNT_MAX 200
+#define TW_STATUS_COUNT_FIRST 5
 
-static void twitterim_process_request(gpointer data);
 
 enum _TweetTimeLine {
 	TL_FRIENDS = 0,
@@ -99,6 +102,14 @@ const char * _TweetTimeLinePaths[] = {
 	"/statuses/user_timeline.xml",
 	"/statuses/public_timeline.xml",
 };
+
+// Hold parameter for statuses request
+typedef struct _TwitterTimeLineReq {
+	gchar * path;
+	gchar * name;
+	gint timeline_id;
+	guint count;
+} TwitterTimeLineReq;
 
 typedef struct _TwitterAccount {
 	PurpleAccount *account;
@@ -138,6 +149,9 @@ typedef struct _TwitterBuddy {
 	gchar *status;
 	gchar *thumb_url;
 } TwitterBuddy;
+
+static void twitterim_process_request(gpointer data);
+void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr);
 
 static TwitterBuddy * twitterim_new_buddy()
 {
@@ -192,7 +206,26 @@ static void twitterim_free_tpd(TwitterProxyData * tpd)
 		tpd->result_data = NULL;
 		tpd->result_len = 0;
 	}
+	if(tpd->handler_data) {
+		g_free(tpd->handler_data);
+	}
 	g_free(tpd);
+}
+
+static TwitterTimeLineReq * twitterim_new_tlr()
+{
+	TwitterTimeLineReq * tlr = g_new(TwitterTimeLineReq, 1);
+	tlr->path = NULL;
+	tlr->name = NULL;
+	tlr->count = 0;
+	tlr->timeline_id = -1;
+	return tlr;
+}
+
+static void twitterim_free_tlr(TwitterTimeLineReq * tlr)
+{
+	if(tlr->path != NULL) g_free(tlr->path);
+	if(tlr->name != NULL) g_free(tlr->name);
 }
 
 const char * twitterim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
@@ -385,7 +418,7 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 				twitterim_free_tpd(tpd);
 			} else if(retval == -1) {
 				// Something's wrong. Requeue the whole process
-				g_free(tpd->result_data);
+				if(tpd->result_data) g_free(tpd->result_data);
 				tpd->result_len = 0;
 				tpd->result_data = NULL;
 				twitterim_process_request(data);
@@ -488,59 +521,149 @@ void twitterim_buddy_free(PurpleBuddy * buddy)
 	}
 }
 
+// Function to fetch first batch of new message
+void twitterim_fetch_first_new_messages(TwitterAccount * ta)
+{
+	TwitterTimeLineReq * tlr = twitterim_new_tlr();
+	
+	tlr->path = g_strdup(_TweetTimeLinePaths[TL_FRIENDS]);
+	tlr->name = g_strdup(_TweetTimeLineNames[TL_FRIENDS]);
+	tlr->timeline_id = TL_FRIENDS;
+	tlr->count = TW_STATUS_COUNT_FIRST;
+	twitterim_fetch_new_messages(ta, tlr);
+}
+
+// Function to fetch all new messages periodically
+void twitterim_fetch_all_new_messages(gpointer data)
+{
+	TwitterAccount * ta = data;
+	TwitterTimeLineReq * tlr;
+	gint i;
+	
+	for(i = 0; i < TL_LAST; i++) {
+		if(!purple_find_buddy(ta->account, _TweetTimeLineNames[i])) {
+			purple_debug_info("twitter", "skipping %s\n", tlr->name);
+		}
+		tlr = twitterim_new_tlr();
+		tlr->path = g_strdup(_TweetTimeLinePaths[i]);
+		tlr->name = g_strdup(_TweetTimeLineNames[i]);
+		tlr->timeline_id = i;
+		tlr->count = TW_STATUS_COUNT_MAX;
+		twitterim_fetch_new_messages(ta, tlr);
+	}
+}
+
 gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 {
-	gchar * path = data;
+	gchar * http_data = NULL;
+	gsize http_len = 0;
+	TwitterTimeLineReq * tlr = data;
+	xmlnode * top = NULL, *time_node, *status, * text, * user, * user_name;
+	gint count = 0;
+	gchar * from, * msg_txt, * time_str;
+	struct tm msg_time;
+	time_t msg_time_t;
 	
 	purple_debug_info("twitter", "fetch_new_messages_handler\n");
 	
-	purple_debug_info("twitter", "received result from %s\n", data);
+	purple_debug_info("twitter", "received result from %s\n", tlr->path);
 	
 	purple_debug_info("twitter", "%s\n", tpd->result_data);
 	
-	twitterim_free_tpd(tpd);
-	g_free(data);
+	http_data = strstr(tpd->result_data, "\r\n\r\n");
+	if(http_data == NULL) {
+		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet\n");
+		twitterim_free_tlr(tlr);
+		return 0;
+	}
+	http_data += 4;
+	http_len = http_data - tpd->result_data;
+	purple_debug_info("twitter", "http_data = #%s#\n", http_data);
+	top = xmlnode_from_str(http_data, -1);
+	if(top == NULL) {
+		purple_debug_info("twitter", "failed to parse XML data\n");
+		twitterim_free_tlr(tlr);
+		return 0;
+	}
+	purple_debug_info("twitter", "successfully parse XML\n");
+	status = xmlnode_get_child(top, "status");
+	purple_debug_info("twitter", "timezone = %ld\n", timezone);
+	while(status) {
+		msg_txt = NULL;
+		from = NULL;
+		time_str = NULL;
+		
+		// time
+		time_node = xmlnode_get_child(status, "created_at");
+		if(time_node) {
+			time_str = xmlnode_get_data_unescaped(time_node);
+		}
+		msg_time_t = time(NULL);
+		
+		// message
+		text = xmlnode_get_child(status, "text");
+		if(text) {
+			msg_txt = xmlnode_get_data_unescaped(text);
+		}
+		
+		// user name
+		user = xmlnode_get_child(status, "user");
+		if(user) {
+			user_name = xmlnode_get_child(user, "screen_name");
+			if(user_name) {
+				from = xmlnode_get_data_unescaped(user_name);
+			}
+		}
+
+		if(from && msg_txt) {
+			gchar * real_msg;
+			purple_debug_info("twitter", "from = %s, msg = %s\n", from, msg_txt);
+			real_msg = g_strdup_printf("%s:%s", from, msg_txt);
+			serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
+			g_free(real_msg);
+		}
+		count++;
+		status = xmlnode_get_next_twin(status);
+	}
+	purple_debug_info("twitter", "we got %d messages\n", count);
+	xmlnode_free(top);
+	twitterim_free_tlr(tlr);
+	return 0;
 }
 
 //
 // Check for new message periodically
 //
-void twitterim_fetch_new_messages(gpointer data)
+void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
 {
-	TwitterAccount * ta = data;
 	TwitterProxyData * tpd;
-	gint i;
 	gsize len;
 	
 	purple_debug_info("twitter", "fetch_new_messages\n");
 
 	// Look for friend list, then have each populate the data themself.
-	for(i = 0; i < TL_LAST; i++) {
-		if(!purple_find_buddy(ta->account, _TweetTimeLineNames[i])) {
-			purple_debug_info("twitter", "skipping %s\n", _TweetTimeLineNames[i]);
-			continue;
-		}
-		tpd = twitterim_new_proxy_data();
-		tpd->ta = ta;
-		tpd->error_message = g_strdup("Fetching status error");
-		// FIXME: Change this to user's option in maximum message fetching retry
-		tpd->max_retry = 0;
-		tpd->post_data = g_malloc(TW_MAXBUFF);
-		snprintf(tpd->post_data, TW_MAXBUFF, "GET %s?count=%d HTTP/1.0\r\n"
-				"Host: " TWITTER_HOST "\r\n"
-				"User-Agent: " TWITTER_AGENT "\r\n"
-				"Acccept: */*\r\n"
-				"Connection: Keep-Alive\r\n"
-				"Authorization: Basic ", _TweetTimeLinePaths[i], TW_TIMELINE_COUNT);
-		len = strlen(tpd->post_data);
-		twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
-		len = strlen(tpd->post_data);
-		strncat(tpd->post_data, "\r\n\r\n", TW_MAXBUFF - len);
-		tpd->handler = twitterim_fetch_new_messages_handler;
-		// List to handle twitter message
-		tpd->handler_data = g_strdup(_TweetTimeLinePaths[i]);
-		twitterim_process_request(tpd);
-	}
+
+
+	tpd = twitterim_new_proxy_data();
+	tpd->ta = ta;
+	tpd->error_message = g_strdup("Fetching status error");
+	// FIXME: Change this to user's option in maximum message fetching retry
+	tpd->max_retry = 0;
+	tpd->post_data = g_malloc(TW_MAXBUFF);
+	snprintf(tpd->post_data, TW_MAXBUFF, "GET %s?count=%d HTTP/1.0\r\n"
+			"Host: " TWITTER_HOST "\r\n"
+			"User-Agent: " TWITTER_AGENT "\r\n"
+			"Acccept: */*\r\n"
+			"Connection: Keep-Alive\r\n"
+			"Authorization: Basic ", tlr->path, tlr->count);
+	len = strlen(tpd->post_data);
+	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
+	len = strlen(tpd->post_data);
+	strncat(tpd->post_data, "\r\n\r\n", TW_MAXBUFF - len);
+	tpd->handler = twitterim_fetch_new_messages_handler;
+	// Request handler for specific request
+	tpd->handler_data = tlr;
+	twitterim_process_request(tpd);
 }
 
 //
@@ -590,8 +713,8 @@ gint twitterim_verify_authen(TwitterProxyData * tpd, gpointer data)
 		purple_connection_set_state(tpd->ta->gc, PURPLE_CONNECTED);
 		tpd->ta->state = PURPLE_CONNECTED;
 		twitterim_get_buddy_list(tpd->ta);
-		//tpd->ta->timeline_timer = purple_timeout_add_seconds(TW_INTERVAL, twitterim_fetch_new_messagees, tpd->ta);
-		twitterim_fetch_new_messages(tpd->ta);
+		tpd->ta->timeline_timer = purple_timeout_add_seconds(TW_INTERVAL, (GSourceFunc)twitterim_fetch_all_new_messages, tpd->ta);
+		twitterim_fetch_first_new_messages(tpd->ta);
 		return 0;
 	} else {
 		purple_connection_set_state(tpd->ta->gc, PURPLE_DISCONNECTED);
