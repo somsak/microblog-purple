@@ -664,7 +664,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 		// message
 		text = xmlnode_get_child(status, "text");
 		if(text) {
-			msg_txt = xmlnode_get_data_unescaped(text);
+			msg_txt = xmlnode_get_data(text);
 		}
 		
 		// user name
