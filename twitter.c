@@ -125,6 +125,7 @@ typedef struct _TwitterAccount {
 	PurpleConnectionState state;
     GHashTable * conn_hash;
 	guint timeline_timer;
+	unsigned long long last_msg_id;
 } TwitterAccount;
 
 struct _TwitterProxyData;
@@ -150,7 +151,6 @@ typedef struct _TwitterProxyData {
 	gint conn_id;
 } TwitterProxyData;
 
-
 typedef struct _TwitterBuddy {
 	TwitterAccount *ta;
 	PurpleBuddy *buddy;
@@ -159,6 +159,13 @@ typedef struct _TwitterBuddy {
 	gchar *status;
 	gchar *thumb_url;
 } TwitterBuddy;
+
+typedef struct _TwitterMsg {
+	unsigned long long id;
+	gchar * from;
+	gchar * msg_txt;
+	time_t msg_time;
+} TwitterMsg;
 
 static void twitterim_process_request(gpointer data);
 void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr);
@@ -597,14 +604,18 @@ void twitterim_fetch_all_new_messages(gpointer data)
 
 gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 {
+	TwitterAccount * ta = tpd->ta;
 	gchar * http_data = NULL;
 	gsize http_len = 0;
 	TwitterTimeLineReq * tlr = data;
-	xmlnode * top = NULL, *time_node, *status, * text, * user, * user_name;
+	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name;
 	gint count = 0;
-	gchar * from, * msg_txt, * time_str;
+	gchar * from, * msg_txt, * time_str, *xml_str;
 	struct tm msg_time;
 	time_t msg_time_t;
+	unsigned long long cur_id;
+	GList * msg_list = NULL, *it = NULL;
+	TwitterMsg * cur_msg = NULL;
 	
 	purple_debug_info("twitter", "fetch_new_messages_handler\n");
 	
@@ -635,6 +646,13 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 		from = NULL;
 		time_str = NULL;
 		
+		// ID
+		id_node = xmlnode_get_child(status, "id");
+		if(id_node) {
+			xml_str = xmlnode_get_data_unescaped(id_node);
+		}
+		cur_id = strtoul(xml_str, NULL, 10);
+
 		// time
 		time_node = xmlnode_get_child(status, "created_at");
 		if(time_node) {
@@ -658,16 +676,33 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 		}
 
 		if(from && msg_txt) {
-			gchar * real_msg;
+			cur_msg = g_new(TwitterMsg, 1);
+			
 			purple_debug_info("twitter", "from = %s, msg = %s\n", from, msg_txt);
-			real_msg = g_strdup_printf("%s:%s", from, msg_txt);
-			serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
-			g_free(real_msg);
+			cur_msg->id = cur_id;
+			cur_msg->from = from; //< actually we don't need this for now
+			cur_msg->msg_time = msg_time_t;
+			cur_msg->msg_txt = g_strdup_printf("%s:%s", from, msg_txt);
+			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
+			
+			msg_list = g_list_append(msg_list, cur_msg);
 		}
 		count++;
 		status = xmlnode_get_next_twin(status);
 	}
 	purple_debug_info("twitter", "we got %d messages\n", count);
+	// reverse the list and append it
+	// only if id > last_msg_id
+	msg_list = g_list_reverse(msg_list);
+	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
+		cur_msg = it->data;
+		if(cur_msg->id > ta->last_msg_id) {
+			ta->last_msg_id = cur_msg->id;
+			serv_got_im(ta->gc, tlr->name, cur_msg->msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+		}
+		g_free(cur_msg->msg_txt);
+	}
+	g_list_free(msg_list);
 	xmlnode_free(top);
 	twitterim_free_tlr(tlr);
 	return 0;
@@ -782,6 +817,7 @@ void twitterim_login(PurpleAccount *acct)
 	ta->gc = acct->gc;
 	ta->state = PURPLE_CONNECTING;
 	ta->timeline_timer = -1;
+	ta->last_msg_id = 0;
 	ta->conn_hash = g_hash_table_new(g_int_hash, g_int_equal);
 	acct->gc->proto_data = ta;
 	
@@ -890,10 +926,6 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 
 	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
 	msg_len = strlen(message);
-	if(strlen(tmp_msg_txt) > TW_STATUS_TXT_MAX) {
-		g_free(tmp_msg_txt);
-		return 0;
-	}
 	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
 
 	tpd = twitterim_new_proxy_data();
@@ -903,20 +935,22 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	tpd->max_retry = 0;
 	tpd->action_on_error = TW_NOACTION;
 	tpd->post_data = g_malloc(TW_MAXBUFF);
-	snprintf(tpd->post_data, TW_MAXBUFF,  "POST " TW_STATUS_UPDATE_PATH "?source=" TW_AGENT_SOURCE "&status=%s HTTP/1.1\r\n"
+	snprintf(tpd->post_data, TW_MAXBUFF,  "POST " TW_STATUS_UPDATE_PATH " HTTP/1.1\r\n"
 			"Host: " TWITTER_HOST "\r\n"
 			"User-Agent: " TW_AGENT_SOURCE "\r\n"
 			"Acccept: */*\r\n"
 			"Connection: Close\r\n"
 			"Pragma: no-cache\r\n"
-			"Content-Length: 0\r\n"
+			"Content-Length: %d\r\n"
 			"Content-Type: application/x-www-form-urlencoded\r\n"
-			"Authorization: Basic ", tmp_msg_txt);
+			"Authorization: Basic ", strlen(tmp_msg_txt) + strlen(TW_AGENT_SOURCE) + 15);
 	
 	len = strlen(tpd->post_data);
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
 	len = strlen(tpd->post_data);
-	strncat(tpd->post_data, "\r\n\r\n", TW_MAXBUFF - len);
+	// FIXME: TW_MAXBUFF is incorrect here
+	strncat(tpd->post_data, "\r\n\r\nsource=" TW_AGENT_SOURCE "&status=", TW_MAXBUFF);
+	strncat(tpd->post_data, tmp_msg_txt, TW_MAXBUFF);
 	tpd->handler = twitterim_send_im_handler;
 	// Request handler for specific request
 	tpd->handler_data = NULL;
