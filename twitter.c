@@ -681,7 +681,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			cur_msg->id = cur_id;
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
-			cur_msg->msg_txt = g_strdup_printf("%s: %s", from, msg_txt);
+			cur_msg->msg_txt = g_strdup_printf("<b>%s:</b> %s", from, msg_txt);
 			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
 			
 			msg_list = g_list_append(msg_list, cur_msg);
