@@ -365,7 +365,7 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 	tmp_data = g_malloc(TW_MAXBUFF + 1);
 	res = purple_ssl_read(ssl, tmp_data, TW_MAXBUFF);
 	cur_error = errno;
-	if(res < 0) {
+	if( (res < 0) && (cur_error != EAGAIN) ) {
 		// error connecting or reading
 		purple_input_remove(ssl->inpa);
 		// First, chec if we already have everythings
@@ -408,6 +408,10 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 				twitterim_free_tpd(tpd);
 			}
 		}
+	} else if( (res < 0) && (cur_error == EAGAIN)) {
+		purple_debug_info("twitter", "error with EAGAIN\n");
+		purple_input_remove(ssl->inpa);
+		purple_ssl_input_add(ssl, twitterim_get_result, tpd);
 	} else if(res > 0) {
 		// Need more data
 		purple_input_remove(ssl->inpa);
@@ -417,7 +421,7 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 		tpd->result_list = g_list_append(tpd->result_list, tmp_data);
 		tpd->result_len += res;
 		purple_ssl_input_add(ssl, twitterim_get_result, tpd);
-	} else {
+	} else if(res == 0) {
 		// we have all data
 		purple_input_remove(ssl->inpa);
 		if(tpd->conn_data) {
