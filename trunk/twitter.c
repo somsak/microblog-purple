@@ -72,8 +72,6 @@
 #	include <netinet/in.h>
 #endif
 
-
-#define LAST_MESSAGE_MAX 10
 #define TWITTER_HOST "twitter.com"
 #define TWITTER_PORT 443
 #define TWITTER_AGENT "Pidgin 2.4"
