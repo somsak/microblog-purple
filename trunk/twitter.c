@@ -582,7 +582,7 @@ void twitterim_fetch_first_new_messages(TwitterAccount * ta)
 }
 
 // Function to fetch all new messages periodically
-void twitterim_fetch_all_new_messages(gpointer data)
+gboolean twitterim_fetch_all_new_messages(gpointer data)
 {
 	TwitterAccount * ta = data;
 	TwitterTimeLineReq * tlr;
@@ -600,6 +600,7 @@ void twitterim_fetch_all_new_messages(gpointer data)
 		tlr->count = TW_STATUS_COUNT_MAX;
 		twitterim_fetch_new_messages(ta, tlr);
 	}
+	return TRUE;
 }
 
 gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
