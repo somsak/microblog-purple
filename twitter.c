@@ -604,6 +604,7 @@ gboolean twitterim_fetch_all_new_messages(gpointer data)
 gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 {
 	TwitterAccount * ta = tpd->ta;
+	const guchar * username;
 	gchar * http_data = NULL;
 	gsize http_len = 0;
 	TwitterTimeLineReq * tlr = data;
@@ -622,6 +623,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	
 	purple_debug_info("twitter", "%s\n", tpd->result_data);
 	
+	username = (const guchar *)purple_account_get_username(ta->account);
 	http_data = strstr(tpd->result_data, "\r\n\r\n");
 	if(http_data == NULL) {
 		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet\n");
@@ -681,7 +683,11 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			cur_msg->id = cur_id;
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
-			cur_msg->msg_txt = g_strdup_printf("<b>%s:</b> %s", from, msg_txt);
+			if (strstr(username, msg_txt) || !strcmp(username, from)) {
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"blue\"><b>%s:</b></font> %s", from, msg_txt);
+			} else {
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"red\"><b>%s:</b></font> %s", from, msg_txt);
+			}
 			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
 			
 			msg_list = g_list_append(msg_list, cur_msg);
