@@ -79,7 +79,7 @@
 #define TWITTER_AGENT "Pidgin 2.4"
 #define TW_MAXBUFF 51200
 #define TW_MAX_RETRY 3
-#define TW_INTERVAL 15
+#define TW_INTERVAL 60
 #define TW_STATUS_COUNT_MAX 200
 #define TW_STATUS_COUNT_FIRST 5
 #define TW_STATUS_UPDATE_PATH "/statuses/update.xml"
