@@ -684,9 +684,9 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
 			if (strstr(username, msg_txt) || !strcmp(username, from)) {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"blue\"><b>%s:</b></font> %s", from, msg_txt);
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s", from, msg_txt);
 			} else {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"red\"><b>%s:</b></font> %s", from, msg_txt);
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s", from, msg_txt);
 			}
 			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
 			
