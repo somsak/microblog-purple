@@ -417,6 +417,7 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 		purple_debug_info("twitter", "error with EAGAIN\n");
 		purple_input_remove(ssl->inpa);
 		purple_ssl_input_add(ssl, twitterim_get_result, tpd);
+		g_free(tmp_data);
 	} else if(res > 0) {
 		// Need more data
 		purple_input_remove(ssl->inpa);
