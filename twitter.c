@@ -259,9 +259,9 @@ const char * twitterim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 GList * twitterim_actions(PurplePlugin *plugin, gpointer context)
 {
 	GList *m = NULL;
+	/*
 	PurplePluginAction *act;
 
-	/*
 	act = purple_plugin_action_new(_("Set Facebook status..."), twitterim_set_status_cb);
 	m = g_list_append(m, act);
 	
@@ -295,7 +295,7 @@ GList * twitterim_statuses(PurpleAccount *acct)
 static gint check_http_data(TwitterProxyData * tpd)
 {
 	GList * it;
-	char * content_length, * next, * cur, *end_ptr;
+	char * next, * cur, *end_ptr;
 	char * http_data_start = NULL;
 	char oldval;
 	gchar * tmp_data;
@@ -359,7 +359,6 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 {
 	TwitterProxyData * tpd = data;
 	TwitterAccount *ta = tpd->ta;
-	gsize len;
 	gint res, call_handler = 0, cur_error;
 	GList * it;
 	gchar * tmp_data;
@@ -478,7 +477,6 @@ static void twitterim_post_request(gpointer data, PurpleSslConnection * ssl, Pur
 	TwitterProxyData * tpd = data;
 	TwitterAccount *ta = tpd->ta;
 	gchar *post_data = tpd->post_data;
-	gsize len;
 	gint res;
 	
 	purple_debug_info("twitter", "twitterim_post_request\n");
@@ -518,7 +516,6 @@ static void twitterim_process_request(gpointer data)
 {
 	TwitterProxyData * tpd = data;
 	TwitterAccount *ta = tpd->ta;
-	guint16 i;
 	
 	purple_debug_info("twitter", "twitterim_process_request\n");
 
@@ -540,17 +537,17 @@ static void twitterim_process_request(gpointer data)
 //
 static void twitterim_get_authen(TwitterAccount * ta, gchar * output, gsize len)
 {
-	const guchar * username_temp, *password_temp;
-	guchar *merged_temp, *encoded_temp;
+	const gchar * username_temp, *password_temp;
+	gchar *merged_temp, *encoded_temp;
 	gsize authen_len;
 
 	//purple_url_encode can't be used more than once on the same line
-	username_temp = (const guchar *)purple_account_get_username(ta->account);
-	password_temp = (const guchar *)purple_account_get_password(ta->account);
+	username_temp = (const gchar *)purple_account_get_username(ta->account);
+	password_temp = (const gchar *)purple_account_get_password(ta->account);
 	authen_len = strlen(username_temp) + strlen(password_temp) + 1;
 	merged_temp = g_strdup_printf("%s:%s", username_temp, password_temp);
-	encoded_temp = purple_base64_encode(merged_temp, authen_len);
-	strncpy(output, encoded_temp, len);
+	encoded_temp = purple_base64_encode((const guchar *)merged_temp, authen_len);
+	g_strlcpy(output, encoded_temp, len);
 	g_free(merged_temp);
 	g_free(encoded_temp);
 }
@@ -584,7 +581,7 @@ void twitterim_fetch_first_new_messages(TwitterAccount * ta)
 gboolean twitterim_fetch_all_new_messages(gpointer data)
 {
 	TwitterAccount * ta = data;
-	TwitterTimeLineReq * tlr;
+	TwitterTimeLineReq * tlr = NULL;
 	gint i;
 	
 	for(i = 0; i < TL_LAST; i++) {
@@ -605,14 +602,13 @@ gboolean twitterim_fetch_all_new_messages(gpointer data)
 gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 {
 	TwitterAccount * ta = tpd->ta;
-	const guchar * username;
+	const gchar * username;
 	gchar * http_data = NULL;
 	gsize http_len = 0;
 	TwitterTimeLineReq * tlr = data;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name;
 	gint count = 0;
-	gchar * from, * msg_txt, * time_str, *xml_str;
-	struct tm msg_time;
+	gchar * from, * msg_txt, * time_str, *xml_str = NULL;
 	time_t msg_time_t;
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
@@ -624,7 +620,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	
 	purple_debug_info("twitter", "%s\n", tpd->result_data);
 	
-	username = (const guchar *)purple_account_get_username(ta->account);
+	username = (const gchar *)purple_account_get_username(ta->account);
 	http_data = strstr(tpd->result_data, "\r\n\r\n");
 	if(http_data == NULL) {
 		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet\n");
@@ -684,7 +680,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			cur_msg->id = cur_id;
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
-			if (strstr(username, msg_txt) || !strcmp(username, from)) {
+			if (g_strrstr(username, msg_txt) || !g_str_equal(username, from)) {
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s", from, msg_txt);
 			} else {
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s", from, msg_txt);
@@ -811,9 +807,7 @@ void twitterim_login(PurpleAccount *acct)
 {
 	TwitterAccount *ta = NULL;
 	TwitterProxyData * tpd = NULL;
-	gchar *username_temp, *password_temp, *challenge_temp;
 	gsize len;
-	gint res;
 	
 	purple_debug_info("twitter", "twitterim_login\n");
 	
@@ -895,8 +889,10 @@ void twitterim_close(PurpleConnection *gc)
 
 gint twitterim_send_im_handler(TwitterProxyData * tpd, gpointer data)
 {
+	/*
 	gchar * http_data = NULL;
 	gsize http_len = 0;
+	*/
 	
 	purple_debug_info("twitter", "send_im_handler\n");
 	
@@ -970,11 +966,11 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 
 static void plugin_init(PurplePlugin *plugin)
 {
+/*	
 	PurpleAccountOption *option;
 	PurplePluginInfo *info = plugin->info;
 	PurplePluginProtocolInfo *prpl_info = info->extra_info;
 
-/*	
 	option = purple_account_option_bool_new(_("Hide myself in the Buddy List"), "twitter_hide_self", TRUE);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
