@@ -1114,7 +1114,7 @@ static PurplePluginInfo info = {
 	"Twitter data feeder", /* summary */
 	"Twitter data feeder", /* description */
 	"Somsak Sriprayoonsakul <somsaks@gmail.com>", /* author */
-	"http://pidgin-facebookchat.googlecode.com/", /* FIXME: homepage */
+	"http://microblog-purple.googlecode.com/", /* FIXME: homepage */
 	plugin_load, /* load */
 	plugin_unload, /* unload */
 	NULL, /* destroy */
