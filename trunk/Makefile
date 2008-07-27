@@ -1,7 +1,6 @@
 CC = gcc
-
-LIBPURPLE_CFLAGS = -I/usr/include/libpurple -I/usr/local/include/libpurple -DPURPLE_PLUGINS -DENABLE_NLS
-GLIB_CFLAGS = -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include -I/usr/local/include/glib-2.0 -I/usr/local/lib/glib-2.0/include -I/usr/local/include
+MICROBLOG_CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC
+PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
 
 DEB_PACKAGE_DIR = ./debdir
 
@@ -22,7 +21,7 @@ clean:
 	rm -f libtwitter.so pidgin-twitterchat.deb pidgin-twitterchat.tar.bz2 pidgin-twitterchat-source.tar.bz2
 
 libtwitter.so: twitter.c
-	${CC} ${LIBPURPLE_CFLAGS} -Wall -pthread ${GLIB_CFLAGS} -I. -g -O2 -pipe twitter.c -o libtwitter.so -shared -fPIC -DPIC
+	${CC} ${MICROBLOG_CFLAGS} ${PURPLE_CFLAGS} -shared twitter.c -o libtwitter.so
 
 pidgin-microblog.deb:        libtwitter.so
 	echo "Dont forget to update version number"
