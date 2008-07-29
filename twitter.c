@@ -378,6 +378,7 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 		if(check_http_data(tpd) == 0) {
 			// All is fine, proceed to handler
 			call_handler = 1;
+			g_free(tmp_data);
 		} else {
 			// Free all data
 			if(tpd->result_data) g_free(tpd->result_data);
@@ -438,6 +439,7 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 			tpd->conn_id = 0;
 		}
 		call_handler = 1;
+		g_free(tmp_data);
 	} // global if else for connection state
 	// Call handler here
 	
