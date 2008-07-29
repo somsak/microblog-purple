@@ -610,7 +610,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	TwitterTimeLineReq * tlr = data;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name;
 	gint count = 0;
-	gchar * from, * msg_txt, * time_str, *xml_str = NULL;
+	gchar * from, * msg_txt, *xml_str = NULL;
 	time_t msg_time_t;
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
@@ -644,7 +644,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	while(status) {
 		msg_txt = NULL;
 		from = NULL;
-		time_str = NULL;
+		xml_str = NULL;
 		
 		// ID
 		id_node = xmlnode_get_child(status, "id");
@@ -652,13 +652,15 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			xml_str = xmlnode_get_data_unescaped(id_node);
 		}
 		cur_id = strtoul(xml_str, NULL, 10);
+		g_free(xml_str);
 
 		// time
 		time_node = xmlnode_get_child(status, "created_at");
 		if(time_node) {
-			time_str = xmlnode_get_data_unescaped(time_node);
+			xml_str = xmlnode_get_data_unescaped(time_node);
 		}
 		msg_time_t = time(NULL);
+		g_free(xml_str);
 		
 		// message
 		text = xmlnode_get_child(status, "text");
@@ -687,6 +689,8 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			} else {
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s", from, msg_txt);
 			}
+			g_free(from);
+			g_free(msg_txt);
 			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
 			
 			msg_list = g_list_append(msg_list, cur_msg);
