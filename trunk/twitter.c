@@ -110,8 +110,8 @@ const char * _TweetTimeLinePaths[] = {
 
 // Hold parameter for statuses request
 typedef struct _TwitterTimeLineReq {
-	gchar * path;
-	gchar * name;
+	const gchar * path;
+	const gchar * name;
 	gint timeline_id;
 	guint count;
 } TwitterTimeLineReq;
@@ -247,8 +247,10 @@ static TwitterTimeLineReq * twitterim_new_tlr()
 
 static void twitterim_free_tlr(TwitterTimeLineReq * tlr)
 {
+	/*
 	if(tlr->path != NULL) g_free(tlr->path);
 	if(tlr->name != NULL) g_free(tlr->name);
+	*/
 }
 
 const char * twitterim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
@@ -590,8 +592,8 @@ gboolean twitterim_fetch_all_new_messages(gpointer data)
 			continue;
 		}
 		tlr = twitterim_new_tlr();
-		tlr->path = g_strdup(_TweetTimeLinePaths[i]);
-		tlr->name = g_strdup(_TweetTimeLineNames[i]);
+		tlr->path = _TweetTimeLinePaths[i];
+		tlr->name = _TweetTimeLineNames[i];
 		tlr->timeline_id = i;
 		tlr->count = TW_STATUS_COUNT_MAX;
 		twitterim_fetch_new_messages(ta, tlr);
