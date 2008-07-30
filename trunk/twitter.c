@@ -761,7 +761,7 @@ void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
 	tpd->action_on_error = TW_NOACTION;
 	tpd->post_data = g_malloc(TW_MAXBUFF);
 	if(ta->last_msg_id > 0) {
-		snprintf(since_id, sizeof(since_id), "&since_id=%d", ta->last_msg_id);
+		snprintf(since_id, sizeof(since_id), "&since_id=%lld", ta->last_msg_id);
 	}
 	snprintf(tpd->post_data, TW_MAXBUFF, "GET %s?count=%d%s HTTP/1.1\r\n"
 			"Host: " TWITTER_HOST "\r\n"
