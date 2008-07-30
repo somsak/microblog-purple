@@ -628,6 +628,17 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	purple_debug_info("twitter", "%s\n", tpd->result_data);
 	
 	username = (const gchar *)purple_account_get_username(ta->account);
+	if(strstr(tpd->result_data, "HTTP/1.1 304")) {
+		// no new messages
+		twitterim_free_tlr(tlr);
+		purple_debug_info("twitter", "no new messages\n");
+		return 0;
+	}
+	if(strstr(tpd->result_data, "HTTP/1.1 200") == NULL) {
+		twitterim_free_tlr(tlr);
+		purple_debug_info("twitter", "something's wrong with the message\n");
+		return 0; //< should we return -1 instead?
+	}
 	http_data = strstr(tpd->result_data, "\r\n\r\n");
 	if(http_data == NULL) {
 		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet\n");
