@@ -20,5 +20,5 @@ install:
 clean:
 	rm -f libtwitter.so
 
-libtwitter.so: twitter.c
-	${CC} ${MICROBLOG_CFLAGS} ${PURPLE_CFLAGS} -shared twitter.c -o libtwitter.so
+libtwitter.so: twitter.c util.c
+	${CC} ${MICROBLOG_CFLAGS} ${PURPLE_CFLAGS} -shared twitter.c util.c -o libtwitter.so
