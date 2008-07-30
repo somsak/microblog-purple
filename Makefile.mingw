@@ -74,6 +74,9 @@ $(OBJECTS): $(PURPLE_CONFIG_H)
 
 $(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+	
+pidgin-microblog.exe: $(TARGET).dll
+	makensis twitter.nsi
 
 ##
 ## CLEAN RULES
