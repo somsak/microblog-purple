@@ -64,6 +64,8 @@
 #include <xmlnode.h>
 #include <version.h>
 
+#include "util.h"
+
 #ifdef _WIN32
 #	include <win32dep.h>
 #else
@@ -124,6 +126,7 @@ typedef struct _TwitterAccount {
     GHashTable * conn_hash;
 	guint timeline_timer;
 	unsigned long long last_msg_id;
+	time_t last_msg_time;
 } TwitterAccount;
 
 struct _TwitterProxyData;
@@ -613,7 +616,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name;
 	gint count = 0;
 	gchar * from, * msg_txt, *xml_str = NULL;
-	time_t msg_time_t;
+	time_t msg_time_t, last_msg_time_t = 0;
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
@@ -661,7 +664,11 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 		if(time_node) {
 			xml_str = xmlnode_get_data_unescaped(time_node);
 		}
-		msg_time_t = time(NULL);
+		purple_debug_info("twitter", "msg time = %s\n", xml_str);
+		msg_time_t = mb_mktime(xml_str) - timezone;
+		if(last_msg_time_t < msg_time_t) {
+			last_msg_time_t = msg_time_t;
+		}
 		g_free(xml_str);
 		
 		// message
@@ -712,6 +719,9 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 		}
 		g_free(cur_msg->msg_txt);
 	}
+	if(ta->last_msg_time < last_msg_time_t) {
+		ta->last_msg_time = last_msg_time_t;
+	}
 	g_list_free(msg_list);
 	xmlnode_free(top);
 	twitterim_free_tlr(tlr);
@@ -725,6 +735,7 @@ void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
 {
 	TwitterProxyData * tpd;
 	gsize len;
+	gchar since_id[TW_MAXBUFF] = "";
 	
 	purple_debug_info("twitter", "fetch_new_messages\n");
 
@@ -738,12 +749,15 @@ void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
 	tpd->max_retry = 0;
 	tpd->action_on_error = TW_NOACTION;
 	tpd->post_data = g_malloc(TW_MAXBUFF);
-	snprintf(tpd->post_data, TW_MAXBUFF, "GET %s?count=%d HTTP/1.1\r\n"
+	if(ta->last_msg_id > 0) {
+		snprintf(since_id, sizeof(since_id), "&since_id=%d", ta->last_msg_id);
+	}
+	snprintf(tpd->post_data, TW_MAXBUFF, "GET %s?count=%d%s HTTP/1.1\r\n"
 			"Host: " TWITTER_HOST "\r\n"
 			"User-Agent: " TWITTER_AGENT "\r\n"
 			"Acccept: */*\r\n"
 			"Connection: Close\r\n"
-			"Authorization: Basic ", tlr->path, tlr->count);
+			"Authorization: Basic ", tlr->path, tlr->count, since_id);
 	len = strlen(tpd->post_data);
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
 	len = strlen(tpd->post_data);
@@ -826,6 +840,7 @@ void twitterim_login(PurpleAccount *acct)
 	ta->state = PURPLE_CONNECTING;
 	ta->timeline_timer = -1;
 	ta->last_msg_id = 0;
+	ta->last_msg_time = 0;
 	ta->conn_hash = g_hash_table_new(g_int_hash, g_int_equal);
 	acct->gc->proto_data = ta;
 	

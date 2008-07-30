@@ -103,6 +103,8 @@ time_t mb_mktime(char * time_str)
 	}
 	// what's left is year
 	msg_time.tm_year = strtoul(cur, NULL, 10) - 1900;
+	
+#ifdef UTEST
 	printf("msg_time.tm_wday = %d\n", msg_time.tm_wday);
 	printf("msg_time.tm_mday = %d\n", msg_time.tm_mday);
 	printf("msg_time.tm_mon = %d\n", msg_time.tm_mon);
@@ -114,9 +116,10 @@ time_t mb_mktime(char * time_str)
 	printf("finished\n");
 	// Always return GMT time
 	printf("asctime = %s\n", asctime(&msg_time));
+#endif
 	return mktime(&msg_time) + cur_timezone;
 }
-
+#ifdef UTEST
 int main(int argc, char * argv[])
 {
 	time_t msg_time;
@@ -124,6 +127,7 @@ int main(int argc, char * argv[])
 	char * cur, * next, *tmp_cur, *tmp_next, oldval;
 	int counter = 0,  tmp_counter = 0, i;
 	
+	printf("test time = %s\n", twitter_time);
 	printf("current timezone offset = %ld\n", timezone);
 	printf("current dst offset = %ld\n", daylight);
 	msg_time = mb_mktime(twitter_time);
@@ -132,3 +136,5 @@ int main(int argc, char * argv[])
 	
 	//printf("Converted time = %s\n", asctime(&msg_time));
 }
+
+#endif

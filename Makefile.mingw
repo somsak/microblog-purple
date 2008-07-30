@@ -38,7 +38,7 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##  SOURCES, OBJECTS
 ##
 CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS
-C_SRC =	twitter.c
+C_SRC =	twitter.c util.c
 IMG_SRC = twitter16.png twitter22.png twitter48.png
 PURPLE_PROTOCOL_PIXMAP_DIR = $(PURPLE_INSTALL_DIR)/pixmaps/pidgin/protocols
 
