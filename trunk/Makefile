@@ -1,24 +1,36 @@
-CC = gcc
-MICROBLOG_CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC
-PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
 
-#Standard stuff here
+TARGETS = libtwitter.so
+PREFIX = /usr
+
+PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
+PURPLE_LIBS = $(shell pkg-config --libs purple)
+
+LD = $(CC)
+CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC
+CFLAGS += $(PURPLE_CFLAGS)
+TWITTER_SRC = twitter.c util.c
+TWITTER_IMG = twitter16.png twitter22.png twitter48.png
+TWITTER_OBJ = $(TWITTER_SRC:%.c=%.o)
+
+OBJECTS = $(TWITTER_OBJ)
+
 .PHONY: all clean install
 
-all:    libtwitter.so
+all: $(TARGETS)
 
-install:
-	mkdir -p $(DESTDIR)/usr/lib/purple-2
-	mkdir -p $(DESTDIR)/usr/share/pixmaps/pidgin/protocols/16
-	mkdir -p $(DESTDIR)/usr/share/pixmaps/pidgin/protocols/22
-	mkdir -p $(DESTDIR)/usr/share/pixmaps/pidgin/protocols/48
-	cp libtwitter.so $(DESTDIR)/usr/lib/purple-2/
-	cp twitter16.png $(DESTDIR)/usr/share/pixmaps/pidgin/protocols/16/twitter.png
-	cp twitter22.png $(DESTDIR)/usr/share/pixmaps/pidgin/protocols/22/twitter.png
-	cp twitter48.png $(DESTDIR)/usr/share/pixmaps/pidgin/protocols/48/twitter.png
+install: $(TARGETS)
+	install -m 0755 -d $(DESTDIR)$(PREFIX)/lib/purple-2
+	install -m 0755 -d $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/16
+	install -m 0755 -d $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/22
+	install -m 0755 -d $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/48
+
+	install -m 0644 libtwitter.so $(DESTDIR)$(PREFIX)/lib/purple-2/libtwitter.so
+	install -m 0644 twitter16.png $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/16/twitter.png
+	install -m 0644 twitter22.png $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/22/twitter.png
+	install -m 0644 twitter48.png $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/48/twitter.png
 
 clean:
-	rm -f libtwitter.so
+	rm -f $(TARGETS) $(OBJECTS)
 
-libtwitter.so: twitter.c util.c
-	${CC} ${MICROBLOG_CFLAGS} ${PURPLE_CFLAGS} -shared twitter.c util.c -o libtwitter.so
+libtwitter.so: $(TWITTER_OBJ)
+	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) -o libtwitter.so
