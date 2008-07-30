@@ -1,0 +1,22 @@
+This package was debianized by Sugree Phatanapherom <sugree@gmail.com> on
+Wed, 30 Jul 2008 00:42:25 +0700.
+
+It was downloaded from <http://code.google.com/p/microblog-purple/>
+
+Upstream Author(s): 
+
+    Somsak Sriprayoonsakul <somsaks@gmail.com>
+
+Copyright: 
+
+    <Copyright (C) 2008 Somsak Sriprayoonsakul>
+
+License:
+
+    GPLv3
+
+The Debian packaging is (C) 2008, Sugree Phatanapherom <sugree@gmail.com> and
+is licensed under the GPL, see `/usr/share/common-licenses/GPL'.
+
+# Please also look if there are files or directories which have a
+# different copyright/license attached and list them here.
