@@ -86,6 +86,9 @@
 #define TW_STATUS_TXT_MAX 140
 #define TW_AGENT_SOURCE "libpurplemicroblogplugin"
 
+#define TW_FORMAT_BUFFER 2048
+#define TW_FORMAT_NAME_MAX 100
+
 enum _TweetTimeLine {
 	TL_FRIENDS = 0,
 	TL_USER = 1,
@@ -610,16 +613,14 @@ gboolean twitterim_fetch_all_new_messages(gpointer data)
 }
 
 gchar* twitterim_format_symbols(gchar* src) {
-	// FIXME: magic number
-	gchar* tmp_buffer = g_malloc(2048);
+	gchar* tmp_buffer = g_malloc(TW_FORMAT_BUFFER);
 	int i = 0;
 	int new_i = 0;
 	while(src[i] != '\0') {
 		if(src[i]=='@' || src[i]=='#') {
 			gchar sym = src[i];
-			i++; // goto next char			  
-			// FIXME: magic number
-			gchar* name = g_malloc(100);
+			i++; // goto next char
+			gchar* name = g_malloc(TW_FORMAT_NAME_MAX);
 			// if it's a proper name, extract it
 			int j = 0;
 			while((src[i]>='a' && src[i] <='z') || (src[i]>='A' && src[i] <='Z') || (src[i]>='0' && src[i] <='9') || src[i]=='_') {
