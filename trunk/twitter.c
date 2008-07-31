@@ -74,14 +74,14 @@
 #	include <netinet/in.h>
 #endif
 
-#define TWITTER_HOST "twitter.com"
-#define TWITTER_PORT 443
-#define TWITTER_AGENT "Pidgin 2.4"
+#define TW_HOST "twitter.com"
+#define TW_PORT 443
+#define TW_AGENT "Pidgin 2.4"
 #define TW_MAXBUFF 51200
 #define TW_MAX_RETRY 3
 #define TW_INTERVAL 60
 #define TW_STATUS_COUNT_MAX 200
-#define TW_STATUS_COUNT_FIRST 5
+#define TW_INIT_TWEET 15
 #define TW_STATUS_UPDATE_PATH "/statuses/update.xml"
 #define TW_STATUS_TXT_MAX 140
 #define TW_AGENT_SOURCE "libpurplemicroblogplugin"
@@ -523,10 +523,13 @@ static void twitterim_process_request(gpointer data)
 {
 	TwitterProxyData * tpd = data;
 	TwitterAccount *ta = tpd->ta;
+	const char * twitter_host = NULL;
 	
 	purple_debug_info("twitter", "twitterim_process_request\n");
 
-	tpd->conn_data = purple_ssl_connect(ta->account, TWITTER_HOST, TWITTER_PORT, twitterim_post_request, twitterim_connect_error, tpd);
+	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
+	purple_debug_info("twitter", "connecting to %s on port %hd\n", twitter_host, TW_PORT);
+	tpd->conn_data = purple_ssl_connect(ta->account, twitter_host, TW_PORT, twitterim_post_request, twitterim_connect_error, tpd);
 	purple_debug_info("twitter", "after connect\n");
 	if(tpd->conn_data != NULL) {
 		// add this to internal hash table
@@ -580,7 +583,7 @@ void twitterim_fetch_first_new_messages(TwitterAccount * ta)
 	tlr->path = g_strdup(_TweetTimeLinePaths[TL_FRIENDS]);
 	tlr->name = g_strdup(_TweetTimeLineNames[TL_FRIENDS]);
 	tlr->timeline_id = TL_FRIENDS;
-	tlr->count = TW_STATUS_COUNT_FIRST;
+	tlr->count = purple_account_get_int(ta->account, "twitter_init_tweet", TW_INIT_TWEET);
 	twitterim_fetch_new_messages(ta, tlr);
 }
 
@@ -747,6 +750,7 @@ void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
 	TwitterProxyData * tpd;
 	gsize len;
 	gchar since_id[TW_MAXBUFF] = "";
+	const char * twitter_host = NULL;
 	
 	purple_debug_info("twitter", "fetch_new_messages\n");
 
@@ -763,12 +767,13 @@ void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
 	if(ta->last_msg_id > 0) {
 		snprintf(since_id, sizeof(since_id), "&since_id=%lld", ta->last_msg_id);
 	}
+	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
 	snprintf(tpd->post_data, TW_MAXBUFF, "GET %s?count=%d%s HTTP/1.1\r\n"
-			"Host: " TWITTER_HOST "\r\n"
-			"User-Agent: " TWITTER_AGENT "\r\n"
+			"Host: %s\r\n"
+			"User-Agent: " TW_AGENT "\r\n"
 			"Acccept: */*\r\n"
 			"Connection: Close\r\n"
-			"Authorization: Basic ", tlr->path, tlr->count, since_id);
+			"Authorization: Basic ", tlr->path, tlr->count, since_id, twitter_host);
 	len = strlen(tpd->post_data);
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
 	len = strlen(tpd->post_data);
@@ -823,10 +828,13 @@ void twitterim_get_buddy_list(TwitterAccount * ta)
 gint twitterim_verify_authen(TwitterProxyData * tpd, gpointer data)
 {
 	if(strstr(tpd->result_data, "HTTP/1.1 200 OK")) {
+		gint interval = purple_account_get_int(tpd->ta->account, "twitter_msg_refresh_rate", TW_INTERVAL);
+		
 		purple_connection_set_state(tpd->ta->gc, PURPLE_CONNECTED);
 		tpd->ta->state = PURPLE_CONNECTED;
 		twitterim_get_buddy_list(tpd->ta);
-		tpd->ta->timeline_timer = purple_timeout_add_seconds(TW_INTERVAL, (GSourceFunc)twitterim_fetch_all_new_messages, tpd->ta);
+		purple_debug_info("twitter", "refresh interval = %d\n", interval);
+		tpd->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitterim_fetch_all_new_messages, tpd->ta);
 		twitterim_fetch_first_new_messages(tpd->ta);
 		return 0;
 	} else {
@@ -841,6 +849,7 @@ void twitterim_login(PurpleAccount *acct)
 	TwitterAccount *ta = NULL;
 	TwitterProxyData * tpd = NULL;
 	gsize len;
+	const char * twitter_host = NULL;
 	
 	purple_debug_info("twitter", "twitterim_login\n");
 	
@@ -860,18 +869,19 @@ void twitterim_login(PurpleAccount *acct)
 	tpd->ta = ta;
 	tpd->error_message = g_strdup("Authentication Error");
 	// FIXME: Change this to user's option in maximum log-on retry
-	tpd->max_retry = TW_MAX_RETRY;
+	tpd->max_retry = purple_account_get_int(acct, "twitter_global_retry", TW_MAX_RETRY);
 
 	// Prepare data for this process
 	purple_debug_info("twitter", "initialize authentication data\n");
 	
 	tpd->post_data = g_malloc(TW_MAXBUFF);
-	strncpy(tpd->post_data, "GET /account/verify_credentials.xml HTTP/1.0\r\n"
-								"Host: " TWITTER_HOST "\r\n"
-								"User-Agent: " TWITTER_AGENT "\r\n"
+	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
+	snprintf(tpd->post_data, TW_MAXBUFF, "GET /account/verify_credentials.xml HTTP/1.0\r\n"
+								"Host: %s\r\n"
+								"User-Agent: " TW_AGENT "\r\n"
 								"Acccept: */*\r\n"
 								"Connection: Keep-Alive\r\n"
-								"Authorization: Basic ", TW_MAXBUFF);
+								"Authorization: Basic ", twitter_host);
 	len = strlen(tpd->post_data);
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
 	len = strlen(tpd->post_data);
@@ -956,6 +966,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	TwitterAccount * ta = gc->proto_data;
 	gchar * tmp_msg_txt = NULL;
 	gsize len, msg_len;
+	const char * twitter_host = NULL;
 
 	//convert html to plaintext, removing trailing spaces
 	purple_debug_info("twitter", "send_im\n");
@@ -971,15 +982,16 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	tpd->max_retry = 0;
 	tpd->action_on_error = TW_NOACTION;
 	tpd->post_data = g_malloc(TW_MAXBUFF);
+	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
 	snprintf(tpd->post_data, TW_MAXBUFF,  "POST " TW_STATUS_UPDATE_PATH " HTTP/1.1\r\n"
-			"Host: " TWITTER_HOST "\r\n"
+			"Host: %s\r\n"
 			"User-Agent: " TW_AGENT_SOURCE "\r\n"
 			"Acccept: */*\r\n"
 			"Connection: Close\r\n"
 			"Pragma: no-cache\r\n"
 			"Content-Length: %d\r\n"
 			"Content-Type: application/x-www-form-urlencoded\r\n"
-			"Authorization: Basic ", strlen(tmp_msg_txt) + strlen(TW_AGENT_SOURCE) + 15);
+			"Authorization: Basic ", twitter_host, strlen(tmp_msg_txt) + strlen(TW_AGENT_SOURCE) + 15);
 	
 	len = strlen(tpd->post_data);
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
@@ -1000,23 +1012,26 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 
 static void plugin_init(PurplePlugin *plugin)
 {
-/*	
+
 	PurpleAccountOption *option;
 	PurplePluginInfo *info = plugin->info;
 	PurplePluginProtocolInfo *prpl_info = info->extra_info;
 
-	option = purple_account_option_bool_new(_("Hide myself in the Buddy List"), "twitter_hide_self", TRUE);
+	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_self", TRUE);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_bool_new(_("Set Facebook status through Pidgin status"), "twitter_set_status_through_pidgin", FALSE);
+	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_bool_new(_("Show Facebook notifications as e-mails in Pidgin"), "twitter_get_notifications", TRUE);
+	option = purple_account_option_int_new(_("Number of initial tweets"), "twitter_init_tweet", 15);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	option = purple_account_option_int_new(_("Maximum number of retry"), "twitter_global_retry", 3);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_int_new(_("Number of retries to send message"), "twitter_max_msg_retry", 2);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-*/
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
