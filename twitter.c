@@ -1071,13 +1071,13 @@ static PurplePluginProtocolInfo prpl_info = {
 	NULL,                   /* protocol_options */
 	//NO_BUDDY_ICONS          /* icon_spec */
 	{   /* icon_spec, a PurpleBuddyIconSpec */
-      "png,jpg,gif",                   /* format */
-      0,                               /* min_width */
-      0,                               /* min_height */
-      50,                             /* max_width */
-      50,                             /* max_height */
-      10000,                           /* max_filesize */
-      PURPLE_ICON_SCALE_DISPLAY,       /* scale_rules */
+		"png,jpg,gif",                   /* format */
+		0,                               /* min_width */
+		0,                               /* min_height */
+		50,                             /* max_width */
+		50,                             /* max_height */
+		10000,                           /* max_filesize */
+		PURPLE_ICON_SCALE_DISPLAY,       /* scale_rules */
 	},
 	twitterim_list_icon,   /* list_icon */
 	NULL,                   /* list_emblems */
