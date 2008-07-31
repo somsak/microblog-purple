@@ -609,6 +609,43 @@ gboolean twitterim_fetch_all_new_messages(gpointer data)
 	return TRUE;
 }
 
+gchar* twitterim_format_symbols(gchar* src) {
+	// FIXME: magic number
+	gchar* tmp_buffer = g_malloc(2048);
+	int i = 0;
+	int new_i = 0;
+	while(src[i] != '\0') {
+		if(src[i]=='@' || src[i]=='#') {
+			gchar sym = src[i];
+			i++; // goto next char			  
+			// FIXME: magic number
+			gchar* name = g_malloc(100);
+			// if it's a proper name, extract it
+			int j = 0;
+			while((src[i]>='a' && src[i] <='z') || (src[i]>='A' && src[i] <='Z') || (src[i]>='0' && src[i] <='9') || src[i]=='_') {
+				name[j++] = src[i++];
+			}
+			name[j]='\0';
+			gchar* fmt_name;
+			if(sym=='@') { // for @ create a hyper link <a href="http://twitter.com/%s">%s</a>
+				fmt_name = g_strdup_printf("@<a href=\"http://twitter.com/%s\">%s</a>",name,name);
+			} else {
+				fmt_name = g_strdup_printf("#<a href=\"http://search.twitter.com/search?q=%%23%s\">%s</a>",name,name);
+			}
+			int k=0;
+			while(fmt_name[k] != '\0') {
+				tmp_buffer[new_i++] = fmt_name[k++];
+			}
+			g_free(fmt_name);
+			g_free(name);
+		} else {
+			tmp_buffer[new_i++] = src[i++];
+		}
+	}
+	tmp_buffer[new_i]='\0';
+	return tmp_buffer;
+}
+
 gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 {
 	TwitterAccount * ta = tpd->ta;
@@ -708,6 +745,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
 			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
+				//TODO: adding reply link [<a href=\"reply\">reply</a>], and cast some magic here
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s", from, msg_txt);
 			} else {
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s", from, msg_txt);
@@ -729,7 +767,9 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 		cur_msg = it->data;
 		if(cur_msg->id > ta->last_msg_id) {
 			ta->last_msg_id = cur_msg->id;
-			serv_got_im(ta->gc, tlr->name, cur_msg->msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			gchar *fmt_txt = twitterim_format_symbols(cur_msg->msg_txt);
+			serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			g_free(fmt_txt);
 		}
 		g_free(cur_msg->msg_txt);
 	}
