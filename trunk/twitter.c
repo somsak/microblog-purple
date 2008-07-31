@@ -623,7 +623,7 @@ gchar* twitterim_format_symbols(gchar* src) {
 			gchar* name = g_malloc(TW_FORMAT_NAME_MAX);
 			// if it's a proper name, extract it
 			int j = 0;
-			while((src[i]>='a' && src[i] <='z') || (src[i]>='A' && src[i] <='Z') || (src[i]>='0' && src[i] <='9') || src[i]=='_') {
+			while((src[i]>='a' && src[i] <='z') || (src[i]>='A' && src[i] <='Z') || (src[i]>='0' && src[i] <='9') || src[i]=='_' || src[i]=='-') {
 				name[j++] = src[i++];
 			}
 			name[j]='\0';
