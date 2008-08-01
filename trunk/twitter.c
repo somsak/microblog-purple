@@ -1114,8 +1114,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	len = strlen(tpd->post_data);
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
 	len = strlen(tpd->post_data);
-	// FIXME: TW_MAXBUFF is incorrect here
-	snprintf(tpd->post_data, TW_MAXBUFF, "\r\n\r\nstatus=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
+	snprintf(&tpd->post_data[len], TW_MAXBUFF - len, "\r\n\r\nstatus=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
 	tpd->handler = twitterim_send_im_handler;
 	// Request handler for specific request
 	tpd->handler_data = NULL;
