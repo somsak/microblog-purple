@@ -1035,6 +1035,8 @@ gint twitterim_send_im_handler(TwitterProxyData * tpd, gpointer data)
 	purple_debug_info("twitter", "send_im_handler\n");
 	
 	if(strstr(tpd->result_data, "HTTP/1.1 200 OK") == NULL) {
+		purple_debug_info("twitter", "http error\n");
+		purple_debug_info("twitter", "http data = #%s#\n", tpd->result_data);
 		return -1;
 	}
 
