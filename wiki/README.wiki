@@ -9,6 +9,11 @@ So what's the different between this and Twitter IM? The answer is this would be
 
 = Building the code =
 == Windows build ==
-TBD
+ # Follow [http://developer.pidgin.im/wiki/BuildingWinPidgin Building on Windows HOWTO]
+ # Download microblog-purple source code, untar and place it at pidgin-2.x.x/libpurple/protocols/microblog-purple
+ # cd pidgin-2.x.x/libpurple/protocols/microblog-purple
+ # make -f Makefile.mingw install
+ # The built dll (libtwitter.dll) will be installed at pidgin-2.x.x/win32-install-dir/plugins. All images will be installed there too. Run new pidgin from win32-install-dir directory and it'll just works. You can copy the generated libtwitter.dll to your normal Pidgin installation directory. Don't forget to also copy all twitter*.png to correct path
+ # If you want to build windows installer, type make -f Makefile.mingw pidgin-microblog.exe instead.
 == Linux build ==
 TBD
