@@ -76,7 +76,7 @@
 
 #define TW_HOST "twitter.com"
 #define TW_PORT 443
-#define TW_AGENT "Pidgin 2.4"
+#define TW_AGENT "curl/7.18.2"
 #define TW_MAXBUFF 51200
 #define TW_MAX_RETRY 3
 #define TW_INTERVAL 60
@@ -130,6 +130,7 @@ typedef struct _TwitterAccount {
 	guint timeline_timer;
 	unsigned long long last_msg_id;
 	time_t last_msg_time;
+	GHashTable * sent_id_hash;
 } TwitterAccount;
 
 struct _TwitterProxyData;
@@ -164,12 +165,15 @@ typedef struct _TwitterBuddy {
 	gchar *thumb_url;
 } TwitterBuddy;
 
+#define TW_MSGFLAG_SKIP 0x1
+
 typedef struct _TwitterMsg {
 	unsigned long long id;
 	gchar * avatar_url;
 	gchar * from;
 	gchar * msg_txt;
 	time_t msg_time;
+	gint flag;
 } TwitterMsg;
 
 static void twitterim_process_request(gpointer data);
@@ -648,6 +652,13 @@ gchar* twitterim_format_symbols(gchar* src) {
 	return tmp_buffer;
 }
 
+#if 0
+static void twitterim_list_sent_id_hash(gpointer key, gpointer value, gpointer user_data)
+{
+	purple_debug_info("twitter", "key/value = %s/%s\n", key, value);
+}
+#endif
+
 gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 {
 	TwitterAccount * ta = tpd->ta;
@@ -662,6 +673,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
+	gboolean hide_myself, skip = FALSE;
 	
 	purple_debug_info("twitter", "fetch_new_messages_handler\n");
 	
@@ -699,6 +711,9 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	purple_debug_info("twitter", "successfully parse XML\n");
 	status = xmlnode_get_child(top, "status");
 	purple_debug_info("twitter", "timezone = %ld\n", timezone);
+	
+	hide_myself = purple_account_get_bool(ta->account, "twitter_hide_myself", TRUE);
+	
 	while(status) {
 		msg_txt = NULL;
 		from = NULL;
@@ -708,6 +723,18 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 		id_node = xmlnode_get_child(status, "id");
 		if(id_node) {
 			xml_str = xmlnode_get_data_unescaped(id_node);
+		}
+		// Check for duplicate message
+		if(hide_myself) {
+			purple_debug_info("twitter", "checking for duplicate message\n");
+#if 0
+			g_hash_table_foreach(ta->sent_id_hash, twitterim_list_sent_id_hash, NULL);
+#endif			
+			if(g_hash_table_remove(ta->sent_id_hash, xml_str)  == TRUE) {
+				// Dupplicate ID, moved to next value
+				purple_debug_info("twitter", "duplicate id = %s\n", xml_str);
+				skip = TRUE;
+			}
 		}
 		cur_id = strtoul(xml_str, NULL, 10);
 		g_free(xml_str);
@@ -751,6 +778,10 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
+			cur_msg->flag = 0;
+			if(skip) {
+				cur_msg->flag |= TW_MSGFLAG_SKIP;
+			}
 			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
 				//TODO: adding reply link [<a href=\"reply\">reply</a>], and cast some magic here
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s", from, msg_txt);
@@ -762,22 +793,28 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			g_free(msg_txt);
 			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
 			
+			//purple_debug_info("twitter", "appending message with id = %llu\n", cur_id);
 			msg_list = g_list_append(msg_list, cur_msg);
 		}
 		count++;
 		status = xmlnode_get_next_twin(status);
 	}
 	purple_debug_info("twitter", "we got %d messages\n", count);
+	
 	// reverse the list and append it
 	// only if id > last_msg_id
 	msg_list = g_list_reverse(msg_list);
 	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
 		cur_msg = it->data;
-		if(cur_msg->id > ta->last_msg_id) {
+		if(cur_msg->id > ta->last_msg_id) { //< should we still double check this? It's already being covered by since_id
+			gchar * fmt_txt = NULL;
+			
 			ta->last_msg_id = cur_msg->id;
-			gchar *fmt_txt = twitterim_format_symbols(cur_msg->msg_txt);
-			serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
-			g_free(fmt_txt);
+			if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
+				fmt_txt = twitterim_format_symbols(cur_msg->msg_txt);
+				serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+				g_free(fmt_txt);
+			}
 		}
 		g_free(cur_msg->msg_txt);
 	}
@@ -910,6 +947,7 @@ void twitterim_login(PurpleAccount *acct)
 	ta->last_msg_id = 0;
 	ta->last_msg_time = 0;
 	ta->conn_hash = g_hash_table_new(g_int_hash, g_int_equal);
+	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	acct->gc->proto_data = ta;
 	
 	// Create Proxy entity to transfer data to/from
@@ -959,6 +997,11 @@ void twitterim_close(PurpleConnection *gc)
 		ta->conn_hash = NULL;
 	}
 	
+	if(ta->sent_id_hash) {
+		g_hash_table_destroy(ta->sent_id_hash);
+		ta->sent_id_hash = NULL;
+	}
+	
 	if(ta->timeline_timer != -1) {
 		purple_timeout_remove(ta->timeline_timer);
 	}
@@ -981,30 +1024,52 @@ void twitterim_close(PurpleConnection *gc)
 
 gint twitterim_send_im_handler(TwitterProxyData * tpd, gpointer data)
 {
-	/*
-	gchar * http_data = NULL;
+	TwitterAccount * ta = tpd->ta;
+	gchar * http_data = NULL, *id_str = NULL;
 	gsize http_len = 0;
-	*/
+	xmlnode * top, *id_node;
 	
 	purple_debug_info("twitter", "send_im_handler\n");
 	
-	if(strstr(tpd->result_data, "HTTP/1.1 200 OK")) {
-		return 0;
-	} else {
+	if(strstr(tpd->result_data, "HTTP/1.1 200 OK") == NULL) {
 		return -1;
 	}
-	/*
+
+	// Are we going to check this?
+	if(!purple_account_get_bool(ta->account, "twitter_hide_myself", TRUE)) {
+		return 0;
+	}
+	
+	// Check for returned ID
 	http_data = strstr(tpd->result_data, "\r\n\r\n");
 	if(http_data == NULL) {
-		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet\n");
-		twitterim_free_tlr(tlr);
-		return 0;
+		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet for send_im_handler\n");
+		return -1;
 	}
 	http_data += 4;
 	http_len = http_data - tpd->result_data;
 	purple_debug_info("twitter", "http_data = #%s#\n", http_data);
-	*/
+	
+	// parse response XML
+	top = xmlnode_from_str(http_data, -1);
+	if(top == NULL) {
+		purple_debug_info("twitter", "failed to parse XML data\n");
+		return -1;
+	}
+	purple_debug_info("twitter", "successfully parse XML\n");
 
+	// ID
+	id_node = xmlnode_get_child(top, "id");
+	if(id_node) {
+		id_str = xmlnode_get_data_unescaped(id_node);
+	}
+	
+	// save it to account
+	g_hash_table_insert(ta->sent_id_hash, id_str, id_str);
+	
+	//hash_table supposed to free this for use
+	//g_free(id_str);
+	xmlnode_free(top);
 	return 0;
 }
 
@@ -1033,7 +1098,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
 	snprintf(tpd->post_data, TW_MAXBUFF,  "POST " TW_STATUS_UPDATE_PATH " HTTP/1.1\r\n"
 			"Host: %s\r\n"
-			"User-Agent: " TW_AGENT_SOURCE "\r\n"
+			"User-Agent: " TW_AGENT "\r\n"
 			"Acccept: */*\r\n"
 			"Connection: Close\r\n"
 			"Pragma: no-cache\r\n"
@@ -1045,8 +1110,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
 	len = strlen(tpd->post_data);
 	// FIXME: TW_MAXBUFF is incorrect here
-	strncat(tpd->post_data, "\r\n\r\nsource=" TW_AGENT_SOURCE "&status=", TW_MAXBUFF);
-	strncat(tpd->post_data, tmp_msg_txt, TW_MAXBUFF);
+	snprintf(tpd->post_data, TW_MAXBUFF, "\r\n\r\nstatus=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
 	tpd->handler = twitterim_send_im_handler;
 	// Request handler for specific request
 	tpd->handler_data = NULL;
@@ -1065,7 +1129,7 @@ static void plugin_init(PurplePlugin *plugin)
 	PurplePluginInfo *info = plugin->info;
 	PurplePluginProtocolInfo *prpl_info = info->extra_info;
 
-	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_self", TRUE);
+	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_myself", TRUE);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
