@@ -77,6 +77,7 @@
 #define TW_HOST "twitter.com"
 #define TW_PORT 443
 #define TW_AGENT "curl/7.18.0 (i486-pc-linux-gnu) libcurl/7.18.0 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/1.1"
+#define TW_AGENT_DESC_URL "http://microblog-purple.googlecode.com/files/mb-0.1.xml"
 #define TW_MAXBUFF 51200
 #define TW_MAX_RETRY 3
 #define TW_INTERVAL 60
@@ -982,6 +983,14 @@ void twitterim_login(PurpleAccount *acct)
 	twitterim_process_request(tpd);
 }
 
+static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointer user_data)
+{
+	PurpleSslConnection * ssl = (PurpleSslConnection *)value;
+	
+	purple_input_remove(ssl->inpa);
+	purple_ssl_close(ssl);
+}
+
 void twitterim_close(PurpleConnection *gc)
 {
 	TwitterAccount *ta = gc->proto_data;
@@ -991,8 +1000,7 @@ void twitterim_close(PurpleConnection *gc)
 	ta->state = PURPLE_DISCONNECTED;
 	
 	if(ta->conn_hash) {
-		// We should close all connection here, but there're chance that something might still working on it.
-		// So let it be there for a while
+		g_hash_table_foreach(ta->conn_hash, twitterim_close_ssl_connection, NULL);
 		g_hash_table_destroy(ta->conn_hash);
 		ta->conn_hash = NULL;
 	}
@@ -1104,7 +1112,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 			"Acccept: */*\r\n"
 			"X-Twitter-Client: " TW_AGENT_SOURCE "\r\n"
 			"X-Twitter-Client-Version: 0.1\r\n"
-			"X-Twitter-Client-Url: http://microblog-purple.googlecode.com/0.1.xml\r\n"
+			"X-Twitter-Client-Url: " TW_AGENT_DESC_URL "\r\n"
 			"Connection: Close\r\n"
 			"Pragma: no-cache\r\n"
 			"Content-Length: %d\r\n"
