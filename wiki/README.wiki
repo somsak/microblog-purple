@@ -1,0 +1,14 @@
+#labels Featured
+#general readme file for microblog-purple
+
+= Introduction =
+
+This is a plug-in for Pidgin or any other LibPurple base client like Adium or Finch. At least for now it works for Pidgin and Finch. I don't sure about Adium but hopefully someone will test it. Currently the plug-in works with Twitter only.
+
+So what's the different between this and Twitter IM? The answer is this would be kind of my personal replacement for Twitter IM, since I spent sometimes waiting for the service to come back and don't want to wait anymore. Besides, having it as plug-in give me some liberty to customize it in many ways. Like modifying the message to link to hashtags or twitter user (thanks @chanwit), or the ability to add special command to itself (/refresh, /downtime, /etc....). I plan to have this in "Chat mode" instead of normal conversation windows for people who easily annoy with constant incoming messages.
+
+= Building the code =
+== Windows build ==
+TBD
+== Linux build ==
+TBD
