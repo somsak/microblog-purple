@@ -76,7 +76,7 @@
 
 #define TW_HOST "twitter.com"
 #define TW_PORT 443
-#define TW_AGENT "curl/7.18.2"
+#define TW_AGENT "curl/7.18.0 (i486-pc-linux-gnu) libcurl/7.18.0 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/1.1"
 #define TW_MAXBUFF 51200
 #define TW_MAX_RETRY 3
 #define TW_INTERVAL 60
