@@ -166,6 +166,7 @@ typedef struct _TwitterBuddy {
 
 typedef struct _TwitterMsg {
 	unsigned long long id;
+	gchar * avatar_url;
 	gchar * from;
 	gchar * msg_txt;
 	time_t msg_time;
@@ -654,9 +655,9 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	gchar * http_data = NULL;
 	gsize http_len = 0;
 	TwitterTimeLineReq * tlr = data;
-	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name;
+	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
 	gint count = 0;
-	gchar * from, * msg_txt, *xml_str = NULL;
+	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL;
 	time_t msg_time_t, last_msg_time_t = 0;
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
@@ -736,6 +737,10 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			if(user_name) {
 				from = xmlnode_get_data_unescaped(user_name);
 			}
+			image_url = xmlnode_get_child(user, "profile_image_url");
+			if(user_name) {
+				avatar_url = xmlnode_get_data(image_url);
+			}
 		}
 
 		if(from && msg_txt) {
@@ -744,6 +749,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			purple_debug_info("twitter", "from = %s, msg = %s\n", from, msg_txt);
 			cur_msg->id = cur_id;
 			cur_msg->from = from; //< actually we don't need this for now
+			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
 			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
 				//TODO: adding reply link [<a href=\"reply\">reply</a>], and cast some magic here
@@ -752,6 +758,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s", from, msg_txt);
 			}
 			g_free(from);
+			g_free(avatar_url);
 			g_free(msg_txt);
 			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
 			
