@@ -858,9 +858,6 @@ void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
 			"User-Agent: " TW_AGENT "\r\n"
 			"Acccept: */*\r\n"
 			"Connection: Close\r\n"
-			"X-Twitter-Client: " TW_AGENT_SOURCE "\r\n"
-			"X-Twitter-Client-Version: 0.1\r\n"
-			"X-Twitter-Client-Url: http://microblog-purple.googlecode.com/0.1.xml\r\n"
 			"Authorization: Basic ", tlr->path, tlr->count, since_id, twitter_host);
 	len = strlen(tpd->post_data);
 	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
@@ -1105,6 +1102,9 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 			"Host: %s\r\n"
 			"User-Agent: " TW_AGENT "\r\n"
 			"Acccept: */*\r\n"
+			"X-Twitter-Client: " TW_AGENT_SOURCE "\r\n"
+			"X-Twitter-Client-Version: 0.1\r\n"
+			"X-Twitter-Client-Url: http://microblog-purple.googlecode.com/0.1.xml\r\n"
 			"Connection: Close\r\n"
 			"Pragma: no-cache\r\n"
 			"Content-Length: %d\r\n"
