@@ -37,7 +37,7 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##
 ##  SOURCES, OBJECTS
 ##
-CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS
+CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall
 C_SRC =	twitter.c util.c
 IMG_SRC = twitter16.png twitter22.png twitter48.png
 PURPLE_PROTOCOL_PIXMAP_DIR = $(PURPLE_INSTALL_DIR)/pixmaps/pidgin/protocols
@@ -74,6 +74,12 @@ $(OBJECTS): $(PURPLE_CONFIG_H)
 
 $(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+
+mb_http.o : mb_http.c
+	$(CC) -DUTEST $(INCLUDE_PATHS) $(CFLAGS) -c $<
+	
+mb_http_test: mb_http.o
+	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(DLL_LD_FLAGS) -o $@ 
 	
 pidgin-microblog.exe: $(TARGET).dll
 	makensis twitter.nsi
