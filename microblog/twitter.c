@@ -543,7 +543,7 @@ static void twitterim_process_request(gpointer data)
 	purple_debug_info("twitter", "after connect\n");
 	if(tpd->conn_data != NULL) {
 		// add this to internal hash table
-		tpd->conn_id = g_random_int();
+		tpd->conn_id = tpd->conn_data->fd;
 		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, &tpd->conn_data);
 		purple_debug_info("twitter", "connect (seems to) success\n");
 	}
@@ -1008,17 +1008,21 @@ void twitterim_close(PurpleConnection *gc)
 	ta->state = PURPLE_DISCONNECTED;
 	
 	if(ta->conn_hash) {
+		purple_debug_info("twitter", "closing all active connection\n");
 		g_hash_table_foreach(ta->conn_hash, twitterim_close_ssl_connection, NULL);
+		purple_debug_info("twitter", "destroying connection hash\n");
 		g_hash_table_destroy(ta->conn_hash);
 		ta->conn_hash = NULL;
 	}
 	
 	if(ta->sent_id_hash) {
+		purple_debug_info("twitter", "destroying sent_id hash\n");
 		g_hash_table_destroy(ta->sent_id_hash);
 		ta->sent_id_hash = NULL;
 	}
 	
 	if(ta->timeline_timer != -1) {
+		purple_debug_info("twitter", "removing timer\n");
 		purple_timeout_remove(ta->timeline_timer);
 	}
 	
@@ -1034,7 +1038,8 @@ void twitterim_close(PurpleConnection *gc)
 	//not sure which one of these lines is the right way to logout
 	//facebookim_post(fba, "apps.facebook.com", "/ajax/chat/settings.php", "visibility=false", NULL, NULL, FALSE);
 	//facebookim_post(fba, "www.facebook.com", "/logout.php", "confirm=1", NULL, NULL, FALSE);
-		
+	
+	purple_debug_info("twitter", "free up memory used for twitter account structure\n");
 	g_free(ta);
 }
 
