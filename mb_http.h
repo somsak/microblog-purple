@@ -150,6 +150,8 @@ extern void mb_http_data_set_path(MbHttpData * data, const gchar * path);
 */
 extern void mb_http_data_set_content(MbHttpData * data, const gchar * content);
 
+extern void mb_http_data_set_basicauth(MbHttpData * data, const gchar * user, const gchar * passwd);
+
 /*
 	Set/replace a header for HTTP connection to MbHttpData
 	
