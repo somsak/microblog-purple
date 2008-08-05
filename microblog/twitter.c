@@ -85,7 +85,8 @@
 #define TW_INIT_TWEET 15
 #define TW_STATUS_UPDATE_PATH "/statuses/update.xml"
 #define TW_STATUS_TXT_MAX 140
-#define TW_AGENT_SOURCE "libpurplemicroblogplugin"
+//#define TW_AGENT_SOURCE "libpurplemicroblogplugin"
+#define TW_AGENT_SOURCE "mbpidgin"
 
 #define TW_FORMAT_BUFFER 2048
 #define TW_FORMAT_NAME_MAX 100
@@ -675,6 +676,7 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
 	gboolean hide_myself, skip = FALSE;
+	gchar * name_color;
 	
 	purple_debug_info("twitter", "fetch_new_messages_handler\n");
 	
@@ -783,11 +785,18 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			if(skip) {
 				cur_msg->flag |= TW_MSGFLAG_SKIP;
 			}
+
 			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", from, username, from, msg_txt);
+				name_color = g_strdup("darkblue");
 			} else {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", from, username, from, msg_txt);
+				name_color = g_strdup("darkred");
 			}
+			if(purple_account_get_bool(ta->account, "twitter_reply_link", FALSE)) {
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", name_color, from, username, from, msg_txt);
+			} else {
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b>%s:</b></font> %s", name_color, from, msg_txt);
+			}
+			g_free(name_color);
 			g_free(from);
 			g_free(avatar_url);
 			g_free(msg_txt);
@@ -1143,6 +1152,9 @@ static void plugin_init(PurplePlugin *plugin)
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_myself", TRUE);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
+	option = purple_account_option_bool_new(_("Enable reply link"), "twitter_reply_link", FALSE);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
 	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
@@ -1155,6 +1167,7 @@ static void plugin_init(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
+
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
