@@ -784,9 +784,9 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 				cur_msg->flag |= TW_MSGFLAG_SKIP;
 			}
 			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s /<a href=\"tw:reply?to=%s&account=%s\">rep</a>", from, msg_txt, from, username);
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", from, username, from, msg_txt);
 			} else {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s /<a href=\"tw:reply?to=%s&account=%s\">rep</a>", from, msg_txt, from, username);
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", from, username, from, msg_txt);
 			}
 			g_free(from);
 			g_free(avatar_url);
