@@ -59,7 +59,6 @@ MbHttpData * mb_http_data_new(void)
 	data->port = 80;
 	
 	data->headers = g_hash_table_new_full(mb_strnocase_hash, mb_strnocase_equal, g_free, g_free);
-	//data->headers = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 	data->params = NULL;
 	data->params_len = 0;
 	data->content = NULL;
@@ -262,6 +261,7 @@ gboolean mb_http_data_rm_param(MbHttpData * data, const gchar * key)
 		p = found->data;
 		data->params_len -= strlen(p->key) + strlen(p->value) - 2;
 		data->params = g_list_delete_link(data->params, found);
+		mb_http_param_free(p);
 		return TRUE;
 	} else {
 		return FALSE;
@@ -509,13 +509,16 @@ static void print_hash_value(gpointer key, gpointer value, gpointer udata)
 
 int main(int argc, char * argv[])
 {
-	MbHttpData * hdata = mb_http_data_new();
+	MbHttpData * hdata = NULL;
 	GList * it;
 	char buf[512];
 	FILE * fp;
 	size_t retval;
 	
+	g_mem_set_vtable(glib_mem_profiler_table);
 	// URL
+
+	hdata = mb_http_data_new();
 	mb_http_data_set_url(hdata, "https://twitter.com/statuses/friends_timeline.xml");
 	printf("URL to set = %s\n", "https://twitter.com/statuses/friends_timeline.xml");
 	printf("host = %s\n", hdata->host);
@@ -523,6 +526,7 @@ int main(int argc, char * argv[])
 	printf("proto = %d\n", hdata->proto);
 	printf("path = %s\n", hdata->path);
 	
+
 	mb_http_data_set_url(hdata, "http://twitter.com/statuses/update.atom");
 	printf("URL to set = %s\n", "http://twitter.com/statuses/update.atom");
 	printf("host = %s\n", hdata->host);
@@ -538,8 +542,8 @@ int main(int argc, char * argv[])
 	printf("Header %s = %s\n", "Content-Length", mb_http_data_get_header(hdata, "X-Twitter-Client"));
 	printf("Header %s = %s\n", "XXX", mb_http_data_get_header(hdata, "XXX"));
 	
-	// param
 
+	// param
 	mb_http_data_add_param(hdata, "key1", "valuevalue1");
 	mb_http_data_add_param(hdata, "key2", "valuevalue1 bcadf");
 	mb_http_data_add_param(hdata, "key1", "valuevalue1");
@@ -552,8 +556,10 @@ int main(int argc, char * argv[])
 		
 		printf("Key = %s, Value = %s\n", p->key, p->value);
 	}
+
 	printf("Before remove\n");
 	mb_http_data_rm_param(hdata, "key1");
+
 	printf("After remove\n");
 	for(it = g_list_first(hdata->params); it; it = g_list_next(it)) {
 		MbHttpParam * p = it->data;
@@ -568,8 +574,8 @@ int main(int argc, char * argv[])
 	printf("packet_len = %d, strlen = %d\n", hdata->packet_len, strlen(hdata->packet));
 //	printf("%s\n", buf);
 	mb_http_data_free(hdata);
-
 	hdata =mb_http_data_new();
+
 	fp = fopen("input1-2.xml", "r");
 	while(!feof(fp)) {
 		retval = fread(buf, sizeof(char), sizeof(buf), fp);
@@ -581,6 +587,8 @@ int main(int argc, char * argv[])
 	printf("http content length = %d\n", hdata->content_len);
 	printf("http content = %s\n", hdata->content->str);
 	mb_http_data_free(hdata);
+
+	g_mem_profile();
 	
 	return 0;
 }
