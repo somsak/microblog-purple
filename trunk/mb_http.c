@@ -370,12 +370,12 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 			data->state = MB_HTTP_STATE_HEADER;
 			//break; //< purposely move to next step
 		case MB_HTTP_STATE_HEADER :	
-			printf("processing header\n");
+			//printf("processing header\n");
 			// at this state, no data at all, so this should be the very first chunk of data
 			// reallocate buffer if we don't have enough
 			cur_pos_len = data->cur_packet - data->packet;
 			if( (data->packet_len - cur_pos_len) < buf_len) {
-				printf("reallocate buffer\n");
+				//printf("reallocate buffer\n");
 				data->packet_len += (buf_len * 2);
 				data->packet = g_realloc(data->packet, data->packet_len);
 				data->cur_packet = data->packet + cur_pos_len;
@@ -385,23 +385,23 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 			
 			// decipher header
 			cur_pos = data->packet;
-			printf("initial_cur_pos = #%s#\n", cur_pos);
+			//printf("initial_cur_pos = #%s#\n", cur_pos);
 			while( (delim = strstr(cur_pos, "\r\n")) != NULL) {
 				if( strncmp(delim, "\r\n\r\n", 4) == 0 ) {
 					// we reach the content now
 					content_start = delim + 4;
-					printf("found content = %s\n", content_start);
+					//printf("found content = %s\n", content_start);
 				}
 				(*delim) = '\0';
-				printf("cur_pos = %s\n", cur_pos);
+				//printf("cur_pos = %s\n", cur_pos);
 				if(strncmp(cur_pos, "HTTP/1.1", 8) == 0) {
 					// first line
 					data->status = (gint)strtoul(&cur_pos[9], NULL, 10);
-					printf("data->status = %d\n", data->status);
+					//printf("data->status = %d\n", data->status);
 				} else {
 					//Header line
 					if( (key_value_sep = strchr(cur_pos, ':')) != NULL) {
-						printf("header line\n");
+						//printf("header line\n");
 						(*key_value_sep) = '\0';
 						key = cur_pos;
 						value = key_value_sep + 1;
@@ -458,6 +458,22 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 	}
 }
 
+void mb_http_data_set_basicauth(MbHttpData * data, const gchar * user, const gchar * passwd)
+{
+	gchar * merged_tmp, *encoded_tmp, *value_tmp;
+	gsize authen_len;
+	
+	authen_len = strlen(user) + strlen(passwd) + 1;
+	merged_tmp = g_strdup_printf("%s:%s", user, passwd);
+	encoded_tmp = purple_base64_encode((const guchar *)merged_tmp, authen_len);
+	//g_strlcpy(output, encoded_temp, len);
+	g_free(merged_tmp);
+	value_tmp = g_strdup_printf("Basic %s", encoded_tmp);
+	g_free(encoded_tmp);
+	mb_http_data_set_header(data, "Authorization", value_tmp);
+	g_free(value_tmp);
+}
+
 gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 {
 	
@@ -495,7 +511,7 @@ int main(int argc, char * argv[])
 {
 	MbHttpData * hdata = mb_http_data_new();
 	GList * it;
-	char buf[1024];
+	char buf[512];
 	FILE * fp;
 	size_t retval;
 	
@@ -517,6 +533,7 @@ int main(int argc, char * argv[])
 	// header
 	mb_http_data_set_header(hdata, "User-Agent", "CURL");
 	mb_http_data_set_header(hdata, "X-Twitter-Client", "1024");
+	mb_http_data_set_basicauth(hdata, "user1", "passwd1");
 	printf("Header %s = %s\n", "User-Agent", mb_http_data_get_header(hdata, "User-Agent"));
 	printf("Header %s = %s\n", "Content-Length", mb_http_data_get_header(hdata, "X-Twitter-Client"));
 	printf("Header %s = %s\n", "XXX", mb_http_data_get_header(hdata, "XXX"));
