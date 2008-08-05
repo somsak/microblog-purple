@@ -116,29 +116,34 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	// do not need to test, because the conversation window must be open before one can click
 	acct = purple_accounts_find(acct_id, "prpl-somsaks-twitter"); 
 	if (g_ascii_strcasecmp(proto, "tw")!=0) return FALSE;	
+	purple_debug_info("twitgin", "found account with libtwtter\n");	
 	/* tw:rep?to=sender */
 	if (!g_ascii_strcasecmp(cmd, "reply")) {
-		gchar *sender = g_hash_table_lookup(params, "to");		
+		purple_debug_info("twitgin", "found reply command\n");	
 		PurpleConversation *conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "twitter.com", acct);		
 		PidginConversation *gtkconv = PIDGIN_CONVERSATION(conv);
-		gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, "@", -1);
-		gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, sender, -1);
-		gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, " ", -1);		
+		gchar *sender = g_hash_table_lookup(params, "to");		
+		gchar *name_to_reply = g_strdup_printf("@%s ", sender);
+		gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, name_to_reply, -1);
+		// gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, "@", -1);
+		// gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, sender, -1);
+		// gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, " ", -1);		
 		gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
+		g_free(name_to_reply);
 		return TRUE;
 	}
 	return FALSE;
 }
 
 static PurpleNotifyUiOps twitgin_ops;
-static PurpleNotifyUiOps saved_ops;
+static void *(*saved_notify_uri)(const char *uri);
 
 static void * twitgin_notify_uri(const char *uri) {
 	if(strncmp(uri,"tw:",3)==0) {
-		purple_debug_info("twitgin", "notify hooked\n");	
+		purple_debug_info("twitgin", "notify hooked: uri=%s\n", uri);	
 		purple_got_protocol_handler_uri(uri);		
 	} else {
-		saved_ops.notify_uri(uri);
+		saved_notify_uri(uri);
 	}
 }
 
@@ -164,10 +169,13 @@ static gboolean plugin_load(PurplePlugin *plugin)
 		convs = convs->next;
 	}
 	
-	memcpy(&saved_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
+	//memcpy(&saved_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
+	
 	memcpy(&twitgin_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
+	saved_notify_uri = twitgin_ops.notify_uri;
 	twitgin_ops.notify_uri = twitgin_notify_uri;
 	purple_notify_set_ui_ops(&twitgin_ops);
+	purple_signal_connect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler), NULL);
 
 	return TRUE;
 }
@@ -178,8 +186,8 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 	
 	purple_debug_info("twitgin", "plugin unloading\n");
 	
-	if(saved_ops.notify_uri != purple_notify_get_ui_ops()->notify_uri) {
-		purple_debug_info("twitgin", "ui ops changed, cannot uninstall\n");
+	if(twitgin_notify_uri != purple_notify_get_ui_ops()->notify_uri) {
+		purple_debug_info("twitgin", "ui ops changed, cannot unloading\n");
 		return FALSE;
 	}	
 	
@@ -192,7 +200,10 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 		}
 		convs = convs->next;
 	}
-	purple_notify_set_ui_ops(&saved_ops);
+	
+	twitgin_ops.notify_uri = saved_notify_uri;
+	purple_notify_set_ui_ops(&twitgin_ops);
+	purple_signal_disconnect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler));
 	purple_debug_info("twitgin", "plugin unloaded\n");	
 	return TRUE;
 }
@@ -232,8 +243,7 @@ static PurplePluginInfo info =
 };
 
 static void 
-init_plugin(PurplePlugin *plugin) {
-	purple_signal_connect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler), NULL);		
+init_plugin(PurplePlugin *plugin) {	
 }
 
 PURPLE_INIT_PLUGIN(twitgin, init_plugin, info)
