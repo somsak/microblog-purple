@@ -125,9 +125,6 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 		gchar *sender = g_hash_table_lookup(params, "to");		
 		gchar *name_to_reply = g_strdup_printf("@%s ", sender);
 		gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, name_to_reply, -1);
-		// gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, "@", -1);
-		// gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, sender, -1);
-		// gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, " ", -1);		
 		gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
 		g_free(name_to_reply);
 		return TRUE;
@@ -168,8 +165,6 @@ static gboolean plugin_load(PurplePlugin *plugin)
 		}
 		convs = convs->next;
 	}
-	
-	//memcpy(&saved_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
 	
 	memcpy(&twitgin_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
 	saved_notify_uri = twitgin_ops.notify_uri;
