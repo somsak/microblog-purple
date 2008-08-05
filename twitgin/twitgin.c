@@ -131,13 +131,14 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 }
 
 static PurpleNotifyUiOps twitgin_ops;
+static PurpleNotifyUiOps saved_ops;
 
 static void * twitgin_notify_uri(const char *uri) {
 	if(strncmp(uri,"tw:",3)==0) {
-		purple_got_protocol_handler_uri(uri);
-		// purple_debug_info("twitgin", "notify hooked\n");	
+		purple_debug_info("twitgin", "notify hooked\n");	
+		purple_got_protocol_handler_uri(uri);		
 	} else {
-		pidgin_notify_get_ui_ops()->notify_uri(uri);
+		saved_ops.notify_uri(uri);
 	}
 }
 
@@ -163,7 +164,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 		convs = convs->next;
 	}
 	
-	memcpy(&twitgin_ops, pidgin_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
+	memcpy(&saved_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
+	memcpy(&twitgin_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
 	twitgin_ops.notify_uri = twitgin_notify_uri;
 	purple_notify_set_ui_ops(&twitgin_ops);
 
@@ -174,7 +176,13 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 {
 	GList *convs = purple_get_conversations();
 	
-	purple_debug_info("twitgin", "plugin unloaded\n");
+	purple_debug_info("twitgin", "plugin unloading\n");
+	
+	if(saved_ops.notify_uri != purple_notify_get_ui_ops()->notify_uri) {
+		purple_debug_info("twitgin", "ui ops changed, cannot uninstall\n");
+		return FALSE;
+	}	
+	
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
 
@@ -184,9 +192,8 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 		}
 		convs = convs->next;
 	}
-	
-	purple_notify_set_ui_ops(pidgin_notify_get_ui_ops());
-
+	purple_notify_set_ui_ops(&saved_ops);
+	purple_debug_info("twitgin", "plugin unloaded\n");	
 	return TRUE;
 }
 
