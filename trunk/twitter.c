@@ -784,10 +784,9 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 				cur_msg->flag |= TW_MSGFLAG_SKIP;
 			}
 			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
-				//TODO: adding reply link [<a href=\"reply\">reply</a>], and cast some magic here
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s", from, msg_txt);
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s /<a href=\"tw:reply?to=%s&account=%s\">rep</a>", from, msg_txt, from, username);
 			} else {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s", from, msg_txt);
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s /<a href=\"tw:reply?to=%s&account=%s\">rep</a>", from, msg_txt, from, username);
 			}
 			g_free(from);
 			g_free(avatar_url);
