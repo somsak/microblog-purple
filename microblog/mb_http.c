@@ -476,7 +476,22 @@ void mb_http_data_set_basicauth(MbHttpData * data, const gchar * user, const gch
 
 gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 {
+	gint retval;
+	gchar * buffer;
 	
+	buffer = g_malloc(MB_MAXBUFF);
+	retval = purple_ssl_read(ssl, buffer, MB_MAXBUFF);
+	if(retval > 0) {
+		mb_http_data_post_read(data, buffer, retval);
+	} else if(retval == 0) {
+		data->state = MB_HTTP_STATE_FINISHED;
+		if(data->packet) {
+			g_free(data->packet);
+		}
+	}
+	g_free(buffer);
+	
+	return retval;
 }
 
 gint mb_http_data_ssl_write(PurpleSslConnection * ssl, MbHttpData * data)
