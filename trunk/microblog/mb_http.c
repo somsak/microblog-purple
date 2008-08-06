@@ -59,6 +59,8 @@ MbHttpData * mb_http_data_new(void)
 	data->port = 80;
 	
 	data->headers = g_hash_table_new_full(mb_strnocase_hash, mb_strnocase_equal, g_free, g_free);
+	data->headers_len = 0;
+	data->fixed_headers = NULL;
 	data->params = NULL;
 	data->params_len = 0;
 	data->content = NULL;
@@ -82,6 +84,9 @@ void mb_http_data_free(MbHttpData * data) {
 
 	if(data->headers) {
 		g_hash_table_destroy(data->headers);
+	}
+	if(data->fixed_headers) {
+		g_free(data->fixed_headers);
 	}
 	data->headers_len = 0;
 	
@@ -210,6 +215,15 @@ gchar * mb_http_data_get_header(MbHttpData * data, const gchar * key)
 	return (gchar *)g_hash_table_lookup(data->headers, key);
 }
 
+void mb_http_data_set_fixed_headers(MbHttpData * data, const gchar * headers)
+{
+	if(data->fixed_headers) {
+		g_free(data->fixed_headers);
+	}
+	data->fixed_headers = g_strdup(headers);
+	data->headers_len += strlen(data->fixed_headers);
+}
+
 static gint mb_http_data_param_key_pred(gconstpointer a, gconstpointer key)
 {
 	const MbHttpParam * p = (const MbHttpParam *)a;
@@ -326,6 +340,10 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	data->cur_packet = cur_packet;
 	g_hash_table_foreach(data->headers, mb_http_data_header_assemble, data);
 	cur_packet = data->cur_packet;
+	if(data->fixed_headers) {
+		strcpy(cur_packet, data->fixed_headers);
+		cur_packet += strlen(data->fixed_headers);
+	}
 	
 	// content-length, if needed
 	if(data->content) {
@@ -334,7 +352,7 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	}
 	
 	// end header part
-	len = sprintf(cur_packet, "\r\n\r\n");
+	len = sprintf(cur_packet, "\r\n");
 	cur_packet += len;
 	
 	// Content part
@@ -552,6 +570,8 @@ int main(int argc, char * argv[])
 	// header
 	mb_http_data_set_header(hdata, "User-Agent", "CURL");
 	mb_http_data_set_header(hdata, "X-Twitter-Client", "1024");
+	mb_http_data_set_fixed_headers(hdata, "X-Twitter-Host: 12345678\r\n\
+X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	mb_http_data_set_basicauth(hdata, "user1", "passwd1");
 	printf("Header %s = %s\n", "User-Agent", mb_http_data_get_header(hdata, "User-Agent"));
 	printf("Header %s = %s\n", "Content-Length", mb_http_data_get_header(hdata, "X-Twitter-Client"));

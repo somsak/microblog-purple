@@ -67,6 +67,7 @@ typedef struct _MbHttpData {
 	// header part
 	GHashTable * headers;
 	gint headers_len;
+	gchar * fixed_headers;
 
 	// param part
 	GList * params;
@@ -106,6 +107,13 @@ extern MbHttpData * mb_http_data_new(void);
 */
 extern void mb_http_data_free(MbHttpData * data);
 
+/*
+	Read a Http data from SSL stream
+	
+	@param ssl purple ssl stream
+	@param data MbHttpData
+	@return number of read bytes
+*/
 extern gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data);
 
 /*
@@ -150,6 +158,13 @@ extern void mb_http_data_set_path(MbHttpData * data, const gchar * path);
 */
 extern void mb_http_data_set_content(MbHttpData * data, const gchar * content);
 
+/*
+	Set HTTP Basic authen with specified user/password into header
+	
+	@param data MbHttpData
+	@param user user name
+	@param passwd password
+*/
 extern void mb_http_data_set_basicauth(MbHttpData * data, const gchar * user, const gchar * passwd);
 
 /*
@@ -169,6 +184,15 @@ extern void mb_http_data_set_header(MbHttpData* data, const gchar * key, const g
 	@return internal buffer pointed to header string, or NULL if not found
 */
 extern gchar * mb_http_data_get_header(MbHttpData * data, const gchar * key);
+
+/*
+	Set a "fixed header" for write (outgoing) stream
+	
+	@param data MbHttpData
+	@param headers header to set
+	@note each line of header MUST ends with \r\n
+*/
+extern void mb_http_data_set_fixed_headers(MbHttpData * data, const gchar * headers);
 
 /*
 	Add new www-urlencoded parameter to data
