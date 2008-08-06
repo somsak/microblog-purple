@@ -545,7 +545,7 @@ static void twitterim_process_request(gpointer data)
 	if(tpd->conn_data != NULL) {
 		// add this to internal hash table
 		tpd->conn_id = tpd->conn_data->fd;
-		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, &tpd);
+		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, tpd);
 		purple_debug_info("twitter", "connect (seems to) success\n");
 	}
 }
@@ -999,7 +999,6 @@ static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointe
 	
 	purple_debug_info("twitter", "closing each connection\n");
 	if(tpd) {
-	/*
 		ssl = (PurpleSslConnection *)tpd->conn_data;
 		if(ssl) {
 			purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
@@ -1007,7 +1006,6 @@ static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointe
 			purple_debug_info("twitter", "closing SSL socket\n");
 			purple_ssl_close(ssl);
 		}
-	*/
 		twitterim_free_tpd(tpd);
 	}	
 }
@@ -1027,10 +1025,8 @@ void twitterim_close(PurpleConnection *gc)
 
 	if(ta->conn_hash) {
 		purple_debug_info("twitter", "closing all active connection\n");
-/*
 		g_hash_table_foreach(ta->conn_hash, twitterim_close_ssl_connection, NULL);
 		purple_debug_info("twitter", "destroying connection hash\n");
-*/
 		g_hash_table_destroy(ta->conn_hash);
 		ta->conn_hash = NULL;
 	}
