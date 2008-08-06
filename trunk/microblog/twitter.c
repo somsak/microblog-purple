@@ -518,12 +518,13 @@ static void twitterim_post_request(gpointer data, PurpleSslConnection * ssl, Pur
 
 void twitterim_connect_error(PurpleSslConnection *ssl, PurpleSslErrorType errortype, gpointer data)
 {
-	TwitterProxyData * tpa = data;
-	TwitterAccount *ta = tpa->ta;
+	TwitterProxyData * tpd = data;
+	TwitterAccount *ta = tpd->ta;
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
 	purple_connection_error(ta->gc, _("SSL Error"));
+	twitterim_free_tpd(tpd);
 }
 
 //
@@ -544,7 +545,7 @@ static void twitterim_process_request(gpointer data)
 	if(tpd->conn_data != NULL) {
 		// add this to internal hash table
 		tpd->conn_id = tpd->conn_data->fd;
-		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, &tpd->conn_data);
+		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, &tpd);
 		purple_debug_info("twitter", "connect (seems to) success\n");
 	}
 }
@@ -993,10 +994,22 @@ void twitterim_login(PurpleAccount *acct)
 
 static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointer user_data)
 {
-	PurpleSslConnection * ssl = (PurpleSslConnection *)value;
+	TwitterProxyData *tpd = value;
+	PurpleSslConnection * ssl = NULL;
 	
-	purple_input_remove(ssl->inpa);
-	purple_ssl_close(ssl);
+	purple_debug_info("twitter", "closing each connection\n");
+	if(tpd) {
+	/*
+		ssl = (PurpleSslConnection *)tpd->conn_data;
+		if(ssl) {
+			purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
+			purple_input_remove(ssl->inpa);
+			purple_debug_info("twitter", "closing SSL socket\n");
+			purple_ssl_close(ssl);
+		}
+	*/
+		twitterim_free_tpd(tpd);
+	}	
 }
 
 void twitterim_close(PurpleConnection *gc)
@@ -1007,10 +1020,17 @@ void twitterim_close(PurpleConnection *gc)
 	purple_debug_info("twitter", "twitterim_close\n");
 	ta->state = PURPLE_DISCONNECTED;
 	
+	if(ta->timeline_timer != -1) {
+		purple_debug_info("twitter", "removing timer\n");
+		purple_timeout_remove(ta->timeline_timer);
+	}
+
 	if(ta->conn_hash) {
 		purple_debug_info("twitter", "closing all active connection\n");
+/*
 		g_hash_table_foreach(ta->conn_hash, twitterim_close_ssl_connection, NULL);
 		purple_debug_info("twitter", "destroying connection hash\n");
+*/
 		g_hash_table_destroy(ta->conn_hash);
 		ta->conn_hash = NULL;
 	}
@@ -1021,23 +1041,8 @@ void twitterim_close(PurpleConnection *gc)
 		ta->sent_id_hash = NULL;
 	}
 	
-	if(ta->timeline_timer != -1) {
-		purple_debug_info("twitter", "removing timer\n");
-		purple_timeout_remove(ta->timeline_timer);
-	}
-	
 	ta->account = NULL;
 	ta->gc = NULL;
-	
-	/*
-	purple_timeout_remove(fba->buddy_list_timeout);
-	purple_timeout_remove(fba->friend_request_timeout);
-	purple_timeout_remove(fba->notifications_timeout);
-	*/
-	
-	//not sure which one of these lines is the right way to logout
-	//facebookim_post(fba, "apps.facebook.com", "/ajax/chat/settings.php", "visibility=false", NULL, NULL, FALSE);
-	//facebookim_post(fba, "www.facebook.com", "/logout.php", "confirm=1", NULL, NULL, FALSE);
 	
 	purple_debug_info("twitter", "free up memory used for twitter account structure\n");
 	g_free(ta);
