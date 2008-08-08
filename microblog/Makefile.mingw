@@ -82,7 +82,7 @@ mb_http.o : mb_http.c
 mb_http_test: mb_http.o
 	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(DLL_LD_FLAGS) -o $@ 
 	
-pidgin-microblog.exe: $(TARGET).dll
+pidgin-microblog.exe: $(TARGET).dll twitter.nsi
 	makensis twitter.nsi
 
 ##
