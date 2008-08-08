@@ -74,7 +74,33 @@
 #	include <netinet/in.h>
 #endif
 
-#include "twitter.h"
+#define TW_HOST "twitter.com"
+#define TW_PORT 443
+#define TW_AGENT "curl/7.18.0 (i486-pc-linux-gnu) libcurl/7.18.0 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/1.1"
+#define TW_AGENT_DESC_URL "http://microblog-purple.googlecode.com/files/mb-0.1.xml"
+#define TW_MAXBUFF 51200
+#define TW_MAX_RETRY 3
+#define TW_INTERVAL 60
+#define TW_STATUS_COUNT_MAX 200
+#define TW_INIT_TWEET 15
+#define TW_STATUS_UPDATE_PATH "/statuses/update.xml"
+#define TW_STATUS_TXT_MAX 140
+#define TW_AGENT_SOURCE "libpurplemicroblogplugin"
+
+#define TW_FORMAT_BUFFER 2048
+#define TW_FORMAT_NAME_MAX 100
+
+enum _TweetTimeLine {
+	TL_FRIENDS = 0,
+	TL_USER = 1,
+	TL_PUBLIC = 2,
+	TL_LAST,
+};
+
+enum _TweetProxyDataErrorActions {
+	TW_NOACTION = 0,
+	TW_RAISE_ERROR = 1,
+};
 
 const char * _TweetTimeLineNames[] = {
 	"twitter.com",
@@ -88,6 +114,68 @@ const char * _TweetTimeLinePaths[] = {
 	"/statuses/public_timeline.xml",
 };
 
+// Hold parameter for statuses request
+typedef struct _TwitterTimeLineReq {
+	const gchar * path;
+	const gchar * name;
+	gint timeline_id;
+	guint count;
+} TwitterTimeLineReq;
+
+typedef struct _TwitterAccount {
+	PurpleAccount *account;
+	PurpleConnection *gc;
+	gchar *login_challenge;
+	PurpleConnectionState state;
+    GHashTable * conn_hash;
+	guint timeline_timer;
+	unsigned long long last_msg_id;
+	time_t last_msg_time;
+	GHashTable * sent_id_hash;
+} TwitterAccount;
+
+struct _TwitterProxyData;
+
+// if handler return
+// 0 - Everything's ok
+// -1 - Requeue the whole process again
+typedef gint (*TwitterHandlerFunc)(struct _TwitterProxyData * , gpointer );
+
+typedef struct _TwitterProxyData {
+	TwitterAccount * ta;
+	gchar * error_message;
+	gchar * post_data;
+	gint retry;
+	gint max_retry;
+	gchar * result_data;
+	GList * result_list;
+	guint result_len;
+	TwitterHandlerFunc handler;
+	gpointer handler_data;
+	gint action_on_error;
+	PurpleSslConnection * conn_data;
+	gint conn_id;
+} TwitterProxyData;
+
+typedef struct _TwitterBuddy {
+	TwitterAccount *ta;
+	PurpleBuddy *buddy;
+	gint uid;
+	gchar *name;
+	gchar *status;
+	gchar *thumb_url;
+} TwitterBuddy;
+
+#define TW_MSGFLAG_SKIP 0x1
+
+typedef struct _TwitterMsg {
+	unsigned long long id;
+	gchar * avatar_url;
+	gchar * from;
+	gchar * msg_txt;
+	time_t msg_time;
+	gint flag;
+} TwitterMsg;
 
 static void twitterim_process_request(gpointer data);
 void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr);
@@ -429,13 +517,12 @@ static void twitterim_post_request(gpointer data, PurpleSslConnection * ssl, Pur
 
 void twitterim_connect_error(PurpleSslConnection *ssl, PurpleSslErrorType errortype, gpointer data)
 {
-	TwitterProxyData * tpd = data;
-	TwitterAccount *ta = tpd->ta;
+	TwitterProxyData * tpa = data;
+	TwitterAccount *ta = tpa->ta;
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
 	purple_connection_error(ta->gc, _("SSL Error"));
-	twitterim_free_tpd(tpd);
 }
 
 //
@@ -455,8 +542,8 @@ static void twitterim_process_request(gpointer data)
 	purple_debug_info("twitter", "after connect\n");
 	if(tpd->conn_data != NULL) {
 		// add this to internal hash table
-		tpd->conn_id = tpd->conn_data->fd;
-		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, tpd);
+		tpd->conn_id = g_random_int();
+		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, &tpd->conn_data);
 		purple_debug_info("twitter", "connect (seems to) success\n");
 	}
 }
@@ -588,7 +675,6 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
 	gboolean hide_myself, skip = FALSE;
-	gchar * name_color;
 	
 	purple_debug_info("twitter", "fetch_new_messages_handler\n");
 	
@@ -697,18 +783,12 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 			if(skip) {
 				cur_msg->flag |= TW_MSGFLAG_SKIP;
 			}
-
 			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
-				name_color = g_strdup("darkblue");
+				//TODO: adding reply link [<a href=\"reply\">reply</a>], and cast some magic here
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkblue\"><b>%s:</b></font> %s", from, msg_txt);
 			} else {
-				name_color = g_strdup("darkred");
+				cur_msg->msg_txt = g_strdup_printf("<font color=\"darkred\"><b>%s:</b></font> %s", from, msg_txt);
 			}
-			if(purple_account_get_bool(ta->account, "twitter_reply_link", FALSE)) {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", name_color, from, username, from, msg_txt);
-			} else {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b>%s:</b></font> %s", name_color, from, msg_txt);
-			}
-			g_free(name_color);
 			g_free(from);
 			g_free(avatar_url);
 			g_free(msg_txt);
@@ -905,20 +985,10 @@ void twitterim_login(PurpleAccount *acct)
 
 static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointer user_data)
 {
-	TwitterProxyData *tpd = value;
-	PurpleSslConnection * ssl = NULL;
+	PurpleSslConnection * ssl = (PurpleSslConnection *)value;
 	
-	purple_debug_info("twitter", "closing each connection\n");
-	if(tpd) {
-		ssl = (PurpleSslConnection *)tpd->conn_data;
-		if(ssl) {
-			purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
-			purple_input_remove(ssl->inpa);
-			purple_debug_info("twitter", "closing SSL socket\n");
-			purple_ssl_close(ssl);
-		}
-		twitterim_free_tpd(tpd);
-	}	
+	purple_input_remove(ssl->inpa);
+	purple_ssl_close(ssl);
 }
 
 void twitterim_close(PurpleConnection *gc)
@@ -929,29 +999,34 @@ void twitterim_close(PurpleConnection *gc)
 	purple_debug_info("twitter", "twitterim_close\n");
 	ta->state = PURPLE_DISCONNECTED;
 	
-	if(ta->timeline_timer != -1) {
-		purple_debug_info("twitter", "removing timer\n");
-		purple_timeout_remove(ta->timeline_timer);
-	}
-
 	if(ta->conn_hash) {
-		purple_debug_info("twitter", "closing all active connection\n");
 		g_hash_table_foreach(ta->conn_hash, twitterim_close_ssl_connection, NULL);
-		purple_debug_info("twitter", "destroying connection hash\n");
 		g_hash_table_destroy(ta->conn_hash);
 		ta->conn_hash = NULL;
 	}
 	
 	if(ta->sent_id_hash) {
-		purple_debug_info("twitter", "destroying sent_id hash\n");
 		g_hash_table_destroy(ta->sent_id_hash);
 		ta->sent_id_hash = NULL;
+	}
+	
+	if(ta->timeline_timer != -1) {
+		purple_timeout_remove(ta->timeline_timer);
 	}
 	
 	ta->account = NULL;
 	ta->gc = NULL;
 	
-	purple_debug_info("twitter", "free up memory used for twitter account structure\n");
+	/*
+	purple_timeout_remove(fba->buddy_list_timeout);
+	purple_timeout_remove(fba->friend_request_timeout);
+	purple_timeout_remove(fba->notifications_timeout);
+	*/
+	
+	//not sure which one of these lines is the right way to logout
+	//facebookim_post(fba, "apps.facebook.com", "/ajax/chat/settings.php", "visibility=false", NULL, NULL, FALSE);
+	//facebookim_post(fba, "www.facebook.com", "/logout.php", "confirm=1", NULL, NULL, FALSE);
+		
 	g_free(ta);
 }
 
@@ -1069,9 +1144,6 @@ static void plugin_init(PurplePlugin *plugin)
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_myself", TRUE);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_bool_new(_("Enable reply link"), "twitter_reply_link", FALSE);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
 	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
@@ -1084,7 +1156,6 @@ static void plugin_init(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-
 }
 
 gboolean plugin_load(PurplePlugin *plugin)

@@ -7,7 +7,7 @@ SetCompressor lzma
 ; todo: SetBrandingImage
 ; HM NIS Edit Wizard helper defines
 !define PRODUCT_NAME "pidgin-microblog"
-!define PRODUCT_VERSION "0.1.1"
+!define PRODUCT_VERSION "0.1"
 !define PRODUCT_PUBLISHER "Somsak Sriprayoonsakul"
 !define PRODUCT_WEB_SITE "http://microblog-purple.googlecode.com/"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
@@ -33,7 +33,7 @@ SetCompressor lzma
 !insertmacro MUI_PAGE_FINISH
 
 ; Uninstaller pages
-!insertmacro MUI_UNPAGE_INSTFILES
+;!insertmacro MUI_UNPAGE_INSTFILES
 
 ; Language files
 !insertmacro MUI_LANGUAGE "English"
@@ -66,10 +66,6 @@ Section "MainSection" SEC01
 		IfErrors dllbusy
 		SetOutPath "$PidginDir\plugins"
 	    File "libtwitter.dll"
-		writeUninstaller "$PidginDir\pidgin-microblog-uninst.exe"
-		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}  - Twitter support for Pidgin"
-		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
-		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "UninstallString" "$PidginDir\pidgin-microblog-uninst.exe"
 		Goto after_copy
 	dllbusy:
 		MessageBox MB_RETRYCANCEL "libtwitter.dll is busy. Please close Pidgin (including tray icon) and try again" IDCANCEL cancel
@@ -80,37 +76,7 @@ Section "MainSection" SEC01
 		
 SectionEnd
 
-Section "Uninstall"
-	Call un.GetPidginInstPath
-	
-	uninstall: 
-		Delete "$PidginDir\plugins\libtwitter.dll"
-		IfErrors dllbusy
-		Delete "$PidginDir\pidgin-microblog-uninst.exe"
-		DeleteRegKey "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}"
-		goto afteruninstall
-	dllbusy: 
-		MessageBox MB_RETRYCANCEL "libtwitter.dll is busy. Please close Pidgin (including tray icon) and try again" IDCANCEL cancel
-		Goto uninstall
-	cancel:
-		Abort "Uninstall of pidgin-microblog aborted"
-	afteruninstall:
-		
-SectionEnd
-
 Function GetPidginInstPath
-  Push $0
-  ReadRegStr $0 HKLM "Software\pidgin" ""
-	IfFileExists "$0\pidgin.exe" cont
-	ReadRegStr $0 HKCU "Software\pidgin" ""
-	IfFileExists "$0\pidgin.exe" cont
-		MessageBox MB_OK|MB_ICONINFORMATION "Failed to find Pidgin installation."
-		Abort "Failed to find Pidgin installation. Please install Pidgin first."
-  cont:
-	StrCpy $PidginDir $0
-FunctionEnd
-
-Function un.GetPidginInstPath
   Push $0
   ReadRegStr $0 HKLM "Software\pidgin" ""
 	IfFileExists "$0\pidgin.exe" cont
