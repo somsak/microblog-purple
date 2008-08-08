@@ -1,0 +1,17 @@
+Source: microblog-purple
+Priority: extra
+Maintainer: Sugree Phatanapherom <sugree@gmail.com>
+Build-Depends: debhelper (>= 5), pkg-config, libpurple-dev
+Standards-Version: 3.7.2
+Section: universe/net
+
+Package: pidgin-microblog
+Section: universe/net
+Architecture: any
+Depends: pidgin
+Description: Microblog, Twitter, plugins for pidgin
+ Microblog plugins for pidgin
+ .
+ This is a pidgin plugin which implements microblog, e.g., Twitter.
+ .
+ Homepage: http://code.google.com/p/microblog-purple/
