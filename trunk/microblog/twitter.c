@@ -941,12 +941,12 @@ static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointe
 	PurpleSslConnection * ssl = NULL;
 	int * fd = key;
 	
-	purple_debug_info("twitter", "closing each connection, fd = %d\n", (*fd));
+	purple_debug_info("twitter", "closing each connection, fd = %d, tpd->conn_id = %d\n", (*fd), tpd->conn_id);
 	if(tpd) {
 		ssl = (PurpleSslConnection *)tpd->conn_data;
 		if(ssl) {
 			purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
-			purple_input_remove(ssl->inpa);
+			//purple_input_remove(ssl->inpa);
 		}
 		purple_debug_info("twitter", "closing SSL socket\n");
 		twitterim_free_tpd(tpd);
