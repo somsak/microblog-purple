@@ -1,0 +1,1 @@
+Please see http://code.google.com/p/microblog-purple/wiki/README for more informations.
