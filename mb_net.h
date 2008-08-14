@@ -24,7 +24,6 @@ enum mb_error_action {
 struct _MbConnData;
 
 typedef gint (*MbHandlerFunc)(struct _MbConnData * , gpointer );
-typedef void (*MbHandlerDataFreeFunc)(gpointer);
 
 typedef struct _MbConnData {
 	MBAccount * ta;
@@ -35,32 +34,13 @@ typedef struct _MbConnData {
 	gint max_retry;
 	MbHandlerFunc handler;
 	gpointer handler_data;
-	MbHandlerDataFreeFunc handler_data_free;
 	gint action_on_error;
-	PurpleSslConnection * ssl_conn_data;
+	PurpleSslConnection * conn_data;
 	gboolean is_ssl;
 } MbConnData;
 
-/*
-	Create new connection data
-	
-	@param ta MbAccount instance
-	@param handler handler function for this request
-	@param is_ssl whether this is SSL or not
-	@return new MbConnData
-*/
 extern MbConnData * mb_conn_data_new(MBAccount * ta, MbHandlerFunc handler, gboolean is_ssl);
-
-/*
-	Free an instance of MbConnData
-	
-	@param conn_data conn_data to free
-	@note connection will be closed if it's still open
-*/
-extern void mb_conn_data_free(MbConnData * conn_data);
-
-extern void mb_conn_data_set_error(MbConnData * data, const gchar * msg, gint action);
-extern void mb_conn_data_set_retry(MbConnData * data, gint retry);
+extern void mb_conn_data_free(MbConnData * data);
 extern void mb_conn_process_request(MbConnData * data);
 extern void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond);
 extern void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond);

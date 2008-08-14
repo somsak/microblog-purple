@@ -454,7 +454,13 @@ void twitterim_connect_error(PurpleSslConnection *ssl, PurpleSslErrorType errort
 	//purple_connection_ssl_error(fba->gc, errortype);
 	purple_debug_info("twitter", "connect_error\n");
 	purple_connection_error(ta->gc, _("SSL Error"));
-	twitterim_free_tpd(tpd);
+	if(tpd->conn_data) {
+		purple_debug_info("twitter", "removing conn_data from hash table\n");
+		g_hash_table_remove(ta->conn_hash, tpd->conn_data);
+		purple_ssl_close(tpd->conn_data);
+		tpd->conn_data = NULL;
+	}
+	//twitterim_free_tpd(tpd);
 }
 
 //
@@ -492,6 +498,7 @@ static void twitterim_get_authen(TwitterAccount * ta, gchar * output, gsize len)
 	gsize authen_len;
 
 	//purple_url_encode can't be used more than once on the same line
+	purple_debug_info("twitter", "getting authentication bits\n");
 	username_temp = (const gchar *)purple_account_get_username(ta->account);
 	password_temp = (const gchar *)purple_account_get_password(ta->account);
 	authen_len = strlen(username_temp) + strlen(password_temp) + 1;
@@ -928,6 +935,7 @@ static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointe
 	TwitterProxyData *tpd = value;
 	PurpleSslConnection * ssl = NULL;
 	
+	purple_debug_info("twitter", "closing each connection\n");
 	if(tpd) {
 		ssl = (PurpleSslConnection *)tpd->conn_data;
 		if(ssl) {
@@ -1028,32 +1036,6 @@ gint twitterim_send_im_handler(TwitterProxyData * tpd, gpointer data)
 
 int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
-	TwitterAccount * ta = gc->proto_data;
-	MbConnData * conn_data = NULL;
-	gchar * post_data = NULL, * tmp_msg_txt = NULL;
-	
-	purple_debug_info("twitter", "send_im\n");
-
-	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
-	msg_len = strlen(message);
-	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
-	conn_data = mb_conn_data_new(ta, twitterim_send_im_handler, TRUE);
-	mb_conn_data_set_error(conn_data, "Sending status error", MB_ERROR_NOACTION);
-	mb_conn_data_set_retry(conn_data, 0);
-	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
-	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
-	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
-	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
-	post_data = g_malloc(TW_MAXBUFF);
-	snprintf(post_data, TW_MAXBUFF - len, "\r\n\r\nstatus=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
-	mb_http_data_set_content(conn_data->request, post_data);
-	
-	mb_conn_data_process_request(conn_data);
-	g_free(post_data);
-	g_free(tmp_msg_txt);
-	return msg_len;
-
-#if 0
 	TwitterProxyData *tpd = NULL;
 	TwitterAccount * ta = gc->proto_data;
 	gchar * tmp_msg_txt = NULL;
@@ -1100,7 +1082,6 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	g_free(tmp_msg_txt);
 
 	return msg_len;
-#endif
 }
 
 
