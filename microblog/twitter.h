@@ -98,7 +98,6 @@ typedef struct _TwitterProxyData {
 	gpointer handler_data;
 	gint action_on_error;
 	PurpleSslConnection * conn_data;
-	gint conn_id;
 } TwitterProxyData;
 
 typedef struct _TwitterBuddy {
