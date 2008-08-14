@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-#define TwitterAccount MBAccount //< for the sake of simplicity for now
+typedef TwitterAccount MBAccount; //< for the sake of simplicity for now
 
 enum mb_error_action {
 	MB_ERROR_NOACTION = 0,
