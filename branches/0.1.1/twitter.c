@@ -457,10 +457,10 @@ void twitterim_connect_error(PurpleSslConnection *ssl, PurpleSslErrorType errort
 	if(tpd->conn_data) {
 		purple_debug_info("twitter", "removing conn_data from hash table\n");
 		g_hash_table_remove(ta->conn_hash, tpd->conn_data);
-		purple_ssl_close(tpd->conn_data);
+		//purple_ssl_close(tpd->conn_data);
 		tpd->conn_data = NULL;
 	}
-	//twitterim_free_tpd(tpd);
+	twitterim_free_tpd(tpd);
 }
 
 //
