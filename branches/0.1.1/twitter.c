@@ -453,11 +453,11 @@ void twitterim_connect_error(PurpleSslConnection *ssl, PurpleSslErrorType errort
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
 	purple_debug_info("twitter", "connect_error\n");
-	purple_connection_error(ta->gc, _("SSL Error"));
+	purple_connection_error(ta->gc, _("Connection Error"));
 	if(tpd->conn_data) {
 		purple_debug_info("twitter", "removing conn_data from hash table\n");
 		g_hash_table_remove(ta->conn_hash, tpd->conn_data);
-		//purple_ssl_close(tpd->conn_data);
+		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
 		tpd->conn_data = NULL;
 	}
 	twitterim_free_tpd(tpd);
