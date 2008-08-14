@@ -123,7 +123,6 @@ static TwitterProxyData *  twitterim_new_proxy_data()
 	tpd->handler_data = NULL;
 	tpd->action_on_error = TW_RAISE_ERROR;
 	tpd->conn_data = NULL;
-	tpd->conn_id = -1;
 	return tpd;
 }
 
@@ -172,11 +171,9 @@ static void twitterim_free_tpd(TwitterProxyData * tpd)
 	
 	purple_debug_info("twitter", "checking for conn_data\n");
 	if(tpd->conn_data) {
-		purple_debug_info("twitter", "free_tpd: closing SSL connection for conn_data of fd = %d\n", tpd->conn_id);
 		purple_ssl_close(tpd->conn_data);
 		tpd->conn_data = NULL;
 	}
-	tpd->conn_id = -1;
 	purple_debug_info("twitter", "freeing tpd itself\n");
 	g_free(tpd);
 }
@@ -340,12 +337,10 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 			tpd->result_len = 0;
 			g_free(tmp_data);
 			
-			if(tpd->conn_id >= 0) {
-				g_hash_table_remove(ta->conn_hash, &tpd->conn_id);
-				purple_debug_info("twitter", "get_result: closing SSL connection for conn_data of fd = %d\n", tpd->conn_id);
+			if(tpd->conn_data) {
+				g_hash_table_remove(ta->conn_hash, tpd->conn_data);
 				purple_ssl_close(tpd->conn_data);
 				tpd->conn_data = NULL;
-				tpd->conn_id = -1;
 			}
 			tpd->retry += 1;
 			if(tpd->retry <= tpd->max_retry) {
@@ -379,12 +374,10 @@ static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, Purpl
 	} else if(res == 0) {
 		// we have all data
 		purple_input_remove(ssl->inpa);
-		if(tpd->conn_id >= 0) {
-			g_hash_table_remove(ta->conn_hash, &tpd->conn_id);
-			purple_debug_info("twitter", "get_result_2: closing SSL connection for conn_data of fd = %d\n", tpd->conn_id);
+		if(tpd->conn_data) {
+			g_hash_table_remove(ta->conn_hash, tpd->conn_data);
 			purple_ssl_close(tpd->conn_data);
 			tpd->conn_data = NULL;			
-			tpd->conn_id = -1;
 		}
 		call_handler = 1;
 		g_free(tmp_data);
@@ -436,10 +429,8 @@ static void twitterim_post_request(gpointer data, PurpleSslConnection * ssl, Pur
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info("twitter", "we're going to be disconnected?\n");
-		purple_debug_info("twitter", "post_request: closing SSL connection for conn_data of fd = %d\n", tpd->conn_id);
 		purple_ssl_close(ssl);
 		tpd->conn_data = NULL;
-		tpd->conn_id = -1;
 		return;
 	}
 	
@@ -482,9 +473,7 @@ static void twitterim_process_request(gpointer data)
 	purple_debug_info("twitter", "after connect\n");
 	if(tpd->conn_data != NULL) {
 		// add this to internal hash table
-		tpd->conn_id = tpd->conn_data->fd;
-		purple_debug_info("twitter", "got conn_id = %d\n", tpd->conn_id);
-		g_hash_table_insert(ta->conn_hash, &tpd->conn_id, tpd);
+		g_hash_table_insert(ta->conn_hash, tpd->conn_data, tpd);
 		purple_debug_info("twitter", "connect (seems to) success\n");
 	}
 }
@@ -897,7 +886,7 @@ void twitterim_login(PurpleAccount *acct)
 	ta->timeline_timer = -1;
 	ta->last_msg_id = 0;
 	ta->last_msg_time = 0;
-	ta->conn_hash = g_hash_table_new(g_int_hash, g_int_equal);
+	ta->conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
 	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	acct->gc->proto_data = ta;
 	
@@ -937,14 +926,12 @@ static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointe
 {
 	TwitterProxyData *tpd = value;
 	PurpleSslConnection * ssl = NULL;
-	int * fd = key;
 	
-	purple_debug_info("twitter", "closing each connection, fd = %d, tpd->conn_id = %d\n", (*fd), tpd->conn_id);
 	if(tpd) {
 		ssl = (PurpleSslConnection *)tpd->conn_data;
 		if(ssl) {
 			purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
-			//purple_input_remove(ssl->inpa);
+			purple_input_remove(ssl->inpa);
 		}
 		purple_debug_info("twitter", "closing SSL socket\n");
 		twitterim_free_tpd(tpd);
