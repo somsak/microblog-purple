@@ -14,6 +14,10 @@ extern "C" {
 
 #define TwitterAccount MBAccount //< for the sake of simplicity for now
 
+enum mb_error_action {
+	MB_ERROR_NOACTION = 0,
+};
+
 // if handler return
 // 0 - Everything's ok
 // -1 - Requeue the whole process again
@@ -33,12 +37,11 @@ typedef struct _MbConnData {
 	gint action_on_error;
 	PurpleSslConnection * conn_data;
 	gboolean is_ssl;
-	gint conn_id;
 } MbConnData;
 
-extern MbConnData * mb_conn_data_new(MBAccount * ta);
+extern MbConnData * mb_conn_data_new(MBAccount * ta, MbHandlerFunc handler, gboolean is_ssl);
 extern void mb_conn_data_free(MbConnData * data);
-extern void mb_conn_process_request(gpointer data);
+extern void mb_conn_process_request(MbConnData * data);
 extern void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond);
 extern void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond);
 extern void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType errortype, gpointer data);
