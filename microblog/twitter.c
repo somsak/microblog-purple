@@ -146,11 +146,9 @@ static void twitterim_free_tpd(TwitterProxyData * tpd)
 	purple_debug_info("twitter", "checking for result_list\n");
 	if(tpd->result_list) {
 		purple_debug_info("twitter", "freeing all result list\n");
-		it = tpd->result_list;
-		while(it) {
+		for(it = g_list_first(tpd->result_list); it; it = g_list_next(it)) {
 			purple_debug_info("twitter", "freeing data, %p\n", it->data);
 			g_free(it->data);
-			it = g_list_next(it);
 		}
 		purple_debug_info("twitter", "going to free the list\n");
 		g_list_free(tpd->result_list);
