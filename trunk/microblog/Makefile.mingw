@@ -9,6 +9,8 @@ include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
 TARGET = libtwitter
 TYPE = PLUGIN
+VERSION = 0.1.1
+SRCNAME = mbpurple
 
 # Static or Plugin...
 ifeq ($(TYPE),STATIC)
@@ -84,6 +86,12 @@ mb_http_test: mb_http.o
 	
 pidgin-microblog.exe: $(TARGET).dll twitter.nsi
 	makensis twitter.nsi
+
+dist: $(H_SRC) $(C_SRC) Makefile.mingw Makefile $(IMG_SRC)
+	rm -rf $(SRCNAME)-$(VERSION)
+	mkdir -p $(SRCNAME)-$(VERSION)
+	cp $^ $(SRCNAME)-$(VERSION)/
+	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/
 
 ##
 ## CLEAN RULES
