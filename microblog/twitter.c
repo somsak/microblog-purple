@@ -64,6 +64,7 @@
 #include <xmlnode.h>
 #include <version.h>
 
+#include "mb_net.h"
 #include "util.h"
 
 #ifdef _WIN32
@@ -452,8 +453,13 @@ void twitterim_connect_error(PurpleSslConnection *ssl, PurpleSslErrorType errort
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
-	purple_debug_info("twitter", "connect_error\n");
-	purple_connection_error(ta->gc, _("SSL Error"));
+	purple_connection_error(ta->gc, _("Connection Error"));
+	if(tpd->conn_data) {
+		purple_debug_info("twitter", "removing conn_data from hash table\n");
+		g_hash_table_remove(ta->conn_hash, tpd->conn_data);
+		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
+		tpd->conn_data = NULL;
+	}
 	twitterim_free_tpd(tpd);
 }
 
@@ -492,6 +498,7 @@ static void twitterim_get_authen(TwitterAccount * ta, gchar * output, gsize len)
 	gsize authen_len;
 
 	//purple_url_encode can't be used more than once on the same line
+	purple_debug_info("twitter", "getting authentication bits\n");
 	username_temp = (const gchar *)purple_account_get_username(ta->account);
 	password_temp = (const gchar *)purple_account_get_password(ta->account);
 	authen_len = strlen(username_temp) + strlen(password_temp) + 1;
@@ -928,6 +935,7 @@ static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointe
 	TwitterProxyData *tpd = value;
 	PurpleSslConnection * ssl = NULL;
 	
+	purple_debug_info("twitter", "closing each connection\n");
 	if(tpd) {
 		ssl = (PurpleSslConnection *)tpd->conn_data;
 		if(ssl) {
@@ -1031,6 +1039,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	TwitterAccount * ta = gc->proto_data;
 	MbConnData * conn_data = NULL;
 	gchar * post_data = NULL, * tmp_msg_txt = NULL;
+	gint msg_len;
 	
 	purple_debug_info("twitter", "send_im\n");
 
@@ -1052,55 +1061,6 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	g_free(post_data);
 	g_free(tmp_msg_txt);
 	return msg_len;
-
-#if 0
-	TwitterProxyData *tpd = NULL;
-	TwitterAccount * ta = gc->proto_data;
-	gchar * tmp_msg_txt = NULL;
-	gsize len, msg_len;
-	const char * twitter_host = NULL;
-
-	//convert html to plaintext, removing trailing spaces
-	purple_debug_info("twitter", "send_im\n");
-
-	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
-	msg_len = strlen(message);
-	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
-
-	tpd = twitterim_new_proxy_data();
-	tpd->ta = ta;
-	tpd->error_message = g_strdup("Sending status error");
-	// FIXME: Change this to user's option in maximum message fetching retry
-	tpd->max_retry = 0;
-	tpd->action_on_error = TW_NOACTION;
-	tpd->post_data = g_malloc(TW_MAXBUFF);
-	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
-	snprintf(tpd->post_data, TW_MAXBUFF,  "POST " TW_STATUS_UPDATE_PATH " HTTP/1.1\r\n"
-			"Host: %s\r\n"
-			"User-Agent: " TW_AGENT "\r\n"
-			"Acccept: */*\r\n"
-			"X-Twitter-Client: " TW_AGENT_SOURCE "\r\n"
-			"X-Twitter-Client-Version: 0.1\r\n"
-			"X-Twitter-Client-Url: " TW_AGENT_DESC_URL "\r\n"
-			"Connection: Close\r\n"
-			"Pragma: no-cache\r\n"
-			"Content-Length: %d\r\n"
-			"Content-Type: application/x-www-form-urlencoded\r\n"
-			"Authorization: Basic ", twitter_host, strlen(tmp_msg_txt) + strlen(TW_AGENT_SOURCE) + 15);
-	
-	len = strlen(tpd->post_data);
-	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
-	len = strlen(tpd->post_data);
-	snprintf(&tpd->post_data[len], TW_MAXBUFF - len, "\r\n\r\nstatus=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
-	tpd->handler = twitterim_send_im_handler;
-	// Request handler for specific request
-	tpd->handler_data = NULL;
-	purple_debug_info("twitter", "sending http data = %s\n", tpd->post_data);
-	twitterim_process_request(tpd);
-	g_free(tmp_msg_txt);
-
-	return msg_len;
-#endif
 }
 
 
