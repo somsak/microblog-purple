@@ -77,6 +77,16 @@
 
 #include "twitter.h"
 
+//static const char twitter_host[] = "twitter.com";
+static gint twitter_port = 443;
+static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
+"Accept: */*\r\n" \
+"X-Twitter-Client: " TW_AGENT_SOURCE "\r\n" \
+"X-Twitter-Client-Version: 0.1\r\n" \
+"X-Twitter-Client-Url: " TW_AGENT_DESC_URL "\r\n" \
+"Connection: Close\r\n" \
+"Pragma: no-cache\r\n";
+
 const char * _TweetTimeLineNames[] = {
 	"twitter.com",
 	"twuser",
@@ -981,38 +991,35 @@ void twitterim_close(PurpleConnection *gc)
 	g_free(ta);
 }
 
-gint twitterim_send_im_handler(TwitterProxyData * tpd, gpointer data)
+gint twitterim_send_im_handler(MbConnData * conn_data, gpointer data)
 {
-	TwitterAccount * ta = tpd->ta;
-	gchar * http_data = NULL, *id_str = NULL;
-	gsize http_len = 0;
+	MbAccount * ta = conn_data->ta;
+	MbHttpData * response = conn_data->response;
+	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
 	
 	purple_debug_info("twitter", "send_im_handler\n");
 	
-	if(strstr(tpd->result_data, "HTTP/1.1 200 OK") == NULL) {
+	if(response->status != 200) {
 		purple_debug_info("twitter", "http error\n");
-		purple_debug_info("twitter", "http data = #%s#\n", tpd->result_data);
+		purple_debug_info("twitter", "http data = #%s#\n", response->content->str);
 		return -1;
 	}
-
-	// Are we going to check this?
+	
 	if(!purple_account_get_bool(ta->account, "twitter_hide_myself", TRUE)) {
 		return 0;
 	}
 	
 	// Check for returned ID
-	http_data = strstr(tpd->result_data, "\r\n\r\n");
-	if(http_data == NULL) {
-		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet for send_im_handler\n");
+	if(response->content->len == 0) {
+		purple_debug_info("twitter", "can not find http data\n");
 		return -1;
 	}
-	http_data += 4;
-	http_len = http_data - tpd->result_data;
-	purple_debug_info("twitter", "http_data = #%s#\n", http_data);
+
+	purple_debug_info("twitter", "http_data = #%s#\n", response->content->str);
 	
 	// parse response XML
-	top = xmlnode_from_str(http_data, -1);
+	top = xmlnode_from_str(response->content->str, -1);
 	if(top == NULL) {
 		purple_debug_info("twitter", "failed to parse XML data\n");
 		return -1;
@@ -1040,24 +1047,33 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	MbConnData * conn_data = NULL;
 	gchar * post_data = NULL, * tmp_msg_txt = NULL;
 	gint msg_len;
+	const gchar * twitter_host;
 	
 	purple_debug_info("twitter", "send_im\n");
 
+	// prepare message to send
 	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
 	msg_len = strlen(message);
 	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
-	conn_data = mb_conn_data_new(ta, twitterim_send_im_handler, TRUE);
+	
+	// connection
+	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_send_im_handler, TRUE);
 	mb_conn_data_set_error(conn_data, "Sending status error", MB_ERROR_NOACTION);
 	mb_conn_data_set_retry(conn_data, 0);
+	conn_data->request->type = HTTP_POST;
+	conn_data->request->proto = MB_HTTPS;
+	mb_http_data_set_host(conn_data->request, twitter_host);
+	mb_http_data_set_path(conn_data->request, TW_STATUS_UPDATE_PATH);
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
 	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
 	post_data = g_malloc(TW_MAXBUFF);
-	snprintf(post_data, TW_MAXBUFF - len, "\r\n\r\nstatus=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
+	snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
 	mb_http_data_set_content(conn_data->request, post_data);
 	
-	mb_conn_data_process_request(conn_data);
+	mb_conn_process_request(conn_data);
 	g_free(post_data);
 	g_free(tmp_msg_txt);
 	return msg_len;

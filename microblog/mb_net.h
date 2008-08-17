@@ -12,10 +12,11 @@
 extern "C" {
 #endif
 
-typedef TwitterAccount MBAccount; //< for the sake of simplicity for now
+typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
 
 enum mb_error_action {
 	MB_ERROR_NOACTION = 0,
+	MB_ERROR_RAISE_ERROR = 1,
 };
 
 // if handler return
@@ -27,7 +28,9 @@ typedef gint (*MbHandlerFunc)(struct _MbConnData * , gpointer );
 typedef void (*MbHandlerDataFreeFunc)(gpointer);
 
 typedef struct _MbConnData {
-	MBAccount * ta;
+	gchar * host;
+	gint port;
+	MbAccount * ta;
 	gchar * error_message;
 	MbHttpData * request;
 	MbHttpData * response;
@@ -49,7 +52,7 @@ typedef struct _MbConnData {
 	@param is_ssl whether this is SSL or not
 	@return new MbConnData
 */
-extern MbConnData * mb_conn_data_new(MBAccount * ta, MbHandlerFunc handler, gboolean is_ssl);
+extern MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbHandlerFunc handler, gboolean is_ssl);
 
 /*
 	Free an instance of MbConnData

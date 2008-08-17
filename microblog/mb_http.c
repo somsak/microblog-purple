@@ -111,6 +111,53 @@ void mb_http_data_free(MbHttpData * data) {
 	g_free(data);
 }
 
+/*
+	Always remove entry in hash
+  */
+static gboolean hash_remover_always(gpointer key, gpointer value, gpointer data)
+{
+	return TRUE;
+}
+
+void mb_http_data_truncate(MbHttpData * data)
+{
+	data->headers_len = 0;
+	data->params_len = 0;
+	data->content_len = 0;
+	data->status = -1;
+	data->state = MB_HTTP_STATE_INIT;
+
+	if(data->headers) {
+		//g_hash_table_destroy(data->headers);
+		//data->headers = g_hash_table_new_full(mb_strnocase_hash, mb_strnocase_equal, g_free, g_free);
+		g_hash_table_foreach_remove(data->headers, hash_remover_always, NULL);
+	}
+	if(data->fixed_headers) {
+		g_free(data->fixed_headers);
+		data->fixed_headers = NULL;
+	}
+	if(data->params) {
+		GList * it;
+		MbHttpParam * p;
+		
+		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
+			p = it->data;
+			mb_http_param_free(p);
+		}
+		g_list_free(data->params);
+		data->params = NULL;
+	}
+	if(data->content) {
+		g_string_free(data->content, TRUE);
+		data->content = NULL;
+	}
+	if(data->packet) {
+		g_free(data->packet);
+		data->packet = NULL;
+		data->cur_packet = NULL;
+	}
+}
+
 void mb_http_data_set_url(MbHttpData * data, const gchar * url)
 {
 	gchar * tmp_url = g_strdup(url);
@@ -191,6 +238,14 @@ void mb_http_data_set_path(MbHttpData * data, const gchar * path)
 		g_free(data->path);
 	}
 	data->path = g_strdup(path);
+}
+
+void mb_http_data_set_host(MbHttpData * data, const gchar * host)
+{
+	if(data->host) {
+		g_free(data->host);
+	}
+	data->host = g_strdup(host);
 }
 
 void mb_http_data_set_content(MbHttpData * data, const gchar * content)
@@ -523,6 +578,7 @@ gint mb_http_data_ssl_write(PurpleSslConnection * ssl, MbHttpData * data)
 	retval = purple_ssl_write(ssl, data->cur_packet, MB_MAXBUFF);
 	if(retval >= data->packet_len) {
 		// everything is written
+		data->state = MB_HTTP_STATE_FINISHED;
 		g_free(data->packet);
 		data->cur_packet = data->packet = NULL;
 		data->packet_len = 0;
@@ -617,6 +673,20 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 		mb_http_data_post_read(hdata, buf, retval);
 	}
 	fclose(fp);
+	printf("http status = %d\n", hdata->status);
+	g_hash_table_foreach(hdata->headers, print_hash_value, NULL);
+	printf("http content length = %d\n", hdata->content_len);
+	printf("http content = %s\n", hdata->content->str);
+	
+	// test again, after truncated
+	mb_http_data_truncate(hdata);
+	fp = fopen("input1-2.xml", "r");
+	while(!feof(fp)) {
+		retval = fread(buf, sizeof(char), sizeof(buf), fp);
+		mb_http_data_post_read(hdata, buf, retval);
+	}
+	fclose(fp);
+
 	printf("http status = %d\n", hdata->status);
 	g_hash_table_foreach(hdata->headers, print_hash_value, NULL);
 	printf("http content length = %d\n", hdata->content_len);
