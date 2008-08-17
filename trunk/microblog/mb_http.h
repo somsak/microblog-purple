@@ -151,6 +151,14 @@ extern void mb_http_data_get_url(MbHttpData * data, gchar * url, gint url_len);
 extern void mb_http_data_set_path(MbHttpData * data, const gchar * path);
 
 /*
+	Set host for current MbHttpData
+	
+	@param data MbHttpData
+	@param path new host to set, if old path exists, it'll be freed first.
+*/
+extern void mb_http_data_set_host(MbHttpData * data, const gchar * host);
+
+/*
 	Set content into current content. If content already exist, it'll truncate the string first
 	
 	@param data MbHttpData
@@ -221,8 +229,12 @@ extern const gchar * mb_http_data_find_param(MbHttpData * data, const gchar * ke
 */
 extern gboolean mb_http_data_rm_param(MbHttpData * data, const gchar * key);
 
-// generic utility
-extern gboolean mb_http_data_ok(MbHttpData * data);
+/*
+	Truncate all data and re-initialize everything back to zero
+	
+	@param data MbHttpData
+*/
+extern void mb_http_data_truncate(MbHttpData * data);
 
 #ifdef __cplusplus
 }
