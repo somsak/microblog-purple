@@ -420,9 +420,7 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	
 	// Content part
 	if(data->content) {
-		//memcpy(cur_packet, data->content->str, data->content->len);
-		snprintf(cur_packet, data->content->len, "%s", data->content->str);
-		//cur_packet[data->content->len] = '\0';
+		sprintf(cur_packet, "%s", data->content->str);
 		cur_packet += len;
 	}
 	
