@@ -299,6 +299,14 @@ void mb_http_data_add_param(MbHttpData * data, const gchar * key, const gchar * 
 	data->params_len += strlen(p->key) + strlen(p->value) + 2; //< length of key + value + "& or ?"
 }
 
+void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value)
+{
+	char tmp[100];
+	
+	snprintf(tmp, sizeof(tmp), "%d", value);
+	mb_http_data_add_param(data, key, tmp);
+}
+
 const gchar * mb_http_data_find_param(MbHttpData * data, const gchar * key)
 {
 	GList * retval;
@@ -362,9 +370,9 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 
 	// assemble all headers
 	// I don't sure how hash table will behave, so assemple everything should be better
-	packet_len = data->headers_len + data->params_len + strlen(data->path) + 100; //< for \r\n\r\n and GET|POST and other stuff
+	packet_len = data->headers_len + data->params_len + strlen(data->path) + 10; //< for \r\n\r\n and GET|POST and other stuff
 	if(data->content) {
-		packet_len += data->content->len;
+		packet_len += data->content->len + 1;
 	}
 	data->packet = g_malloc0(packet_len);
 	cur_packet = data->packet;
@@ -412,7 +420,9 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	
 	// Content part
 	if(data->content) {
-		sprintf(cur_packet, "%s", data->content->str);
+		//memcpy(cur_packet, data->content->str, data->content->len);
+		snprintf(cur_packet, data->content->len, "%s", data->content->str);
+		//cur_packet[data->content->len] = '\0';
 		cur_packet += len;
 	}
 	
@@ -552,8 +562,9 @@ gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 	gint retval;
 	gchar * buffer;
 	
-	buffer = g_malloc(MB_MAXBUFF);
+	buffer = g_malloc0(MB_MAXBUFF + 1);
 	retval = purple_ssl_read(ssl, buffer, MB_MAXBUFF);
+	purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
 	if(retval > 0) {
 		mb_http_data_post_read(data, buffer, retval);
 	} else if(retval == 0) {
@@ -575,6 +586,7 @@ gint mb_http_data_ssl_write(PurpleSslConnection * ssl, MbHttpData * data)
 		mb_http_data_prepare_write(data);
 	}
 	// Do SSL-write, then update cur_packet to proper position. Exit if already exceeding the length
+	//purple_debug_info(MB_HTTPID, "http data to send = #%s#\n", data->packet);
 	retval = purple_ssl_write(ssl, data->cur_packet, MB_MAXBUFF);
 	if(retval >= data->packet_len) {
 		// everything is written
@@ -638,6 +650,7 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	mb_http_data_add_param(hdata, "key1", "valuevalue1");
 	mb_http_data_add_param(hdata, "key2", "valuevalue1 bcadf");
 	mb_http_data_add_param(hdata, "key1", "valuevalue1");
+	mb_http_data_add_param_int(hdata, "keyint1", 1000000);
 	
 	printf("Param %s = %s\n", "key1", mb_http_data_find_param(hdata, "key1"));
 	printf("Param %s = %s\n", "key2", mb_http_data_find_param(hdata, "key2"));

@@ -37,9 +37,11 @@ void mb_conn_data_free(MbConnData * conn_data)
 	if(conn_data->error_message) {
 		g_free(conn_data->error_message);
 	}
+	/*
 	if(conn_data->handler_data) {
 		conn_data->handler_data_free(conn_data->handler_data);
 	}
+	*/
 	if(conn_data->ssl_conn_data) {
 		purple_ssl_close(conn_data->ssl_conn_data);
 	}
@@ -64,16 +66,16 @@ void mb_conn_process_request(MbConnData * data)
 {
 	MbAccount *ta = data->ta;
 	
-	purple_debug_info("twitter", "mb_conn_process_request\n");
+	purple_debug_info(MB_NET, "mb_conn_process_request\n");
 
-	purple_debug_info("twitter", "connecting to %s on port %hd\n", data->host, data->port);
+	purple_debug_info(MB_NET, "connecting to %s on port %hd\n", data->host, data->port);
 	if(data->is_ssl) {
 		data->ssl_conn_data = purple_ssl_connect(ta->account, data->host, data->port, mb_conn_post_ssl_request, mb_conn_connect_ssl_error, data);
-		purple_debug_info("twitter", "after connect\n");
+		purple_debug_info(MB_NET, "after connect\n");
 		if(data->ssl_conn_data != NULL) {
 			// add this to internal hash table
-			g_hash_table_insert(ta->conn_hash, data->ssl_conn_data, data);
-			purple_debug_info("twitter", "connect (seems to) success\n");
+			g_hash_table_insert(ta->ssl_conn_hash, data->ssl_conn_data, data);
+			purple_debug_info(MB_NET, "connect (seems to) success\n");
 		}
 	} else {
 		// Ignore for now
@@ -86,17 +88,17 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 	MbAccount *ta = conn_data->ta;
 	gint res;
 	
-	purple_debug_info("twitter", "mb_conn_post_ssl_request\n");
+	purple_debug_info(MB_NET, "mb_conn_post_ssl_request\n");
 	
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
-		purple_debug_info("twitter", "we're going to be disconnected?\n");
+		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
 		purple_ssl_close(ssl);
 		conn_data->ssl_conn_data = NULL;
 		return;
 	}
 	
-	purple_debug_info("twitter", "mb_conn posting request\n");
+	purple_debug_info(MB_NET, "mb_conn posting request\n");
 	while(conn_data->request->state != MB_HTTP_STATE_FINISHED) {
 		res = mb_http_data_ssl_write(ssl, conn_data->request);
 		if(res <= 0) break;
@@ -104,7 +106,7 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 	
 	if(res <= 0) {
 		// error connecting
-		purple_debug_info("twitter", "error while posting request %s\n", conn_data->request->content->str);
+		purple_debug_info(MB_NET, "error while posting request %s\n", conn_data->request->content->str);
 		purple_connection_error(ta->gc, _(conn_data->error_message));
 	} else {
 		purple_ssl_input_add(ssl, mb_conn_get_ssl_result, conn_data);
@@ -120,8 +122,8 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	//purple_connection_ssl_error(fba->gc, errortype);
 	purple_connection_error(ta->gc, _("Connection Error"));
 	if(conn_data->ssl_conn_data) {
-		purple_debug_info("twitter", "removing conn_data from hash table\n");
-		g_hash_table_remove(ta->conn_hash, conn_data->ssl_conn_data);
+		purple_debug_info(MB_NET, "removing conn_data from hash table\n");
+		g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
 		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
 		conn_data->ssl_conn_data = NULL;
 	}
@@ -137,9 +139,9 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 	gint res, cur_error;
 	gboolean call_handler = FALSE;
 	
-	purple_debug_info("twitter", "mb_conn_get_ssl_result\n");
+	purple_debug_info(MB_NET, "mb_conn_get_ssl_result\n");
 
-	//purple_debug_info("twitter", "new cur_result_pos = %d\n", tpd->cur_result_pos);
+	//purple_debug_info(MB_NET, "new cur_result_pos = %d\n", tpd->cur_result_pos);
 	res = mb_http_data_ssl_read(ssl, response);
 	cur_error = errno;
 	if( (res < 0) && (cur_error != EAGAIN) ) {
@@ -150,7 +152,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 			// All is fine, proceed to handler
 			purple_input_remove(ssl->inpa);
 			if(conn_data->ssl_conn_data) {
-				g_hash_table_remove(ta->conn_hash, conn_data->ssl_conn_data);
+				g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
 				purple_ssl_close(conn_data->ssl_conn_data);
 				conn_data->ssl_conn_data = NULL;			
 			}
@@ -160,7 +162,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 			mb_http_data_truncate(response);
 
 			if(conn_data->ssl_conn_data) {
-				g_hash_table_remove(ta->conn_hash, conn_data->ssl_conn_data);
+				g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
 				purple_ssl_close(conn_data->ssl_conn_data);
 				conn_data->ssl_conn_data = NULL;
 			}
@@ -168,11 +170,11 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 			if(conn_data->retry <= conn_data->max_retry) {
 				// process request will reconnect and exit
 				// FIXME: should we add it to timeout here instead?
-				purple_debug_info("twitter", "retrying request\n");
+				purple_debug_info(MB_NET, "retrying request\n");
 				mb_conn_process_request(conn_data);
 				return;
 			} else {
-				purple_debug_info("twitter", "error while reading data, res = %d, retry = %d, error = %s\n", res, conn_data->retry, strerror(cur_error));
+				purple_debug_info(MB_NET, "error while reading data, res = %d, retry = %d, error = %s\n", res, conn_data->retry, strerror(cur_error));
 				if(conn_data->action_on_error == MB_ERROR_RAISE_ERROR) {
 					purple_connection_error(ta->gc, _(conn_data->error_message));
 				}
@@ -183,9 +185,9 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 			(res > 0) )
 	{
 		if(res < 0) {
-			purple_debug_info("twitter", "error with EAGAIN\n");
+			purple_debug_info(MB_NET, "error with EAGAIN\n");
 		} else {
-			purple_debug_info("twitter", "need more data\n");
+			purple_debug_info(MB_NET, "need more data\n");
 		}
 		// do we need to remove and add here? I just want to make sure everything's working
 		purple_input_remove(ssl->inpa);
@@ -194,7 +196,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 		// we have all data
 		purple_input_remove(ssl->inpa);
 		if(conn_data->ssl_conn_data) {
-			g_hash_table_remove(ta->conn_hash, conn_data->ssl_conn_data);
+			g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
 			purple_ssl_close(conn_data->ssl_conn_data);
 			conn_data->ssl_conn_data = NULL;			
 		}
@@ -204,7 +206,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 	// Call handler here
 	if(call_handler) {
 		// reassemble data
-		purple_debug_info("twitter", "got whole response = %s\n", response->content->str);
+		purple_debug_info(MB_NET, "got whole response = %s\n", response->content->str);
 		if(conn_data->handler) {
 			gint retval;
 			

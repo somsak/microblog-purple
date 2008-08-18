@@ -100,7 +100,6 @@ const char * _TweetTimeLinePaths[] = {
 };
 
 
-static void twitterim_process_request(gpointer data);
 void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr);
 
 static TwitterBuddy * twitterim_new_buddy()
@@ -115,78 +114,6 @@ static TwitterBuddy * twitterim_new_buddy()
 	buddy->thumb_url = NULL;
 	
 	return buddy;
-}
-
-static TwitterProxyData *  twitterim_new_proxy_data()
-{
-	TwitterProxyData * tpd;
-	
-	tpd = g_new(TwitterProxyData, 1);
-	tpd->ta = NULL;
-	tpd->error_message = NULL;
-	tpd->post_data = NULL;
-	tpd->retry = 0;
-	tpd->max_retry = TW_MAX_RETRY;
-	tpd->result_data = NULL;
-	tpd->result_list = NULL;
-	tpd->result_len = 0;
-	tpd->handler = NULL;
-	tpd->handler_data = NULL;
-	tpd->action_on_error = TW_RAISE_ERROR;
-	tpd->conn_data = NULL;
-	return tpd;
-}
-
-static void twitterim_free_tpd(TwitterProxyData * tpd)
-{
-	GList * it;
-
-	purple_debug_info("twitter", "checking for error message\n");
-	if(tpd->error_message) {
-		purple_debug_info("twitter", "freeing error message\n");
-		g_free(tpd->error_message);
-	}
-	
-	purple_debug_info("twitter", "checking for post data\n");
-	if(tpd->post_data) {
-		purple_debug_info("twitter", "freeing post data\n");
-		g_free(tpd->post_data);
-	}
-	
-	purple_debug_info("twitter", "checking for result_list\n");
-	if(tpd->result_list) {
-		purple_debug_info("twitter", "freeing all result list\n");
-		for(it = g_list_first(tpd->result_list); it; it = g_list_next(it)) {
-			purple_debug_info("twitter", "freeing data, %p\n", it->data);
-			g_free(it->data);
-		}
-		purple_debug_info("twitter", "going to free the list\n");
-		g_list_free(tpd->result_list);
-		purple_debug_info("twitter", "finished freeing all result list\n");
-		tpd->result_list = NULL;
-	}
-	
-	purple_debug_info("twitter", "checking for result_data\n");
-	if(tpd->result_data) {
-		purple_debug_info("twitter", "freeing all result data\n");
-		g_free(tpd->result_data);
-		tpd->result_data = NULL;
-		tpd->result_len = 0;
-	}
-	
-	purple_debug_info("twitter", "checking for handler_data\n");
-	if(tpd->handler_data) {
-		purple_debug_info("twitter", "freeing all handler data\n");
-		g_free(tpd->handler_data);
-	}
-	
-	purple_debug_info("twitter", "checking for conn_data\n");
-	if(tpd->conn_data) {
-		purple_ssl_close(tpd->conn_data);
-		tpd->conn_data = NULL;
-	}
-	purple_debug_info("twitter", "freeing tpd itself\n");
-	g_free(tpd);
 }
 
 static TwitterTimeLineReq * twitterim_new_tlr()
@@ -243,280 +170,6 @@ GList * twitterim_statuses(PurpleAccount *acct)
 	types = g_list_append(types, status);
 	
 	return types;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Check for validity of a http data
-// @return 0 for success, otherwise -1
-static gint check_http_data(TwitterProxyData * tpd)
-{
-	GList * it;
-	char * next, * cur, *end_ptr;
-	char * http_data_start = NULL;
-	char oldval;
-	gchar * tmp_data;
-	gsize data_size = 0, received_size;
-	
-	purple_debug_info("twitter", "check_http_data\n");
-	// accumulate data
-	tmp_data = g_malloc(tpd->result_len + 1);
-	tmp_data[0] = '\0';
-	for(it = g_list_first(tpd->result_list); it; it = g_list_next(it)) {
-		strcat(tmp_data, it->data);
-	}
-	purple_debug_info("twitter", "packet to check for = %s\n", tmp_data);
-	// Now check for http validity
-	http_data_start = strstr(tmp_data, "\r\n\r\n");
-	if(http_data_start == NULL) {
-		g_free(tmp_data);
-		return -1;
-	}
-	cur = tmp_data;
-	received_size = tpd->result_len - (http_data_start - cur) - 4 * sizeof(char);
-	purple_debug_info("twitter", "received data size = %d\n", received_size);
-	next = strstr(cur, "\r\n");
-	if(next == NULL) {
-		g_free(tmp_data);
-		return -1;
-	}
-	while( (cur < http_data_start) && next) {
-		oldval = (*next);
-		(*next) = '\0';
-		purple_debug_info("twitter", "http line = %s\n", cur);
-		purple_debug_info("twitter", "len = %d\n", next - cur);
-		if(strncasecmp(cur, "Content-Length:", 15) == 0) {
-			purple_debug_info("twitter", "found content-length: %s\n", &cur[15]);
-			data_size = strtoul(&cur[15], &end_ptr, 10);
-			(*next) = oldval;
-			break;
-		}
-		(*next) = oldval;
-		cur = next + 2 * sizeof(char);
-		next = strstr(cur, "\r\n");
-	}
-	purple_debug_info("twitter", "content-length = %d, received_size = %d\n", data_size, received_size);
-	g_free(tmp_data);
-	if(data_size) {
-		if(data_size == received_size) {
-			return 0;
-		}
-	}
-	return -1;
-}
-
-//
-// Get result (read) from posted request
-//
-// This function read rfc822 HTTP header, then check for its validity,
-// If not (yet) valid, continue in reading queue until everything's read
-// If valid but failed (bad gateway, etc), go back to "process_request" step and redo everything until max_retry
-// If success, call requets handler
-static void twitterim_get_result(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond)
-{
-	TwitterProxyData * tpd = data;
-	TwitterAccount *ta = tpd->ta;
-	gint res, call_handler = 0, cur_error;
-	GList * it;
-	gchar * tmp_data;
-	
-	purple_debug_info("twitter", "twitterim_get_result\n");
-
-	//purple_debug_info("twitter", "new cur_result_pos = %d\n", tpd->cur_result_pos);
-	tmp_data = g_malloc(TW_MAXBUFF + 1);
-	res = purple_ssl_read(ssl, tmp_data, TW_MAXBUFF);
-	cur_error = errno;
-	if( (res < 0) && (cur_error != EAGAIN) ) {
-		// error connecting or reading
-		purple_input_remove(ssl->inpa);
-		// First, chec if we already have everythings
-		if(check_http_data(tpd) == 0) {
-			// All is fine, proceed to handler
-			call_handler = 1;
-			g_free(tmp_data);
-		} else {
-			// Free all data
-			if(tpd->result_data) g_free(tpd->result_data);
-			tpd->result_data = NULL;
-			if(tpd->result_list) {
-				for(it = g_list_first(tpd->result_list); it; it = g_list_next(it)) {
-					g_free(it->data);
-				}
-				g_list_free(tpd->result_list);
-				tpd->result_list = NULL;
-			}
-			tpd->result_len = 0;
-			g_free(tmp_data);
-			
-			if(tpd->conn_data) {
-				g_hash_table_remove(ta->conn_hash, tpd->conn_data);
-				purple_ssl_close(tpd->conn_data);
-				tpd->conn_data = NULL;
-			}
-			tpd->retry += 1;
-			if(tpd->retry <= tpd->max_retry) {
-				// process request will reconnect and exit
-				// FIXME: should we add it to timeout here instead?
-				purple_debug_info("twitter", "retrying request\n");
-				twitterim_process_request(data);
-				return;
-			} else {
-				purple_debug_info("twitter", "error while reading data, res = %d, retry = %d, error = %s\n", res, tpd->retry, strerror(cur_error));
-				if(tpd->action_on_error == TW_RAISE_ERROR) {
-					purple_connection_error(ta->gc, _(tpd->error_message));
-				}
-				twitterim_free_tpd(tpd);
-			}
-		}
-	} else if( (res < 0) && (cur_error == EAGAIN)) {
-		purple_debug_info("twitter", "error with EAGAIN\n");
-		purple_input_remove(ssl->inpa);
-		purple_ssl_input_add(ssl, twitterim_get_result, tpd);
-		g_free(tmp_data);
-	} else if(res > 0) {
-		// Need more data
-		purple_input_remove(ssl->inpa);
-		tmp_data[res] = '\0';
-		purple_debug_info("twitter", "got partial result: len = %d\n", res);
-		purple_debug_info("twitter", "got partial response = %s\n", tmp_data);
-		tpd->result_list = g_list_append(tpd->result_list, tmp_data);
-		tpd->result_len += res;
-		purple_ssl_input_add(ssl, twitterim_get_result, tpd);
-	} else if(res == 0) {
-		// we have all data
-		purple_input_remove(ssl->inpa);
-		if(tpd->conn_data) {
-			g_hash_table_remove(ta->conn_hash, tpd->conn_data);
-			purple_ssl_close(tpd->conn_data);
-			tpd->conn_data = NULL;			
-		}
-		call_handler = 1;
-		g_free(tmp_data);
-	} // global if else for connection state
-	// Call handler here
-	
-	if(call_handler) {
-		// reassemble data
-		tpd->result_data = g_malloc(tpd->result_len + 1);
-		tpd->result_data[0] = '\0';
-		for(it = g_list_first(tpd->result_list); it; it = g_list_next(it)) {
-			strcat(tpd->result_data, it->data);
-			g_free(it->data);
-		}
-		// Free old data
-		g_list_free(tpd->result_list);
-		tpd->result_list = NULL;
-		purple_debug_info("twitter", "got whole response = %s\n", tpd->result_data);
-		if(tpd->handler) {
-			gint retval;
-			
-			retval = tpd->handler(tpd, tpd->handler_data);
-			if(retval == 0) {
-				// Everything's good. Free data structure and go-on with usual works
-				twitterim_free_tpd(tpd);
-			} else if(retval == -1) {
-				// Something's wrong. Requeue the whole process
-				if(tpd->result_data) g_free(tpd->result_data);
-				tpd->result_len = 0;
-				tpd->result_data = NULL;
-				twitterim_process_request(data);
-			}
-		} // if handler != NULL
-	}
-}
-
-//
-// Post (write) the request
-// FIXME: Actually we should add input for write, but SSL function has no "write" condition yet
-static void twitterim_post_request(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond)
-{
-	TwitterProxyData * tpd = data;
-	TwitterAccount *ta = tpd->ta;
-	gchar *post_data = tpd->post_data;
-	gint res;
-	
-	purple_debug_info("twitter", "twitterim_post_request\n");
-	
-	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
-	{
-		purple_debug_info("twitter", "we're going to be disconnected?\n");
-		purple_ssl_close(ssl);
-		tpd->conn_data = NULL;
-		return;
-	}
-	
-	purple_debug_info("twitter", "posting request %s\n", post_data);
-	res = purple_ssl_write(ssl, post_data, strlen(post_data) + 1);
-	
-	if(res <= 0) {
-		// error connecting
-		purple_debug_info("twitter", "error while posting request %s\n", post_data);
-		purple_connection_error(ta->gc, _(tpd->error_message));
-	}
-	purple_ssl_input_add(ssl, twitterim_get_result, tpd);
-}
-
-void twitterim_connect_error(PurpleSslConnection *ssl, PurpleSslErrorType errortype, gpointer data)
-{
-	TwitterProxyData * tpd = data;
-	TwitterAccount *ta = tpd->ta;
-
-	//ssl error is after 2.3.0
-	//purple_connection_ssl_error(fba->gc, errortype);
-	purple_connection_error(ta->gc, _("Connection Error"));
-	if(tpd->conn_data) {
-		purple_debug_info("twitter", "removing conn_data from hash table\n");
-		g_hash_table_remove(ta->conn_hash, tpd->conn_data);
-		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
-		tpd->conn_data = NULL;
-	}
-	twitterim_free_tpd(tpd);
-}
-
-//
-// Start the processing of any twitter actions (REST)
-// 
-static void twitterim_process_request(gpointer data)
-{
-	TwitterProxyData * tpd = data;
-	TwitterAccount *ta = tpd->ta;
-	const char * twitter_host = NULL;
-	
-	purple_debug_info("twitter", "twitterim_process_request\n");
-
-	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
-	purple_debug_info("twitter", "connecting to %s on port %hd\n", twitter_host, TW_PORT);
-	tpd->conn_data = purple_ssl_connect(ta->account, twitter_host, TW_PORT, twitterim_post_request, twitterim_connect_error, tpd);
-	purple_debug_info("twitter", "after connect\n");
-	if(tpd->conn_data != NULL) {
-		// add this to internal hash table
-		g_hash_table_insert(ta->conn_hash, tpd->conn_data, tpd);
-		purple_debug_info("twitter", "connect (seems to) success\n");
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//
-// Add authentication bits into HTTP header
-// Currently, twitter only support basic authen, so we only have basic authen here
-//
-static void twitterim_get_authen(TwitterAccount * ta, gchar * output, gsize len)
-{
-	const gchar * username_temp, *password_temp;
-	gchar *merged_temp, *encoded_temp;
-	gsize authen_len;
-
-	//purple_url_encode can't be used more than once on the same line
-	purple_debug_info("twitter", "getting authentication bits\n");
-	username_temp = (const gchar *)purple_account_get_username(ta->account);
-	password_temp = (const gchar *)purple_account_get_password(ta->account);
-	authen_len = strlen(username_temp) + strlen(password_temp) + 1;
-	merged_temp = g_strdup_printf("%s:%s", username_temp, password_temp);
-	encoded_temp = purple_base64_encode((const guchar *)merged_temp, authen_len);
-	g_strlcpy(output, encoded_temp, len);
-	g_free(merged_temp);
-	g_free(encoded_temp);
 }
 
 void twitterim_buddy_free(PurpleBuddy * buddy)
@@ -608,12 +261,11 @@ static void twitterim_list_sent_id_hash(gpointer key, gpointer value, gpointer u
 }
 #endif
 
-gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
+gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 {
-	TwitterAccount * ta = tpd->ta;
+	MbAccount * ta = conn_data->ta;
 	const gchar * username;
-	gchar * http_data = NULL;
-	gsize http_len = 0;
+	MbHttpData * response = conn_data->response;
 	TwitterTimeLineReq * tlr = data;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
 	gint count = 0;
@@ -629,30 +281,26 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 	
 	purple_debug_info("twitter", "received result from %s\n", tlr->path);
 	
-	purple_debug_info("twitter", "%s\n", tpd->result_data);
-	
 	username = (const gchar *)purple_account_get_username(ta->account);
-	if(strstr(tpd->result_data, "HTTP/1.1 304")) {
+	
+	if(response->status == HTTP_MOVED_TEMPORARILY) {
 		// no new messages
 		twitterim_free_tlr(tlr);
 		purple_debug_info("twitter", "no new messages\n");
 		return 0;
 	}
-	if(strstr(tpd->result_data, "HTTP/1.1 200") == NULL) {
+	if(response->status != HTTP_OK) {
 		twitterim_free_tlr(tlr);
 		purple_debug_info("twitter", "something's wrong with the message\n");
 		return 0; //< should we return -1 instead?
 	}
-	http_data = strstr(tpd->result_data, "\r\n\r\n");
-	if(http_data == NULL) {
-		purple_debug_info("twitter", "can not find new-line separater in rfc822 packet\n");
+	if(response->content_len == 0) {
+		purple_debug_info("twitter", "no data to parse\n");
 		twitterim_free_tlr(tlr);
 		return 0;
 	}
-	http_data += 4;
-	http_len = http_data - tpd->result_data;
-	purple_debug_info("twitter", "http_data = #%s#\n", http_data);
-	top = xmlnode_from_str(http_data, -1);
+	purple_debug_info("twitter", "http_data = #%s#\n", response->content->str);
+	top = xmlnode_from_str(response->content->str, -1);
 	if(top == NULL) {
 		purple_debug_info("twitter", "failed to parse XML data\n");
 		twitterim_free_tlr(tlr);
@@ -788,43 +436,37 @@ gint twitterim_fetch_new_messages_handler(TwitterProxyData * tpd, gpointer data)
 //
 // Check for new message periodically
 //
-void twitterim_fetch_new_messages(TwitterAccount * ta, TwitterTimeLineReq * tlr)
+void twitterim_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 {
-	TwitterProxyData * tpd;
-	gsize len;
-	gchar since_id[TW_MAXBUFF] = "";
+	MbConnData * conn_data;
+	MbHttpData * request;
 	const char * twitter_host = NULL;
 	
 	purple_debug_info("twitter", "fetch_new_messages\n");
 
-	// Look for friend list, then have each populate the data themself.
-
-
-	tpd = twitterim_new_proxy_data();
-	tpd->ta = ta;
-	tpd->error_message = g_strdup("Fetching status error");
-	// FIXME: Change this to user's option in maximum message fetching retry
-	tpd->max_retry = 0;
-	tpd->action_on_error = TW_NOACTION;
-	tpd->post_data = g_malloc(TW_MAXBUFF);
-	if(ta->last_msg_id > 0) {
-		snprintf(since_id, sizeof(since_id), "&since_id=%lld", ta->last_msg_id);
-	}
 	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
-	snprintf(tpd->post_data, TW_MAXBUFF, "GET %s?count=%d%s HTTP/1.1\r\n"
-			"Host: %s\r\n"
-			"User-Agent: " TW_AGENT "\r\n"
-			"Acccept: */*\r\n"
-			"Connection: Close\r\n"
-			"Authorization: Basic ", tlr->path, tlr->count, since_id, twitter_host);
-	len = strlen(tpd->post_data);
-	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
-	len = strlen(tpd->post_data);
-	strncat(tpd->post_data, "\r\n\r\n", TW_MAXBUFF - len);
-	tpd->handler = twitterim_fetch_new_messages_handler;
-	// Request handler for specific request
-	tpd->handler_data = tlr;
-	twitterim_process_request(tpd);
+	
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_fetch_new_messages_handler, TRUE);
+	mb_conn_data_set_error(conn_data, "Fetching status error", MB_ERROR_NOACTION);
+	mb_conn_data_set_retry(conn_data, 0);
+	
+	request = conn_data->request;
+	request->type = HTTP_GET;
+	request->port = twitter_port;
+	request->proto = MB_HTTPS;
+
+	mb_http_data_set_host(request, twitter_host);
+	mb_http_data_set_path(request, tlr->path);
+	mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
+	mb_http_data_set_header(request, "Host", twitter_host);
+	mb_http_data_set_basicauth(request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
+	mb_http_data_add_param_int(request, "count", tlr->count);
+	if(ta->last_msg_id > 0) {
+		mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
+	}
+	conn_data->handler_data = tlr;
+	
+	mb_conn_process_request(conn_data);
 }
 
 //
@@ -868,101 +510,67 @@ void twitterim_get_buddy_list(TwitterAccount * ta)
 	// We'll deal with public and users timeline later
 }
 
-gint twitterim_verify_authen(TwitterProxyData * tpd, gpointer data)
+gint twitterim_verify_authen(MbConnData * conn_data, gpointer data)
 {
-	if(strstr(tpd->result_data, "HTTP/1.1 200 OK")) {
-		gint interval = purple_account_get_int(tpd->ta->account, "twitter_msg_refresh_rate", TW_INTERVAL);
+	MbAccount * ta = conn_data->ta;
+	MbHttpData * response = conn_data->response;
+	
+	if(response->status == HTTP_OK) {
+		gint interval = purple_account_get_int(conn_data->ta->account, "twitter_msg_refresh_rate", TW_INTERVAL);
 		
-		purple_connection_set_state(tpd->ta->gc, PURPLE_CONNECTED);
-		tpd->ta->state = PURPLE_CONNECTED;
-		twitterim_get_buddy_list(tpd->ta);
+		purple_connection_set_state(conn_data->ta->gc, PURPLE_CONNECTED);
+		conn_data->ta->state = PURPLE_CONNECTED;
+		twitterim_get_buddy_list(conn_data->ta);
 		purple_debug_info("twitter", "refresh interval = %d\n", interval);
-		tpd->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitterim_fetch_all_new_messages, tpd->ta);
-		twitterim_fetch_first_new_messages(tpd->ta);
+		conn_data->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitterim_fetch_all_new_messages, conn_data->ta);
+		twitterim_fetch_first_new_messages(conn_data->ta);
 		return 0;
 	} else {
-		purple_connection_set_state(tpd->ta->gc, PURPLE_DISCONNECTED);
-		tpd->ta->state = PURPLE_DISCONNECTED;
+		purple_connection_set_state(conn_data->ta->gc, PURPLE_DISCONNECTED);
+		conn_data->ta->state = PURPLE_DISCONNECTED;
+		purple_connection_error(ta->gc, _("Authentication error"));
 		return -1;
 	}
 }
 
-void twitterim_login(PurpleAccount *acct)
+MbAccount * mb_account_new(PurpleAccount * acct)
 {
-	TwitterAccount *ta = NULL;
-	TwitterProxyData * tpd = NULL;
-	gsize len;
-	const char * twitter_host = NULL;
+	MbAccount * ta = NULL;
 	
-	purple_debug_info("twitter", "twitterim_login\n");
-	
-	// Create account data
-	ta = g_new(TwitterAccount, 1);
+	purple_debug_info("twitter", "mb_account_new\n");
+	ta = g_new(MbAccount, 1);
 	ta->account = acct;
 	ta->gc = acct->gc;
 	ta->state = PURPLE_CONNECTING;
 	ta->timeline_timer = -1;
 	ta->last_msg_id = 0;
 	ta->last_msg_time = 0;
-	ta->conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
+	ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
 	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	acct->gc->proto_data = ta;
-	
-	// Create Proxy entity to transfer data to/from
-	tpd = twitterim_new_proxy_data();
-	tpd->ta = ta;
-	tpd->error_message = g_strdup("Authentication Error");
-	// FIXME: Change this to user's option in maximum log-on retry
-	tpd->max_retry = purple_account_get_int(acct, "twitter_global_retry", TW_MAX_RETRY);
-
-	// Prepare data for this process
-	purple_debug_info("twitter", "initialize authentication data\n");
-	
-	tpd->post_data = g_malloc(TW_MAXBUFF);
-	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
-	snprintf(tpd->post_data, TW_MAXBUFF, "GET /account/verify_credentials.xml HTTP/1.0\r\n"
-								"Host: %s\r\n"
-								"User-Agent: " TW_AGENT "\r\n"
-								"Acccept: */*\r\n"
-								"Connection: Keep-Alive\r\n"
-								"Authorization: Basic ", twitter_host);
-	len = strlen(tpd->post_data);
-	twitterim_get_authen(ta, tpd->post_data + len, TW_MAXBUFF - len);
-	len = strlen(tpd->post_data);
-	strncat(tpd->post_data, "\r\n\r\n", TW_MAXBUFF - len);
-	tpd->handler = twitterim_verify_authen;
-	tpd->handler_data = NULL;
-	
-	purple_debug_info("twitter", "authentication verification data is\n");
-	purple_debug_info("twitter", "%s", tpd->post_data);
-	// End data preparation
-	
-	twitterim_process_request(tpd);
+	return ta;
 }
 
-static void twitterim_close_ssl_connection(gpointer key, gpointer value, gpointer user_data)
+static void mb_close_ssl_connection(gpointer key, gpointer value, gpointer user_data)
 {
-	TwitterProxyData *tpd = value;
+	MbConnData *conn_data = value;
 	PurpleSslConnection * ssl = NULL;
 	
 	purple_debug_info("twitter", "closing each connection\n");
-	if(tpd) {
-		ssl = (PurpleSslConnection *)tpd->conn_data;
+	if(conn_data) {
+		ssl = (PurpleSslConnection *)conn_data->ssl_conn_data;
 		if(ssl) {
 			purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
 			purple_input_remove(ssl->inpa);
 		}
 		purple_debug_info("twitter", "closing SSL socket\n");
-		twitterim_free_tpd(tpd);
+		mb_conn_data_free(conn_data);
 	}	
 }
 
-void twitterim_close(PurpleConnection *gc)
-{
-	TwitterAccount *ta = gc->proto_data;
-	gc->proto_data = NULL;
-	
-	purple_debug_info("twitter", "twitterim_close\n");
+void mb_account_free(MbAccount * ta)
+{	
+	purple_debug_info("twitter", "mb_account_free\n");
 	ta->state = PURPLE_DISCONNECTED;
 	
 	if(ta->timeline_timer != -1) {
@@ -970,12 +578,13 @@ void twitterim_close(PurpleConnection *gc)
 		purple_timeout_remove(ta->timeline_timer);
 	}
 
-	if(ta->conn_hash) {
+	// new SSL-base connection hash
+	if(ta->ssl_conn_hash) {
 		purple_debug_info("twitter", "closing all active connection\n");
-		g_hash_table_foreach(ta->conn_hash, twitterim_close_ssl_connection, NULL);
+		g_hash_table_foreach(ta->ssl_conn_hash, mb_close_ssl_connection, NULL);
 		purple_debug_info("twitter", "destroying connection hash\n");
-		g_hash_table_destroy(ta->conn_hash);
-		ta->conn_hash = NULL;
+		g_hash_table_destroy(ta->ssl_conn_hash);
+		ta->ssl_conn_hash = NULL;
 	}
 	
 	if(ta->sent_id_hash) {
@@ -987,8 +596,44 @@ void twitterim_close(PurpleConnection *gc)
 	ta->account = NULL;
 	ta->gc = NULL;
 	
-	purple_debug_info("twitter", "free up memory used for twitter account structure\n");
+	purple_debug_info("twitter", "free up memory used for microblog account structure\n");
 	g_free(ta);
+}
+
+void twitterim_login(PurpleAccount *acct)
+{
+	MbAccount *ta = NULL;
+	MbConnData * conn_data = NULL;
+	const char * twitter_host = NULL;
+	
+	purple_debug_info("twitter", "twitterim_login\n");
+	
+	// Create account data
+	ta = mb_account_new(acct);
+	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_verify_authen, TRUE);
+	mb_conn_data_set_error(conn_data, "Authentication error", MB_ERROR_RAISE_ERROR);
+	mb_conn_data_set_retry(conn_data, purple_account_get_int(acct, "twitter_global_retry", TW_MAX_RETRY));
+	
+	conn_data->request->type = HTTP_GET;
+	conn_data->request->proto = MB_HTTPS;
+	mb_http_data_set_host(conn_data->request, twitter_host);
+	mb_http_data_set_path(conn_data->request, "/account/verify_credentials.xml");
+	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
+	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
+	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
+
+	mb_conn_process_request(conn_data);
+}
+
+
+void twitterim_close(PurpleConnection *gc)
+{
+	MbAccount *ta = gc->proto_data;
+
+	purple_debug_info("twitter", "twitterim_close\n");
+	mb_account_free(ta);
+	gc->proto_data = NULL;
 }
 
 gint twitterim_send_im_handler(MbConnData * conn_data, gpointer data)
