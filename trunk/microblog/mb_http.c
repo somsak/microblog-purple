@@ -370,9 +370,9 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 
 	// assemble all headers
 	// I don't sure how hash table will behave, so assemple everything should be better
-	packet_len = data->headers_len + data->params_len + strlen(data->path) + 10; //< for \r\n\r\n and GET|POST and other stuff
+	packet_len = data->headers_len + data->params_len + strlen(data->path) + 100; //< for \r\n\r\n and GET|POST and other stuff
 	if(data->content) {
-		packet_len += data->content->len + 1;
+		packet_len += data->content->len;
 	}
 	data->packet = g_malloc0(packet_len);
 	cur_packet = data->packet;
@@ -420,7 +420,7 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	
 	// Content part
 	if(data->content) {
-		sprintf(cur_packet, "%s", data->content->str);
+		len = sprintf(cur_packet, "%s", data->content->str);
 		cur_packet += len;
 	}
 	
@@ -562,7 +562,7 @@ gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 	
 	buffer = g_malloc0(MB_MAXBUFF + 1);
 	retval = purple_ssl_read(ssl, buffer, MB_MAXBUFF);
-	//purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
+	purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
 	if(retval > 0) {
 		mb_http_data_post_read(data, buffer, retval);
 	} else if(retval == 0) {
@@ -578,22 +578,24 @@ gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 
 gint mb_http_data_ssl_write(PurpleSslConnection * ssl, MbHttpData * data)
 {
-	gint retval;
+	gint retval, cur_packet_len;
 	
 	if(data->packet == NULL) {
 		mb_http_data_prepare_write(data);
 	}
 	// Do SSL-write, then update cur_packet to proper position. Exit if already exceeding the length
 	//purple_debug_info(MB_HTTPID, "http data to send = #%s#\n", data->packet);
+	purple_debug_info(MB_HTTPID, "writing data %s\n", data->cur_packet);
 	retval = purple_ssl_write(ssl, data->cur_packet, MB_MAXBUFF);
-	if(retval >= data->packet_len) {
+	cur_packet_len = data->cur_packet - data->packet;
+	if(retval >= (data->packet_len - cur_packet_len) )  {
 		// everything is written
 		data->state = MB_HTTP_STATE_FINISHED;
 		g_free(data->packet);
 		data->cur_packet = data->packet = NULL;
 		data->packet_len = 0;
 		return retval;
-	} else if( (retval > 0) && (retval < data->packet_len)) {
+	} else if( (retval > 0) && (retval < cur_packet_len)) {
 		data->cur_packet = data->cur_packet + retval;
 	}
 	return retval;

@@ -714,6 +714,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
 	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
+	
 	post_data = g_malloc(TW_MAXBUFF);
 	snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
 	mb_http_data_set_content(conn_data->request, post_data);
@@ -721,6 +722,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	mb_conn_process_request(conn_data);
 	g_free(post_data);
 	g_free(tmp_msg_txt);
+	
 	return msg_len;
 }
 
