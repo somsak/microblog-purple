@@ -31,6 +31,8 @@
 extern "C" {
 #endif
 
+#define MB_HTTPID "mb_http"
+
 enum MbHttpStatus {
 	HTTP_OK = 200,
 	HTTP_MOVED_TEMPORARILY = 304,
@@ -210,6 +212,15 @@ extern void mb_http_data_set_fixed_headers(MbHttpData * data, const gchar * head
 	@param value value of current param
 */
 extern void mb_http_data_add_param(MbHttpData * data, const gchar * key, const gchar * value);
+
+/*
+	Add new www-urlencoded parameter to data
+	
+	@param data MbHttpData
+	@param key key of param
+	@param value value of current param
+*/
+extern void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value);
 
 /*
 	Look for value of specified parameter

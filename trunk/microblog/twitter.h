@@ -71,7 +71,8 @@ typedef struct _TwitterAccount {
 	PurpleConnection *gc;
 	gchar *login_challenge;
 	PurpleConnectionState state;
-    GHashTable * conn_hash;
+    //GHashTable * conn_hash;
+	GHashTable * ssl_conn_hash;
 	guint timeline_timer;
 	unsigned long long last_msg_id;
 	time_t last_msg_time;
