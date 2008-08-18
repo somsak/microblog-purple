@@ -564,7 +564,7 @@ gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 	
 	buffer = g_malloc0(MB_MAXBUFF + 1);
 	retval = purple_ssl_read(ssl, buffer, MB_MAXBUFF);
-	purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
+	//purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
 	if(retval > 0) {
 		mb_http_data_post_read(data, buffer, retval);
 	} else if(retval == 0) {
