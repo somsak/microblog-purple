@@ -110,6 +110,15 @@ extern MbHttpData * mb_http_data_new(void);
 extern void mb_http_data_free(MbHttpData * data);
 
 /*
+	Read a Http data from a stream
+	
+	@param fd file descriptor
+	@param data MbHttpData
+	@return number of read bytes
+*/
+extern gint mb_http_data_read(gint fd, MbHttpData * data);
+
+/*
 	Read a Http data from SSL stream
 	
 	@param ssl purple ssl stream
@@ -117,6 +126,15 @@ extern void mb_http_data_free(MbHttpData * data);
 	@return number of read bytes
 */
 extern gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data);
+
+/*
+	Write a Http data to a stream
+	
+	@param fd file descriptor
+	@param data MbHttpData
+	@return bytes written
+*/
+extern gint mb_http_data_write(gint fd, MbHttpData * data);
 
 /*
 	Write a Http data to SSL stream
