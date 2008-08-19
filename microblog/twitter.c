@@ -128,10 +128,9 @@ static TwitterTimeLineReq * twitterim_new_tlr()
 
 static void twitterim_free_tlr(TwitterTimeLineReq * tlr)
 {
-	/*
 	if(tlr->path != NULL) g_free(tlr->path);
 	if(tlr->name != NULL) g_free(tlr->name);
-	*/
+	g_free(tlr);
 }
 
 const char * twitterim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
@@ -210,8 +209,8 @@ gboolean twitterim_fetch_all_new_messages(gpointer data)
 			continue;
 		}
 		tlr = twitterim_new_tlr();
-		tlr->path = _TweetTimeLinePaths[i];
-		tlr->name = _TweetTimeLineNames[i];
+		tlr->path = g_strdup(_TweetTimeLinePaths[i]);
+		tlr->name = g_strdup(_TweetTimeLineNames[i]);
 		tlr->timeline_id = i;
 		tlr->count = TW_STATUS_COUNT_MAX;
 		twitterim_fetch_new_messages(ta, tlr);
@@ -545,25 +544,36 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 	ta->timeline_timer = -1;
 	ta->last_msg_id = 0;
 	ta->last_msg_time = 0;
+	ta->conn_hash = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
 	ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
 	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	acct->gc->proto_data = ta;
 	return ta;
 }
 
-static void mb_close_ssl_connection(gpointer key, gpointer value, gpointer user_data)
+static void mb_close_connection(gpointer key, gpointer value, gpointer user_data)
 {
 	MbConnData *conn_data = value;
-	PurpleSslConnection * ssl = NULL;
+	gboolean is_https = (gboolean)user_data;
 	
 	purple_debug_info("twitter", "closing each connection\n");
 	if(conn_data) {
-		ssl = (PurpleSslConnection *)conn_data->ssl_conn_data;
-		if(ssl) {
-			purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
-			purple_input_remove(ssl->inpa);
+		purple_debug_info("twitter", "is_https = %d\n", is_https);
+		if(is_https) {
+			PurpleSslConnection * ssl = NULL;
+			
+			ssl = conn_data->ssl_conn_data;
+			if(ssl) {
+				purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
+				purple_input_remove(ssl->inpa);
+			}
+			purple_debug_info("twitter", "closing SSL socket\n");
+		} else {
+			purple_proxy_connect_cancel_with_handle(conn_data);
+			if(conn_data->conn_event_handle >= 0) {
+				purple_input_remove(conn_data->conn_event_handle);
+			}
 		}
-		purple_debug_info("twitter", "closing SSL socket\n");
 		mb_conn_data_free(conn_data);
 	}	
 }
@@ -571,6 +581,7 @@ static void mb_close_ssl_connection(gpointer key, gpointer value, gpointer user_
 void mb_account_free(MbAccount * ta)
 {	
 	purple_debug_info("twitter", "mb_account_free\n");
+	
 	ta->state = PURPLE_DISCONNECTED;
 	
 	if(ta->timeline_timer != -1) {
@@ -581,10 +592,16 @@ void mb_account_free(MbAccount * ta)
 	// new SSL-base connection hash
 	if(ta->ssl_conn_hash) {
 		purple_debug_info("twitter", "closing all active connection\n");
-		g_hash_table_foreach(ta->ssl_conn_hash, mb_close_ssl_connection, NULL);
+		g_hash_table_foreach(ta->ssl_conn_hash, mb_close_connection, (gpointer)TRUE);
 		purple_debug_info("twitter", "destroying connection hash\n");
 		g_hash_table_destroy(ta->ssl_conn_hash);
 		ta->ssl_conn_hash = NULL;
+	}
+	
+	if(ta->conn_hash) {
+		g_hash_table_foreach(ta->conn_hash, mb_close_connection, (gpointer)FALSE);
+		g_hash_table_destroy(ta->conn_hash);
+		ta->conn_hash = NULL;
 	}
 	
 	if(ta->sent_id_hash) {
@@ -604,25 +621,37 @@ void twitterim_login(PurpleAccount *acct)
 {
 	MbAccount *ta = NULL;
 	MbConnData * conn_data = NULL;
-	const char * twitter_host = NULL;
+	gchar * twitter_host = NULL;
+	gchar * path = NULL;
+	gboolean use_https = TRUE;
 	
 	purple_debug_info("twitter", "twitterim_login\n");
 	
 	// Create account data
 	ta = mb_account_new(acct);
-	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_verify_authen, TRUE);
+	twitter_host = g_strdup(purple_account_get_string(ta->account, "twitter_hostname", TW_HOST));
+	path = g_strdup(purple_account_get_string(ta->account, "twitter_verify_url", TW_VERIFY_PATH));
+	use_https = purple_account_get_bool(ta->account, "twitter_use_https", TRUE);
+	if(use_https) {
+		twitter_port = TW_HTTPS_PORT;
+	} else {
+		twitter_port = TW_HTTP_PORT;
+	}
+	
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_verify_authen, use_https);
 	mb_conn_data_set_error(conn_data, "Authentication error", MB_ERROR_RAISE_ERROR);
 	mb_conn_data_set_retry(conn_data, purple_account_get_int(acct, "twitter_global_retry", TW_MAX_RETRY));
 	
 	conn_data->request->type = HTTP_GET;
 	conn_data->request->proto = MB_HTTPS;
 	mb_http_data_set_host(conn_data->request, twitter_host);
-	mb_http_data_set_path(conn_data->request, "/account/verify_credentials.xml");
+	mb_http_data_set_path(conn_data->request, path);
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
 	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
 
+	g_free(twitter_host);
+	g_free(path);
 	mb_conn_process_request(conn_data);
 }
 
@@ -691,8 +720,9 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	TwitterAccount * ta = gc->proto_data;
 	MbConnData * conn_data = NULL;
 	gchar * post_data = NULL, * tmp_msg_txt = NULL;
-	gint msg_len;
-	const gchar * twitter_host;
+	gint msg_len, twitter_port;
+	gchar * twitter_host, * path;
+	gboolean use_https;
 	
 	purple_debug_info("twitter", "send_im\n");
 
@@ -702,14 +732,22 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
 	
 	// connection
-	twitter_host = purple_account_get_string(ta->account, "twitter_hostname", TW_HOST);
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_send_im_handler, TRUE);
+	twitter_host = g_strdup(purple_account_get_string(ta->account, "twitter_hostname", TW_HOST));
+	path = g_strdup(purple_account_get_string(ta->account, "twitter_status_update", TW_STATUS_UPDATE_PATH));
+	use_https = purple_account_get_bool(ta->account, "twitter_use_https", TRUE);
+	
+	if(use_https) {
+		twitter_port = TW_HTTPS_PORT;
+	} else {
+		twitter_port = TW_HTTP_PORT;
+	}
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_send_im_handler, use_https);
 	mb_conn_data_set_error(conn_data, "Sending status error", MB_ERROR_NOACTION);
 	mb_conn_data_set_retry(conn_data, 0);
 	conn_data->request->type = HTTP_POST;
 	conn_data->request->proto = MB_HTTPS;
 	mb_http_data_set_host(conn_data->request, twitter_host);
-	mb_http_data_set_path(conn_data->request, TW_STATUS_UPDATE_PATH);
+	mb_http_data_set_path(conn_data->request, path);
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
@@ -720,6 +758,8 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	mb_http_data_set_content(conn_data->request, post_data);
 	
 	mb_conn_process_request(conn_data);
+	g_free(twitter_host);
+	g_free(path);
 	g_free(post_data);
 	g_free(tmp_msg_txt);
 	
@@ -752,7 +792,23 @@ static void plugin_init(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-
+	option = purple_account_option_bool_new(_("Use HTTPS"), "twitter_use_https", TRUE);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_status_update", TW_STATUS_UPDATE_PATH);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_verify", TW_VERIFY_PATH);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter Friends timeline path"), "twitter_friends_timeline", _TweetTimeLinePaths[TL_FRIENDS]);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter User timeline path"), "twitter_user_timeline", _TweetTimeLinePaths[TL_USER]);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter Public timeline path"), "twitter_public_timeline",  _TweetTimeLinePaths[TL_PUBLIC]);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 }
 
 gboolean plugin_load(PurplePlugin *plugin)

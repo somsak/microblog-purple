@@ -31,6 +31,8 @@ extern "C" {
  
 #define TW_HOST "twitter.com"
 #define TW_PORT 443
+#define TW_HTTP_PORT 80
+#define TW_HTTPS_PORT 443
 #define TW_AGENT "curl/7.18.0 (i486-pc-linux-gnu) libcurl/7.18.0 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/1.1"
 #define TW_AGENT_DESC_URL "http://microblog-purple.googlecode.com/files/mb-0.1.xml"
 #define TW_MAXBUFF 51200
@@ -39,6 +41,7 @@ extern "C" {
 #define TW_STATUS_COUNT_MAX 200
 #define TW_INIT_TWEET 15
 #define TW_STATUS_UPDATE_PATH "/statuses/update.xml"
+#define TW_VERIFY_PATH "/account/verify_credentials.xml"
 #define TW_STATUS_TXT_MAX 140
 //#define TW_AGENT_SOURCE "libpurplemicroblogplugin"
 #define TW_AGENT_SOURCE "mbpidgin"
@@ -60,8 +63,8 @@ enum _TweetProxyDataErrorActions {
 
 // Hold parameter for statuses request
 typedef struct _TwitterTimeLineReq {
-	const gchar * path;
-	const gchar * name;
+	gchar * path;
+	gchar * name;
 	gint timeline_id;
 	guint count;
 } TwitterTimeLineReq;
@@ -72,6 +75,7 @@ typedef struct _TwitterAccount {
 	gchar *login_challenge;
 	PurpleConnectionState state;
     //GHashTable * conn_hash;
+	GHashTable * conn_hash;
 	GHashTable * ssl_conn_hash;
 	guint timeline_timer;
 	unsigned long long last_msg_id;
