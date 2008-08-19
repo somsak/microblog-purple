@@ -87,7 +87,7 @@ void mb_conn_process_request(MbConnData * data)
 			purple_debug_info(MB_NET, "connect (seems to) success\n");
 		}
 	} else {
-		purple_debug_info(MB_NET, "connecting using non-SSL connection\n");
+		purple_debug_info(MB_NET, "connecting using non-SSL connection to %s, %d\n", data->host, data->port);
 		data->conn_data = purple_proxy_connect(data, ta->account, data->host, data->port, mb_conn_connect_cb, data);
 		purple_debug_info(MB_NET, "after connect\n");
 	}
@@ -102,18 +102,20 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	purple_debug_info(MB_NET, "mb_conn_post_request, source = %d\n", source);
 	purple_input_remove(conn_data->conn_event_handle);
 	conn_data->conn_event_handle = -1;
+	
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
 		g_hash_table_remove(ta->conn_hash, &source);
-		purple_proxy_connect_cancel_with_handle(data);
-		conn_data->conn_data = NULL;
+		purple_proxy_connect_cancel_with_handle(conn_data);
 		return;
 	}
+	
 	purple_debug_info(MB_NET, "posting request\n");
 	res = mb_http_data_write(source, conn_data->request);
 	cur_error = errno;
 	
+
 	purple_debug_info(MB_NET, "res = %d\n", res);
 	if(res < 0) {
 		if(cur_error == EAGAIN) {
@@ -139,6 +141,7 @@ void mb_conn_connect_cb(gpointer data, gint source, const gchar * error_message)
 {
 	MbConnData * conn_data = data;
 	MbAccount * ta = conn_data->ta;
+	gint res;
 	
 	purple_debug_info(MB_NET, "mb_conn_connect_cb, source = %d\n", source);
 
@@ -150,7 +153,7 @@ void mb_conn_connect_cb(gpointer data, gint source, const gchar * error_message)
 		return;
 	}
 	conn_data->conn_data = NULL;
-	if( (source == -1) && error_message) {
+	if( error_message) {
 		purple_debug_info(MB_NET, "error_messsage = %s\n", error_message);
 		purple_connection_error(ta->gc, _(error_message));
 	} else {
