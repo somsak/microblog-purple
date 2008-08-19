@@ -184,7 +184,7 @@ extern void mb_http_data_set_host(MbHttpData * data, const gchar * host);
 	@param data MbHttpData
 	@param content content to set to data->content
 */
-extern void mb_http_data_set_content(MbHttpData * data, const gchar * content);
+extern void mb_http_data_set_content(MbHttpData * data, const gchar * content, gssize len);
 
 /*
 	Set HTTP Basic authen with specified user/password into header

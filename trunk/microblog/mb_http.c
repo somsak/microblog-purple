@@ -248,12 +248,12 @@ void mb_http_data_set_host(MbHttpData * data, const gchar * host)
 	data->host = g_strdup(host);
 }
 
-void mb_http_data_set_content(MbHttpData * data, const gchar * content)
+void mb_http_data_set_content(MbHttpData * data, const gchar * content, gssize len)
 {
 	if(data->content) {
 		g_string_truncate(data->content, 0);
 	} else {
-		data->content = g_string_new(content);
+		data->content = g_string_new_len(content, len);
 	}
 }
 
@@ -374,7 +374,7 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	if(data->content) {
 		packet_len += data->content->len;
 	}
-	data->packet = g_malloc0(packet_len);
+	data->packet = g_malloc0(packet_len + 1);
 	cur_packet = data->packet;
 	
 	// GET|POST and parameter part
@@ -420,8 +420,12 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	
 	// Content part
 	if(data->content) {
+	/*
 		len = sprintf(cur_packet, "%s", data->content->str);
 		cur_packet += len;
+	*/
+		memcpy(cur_packet, data->content->str, data->content->len);
+		cur_packet += data->content->len;
 	}
 	
 	data->packet_len = cur_packet - data->packet;

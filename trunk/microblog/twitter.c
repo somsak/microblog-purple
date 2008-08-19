@@ -720,7 +720,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	TwitterAccount * ta = gc->proto_data;
 	MbConnData * conn_data = NULL;
 	gchar * post_data = NULL, * tmp_msg_txt = NULL;
-	gint msg_len, twitter_port;
+	gint msg_len, twitter_port, len;
 	gchar * twitter_host, * path;
 	gboolean use_https;
 	
@@ -754,8 +754,8 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
 	
 	post_data = g_malloc(TW_MAXBUFF);
-	snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
-	mb_http_data_set_content(conn_data->request, post_data);
+	len = snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
+	mb_http_data_set_content(conn_data->request, post_data, len);
 	
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);
