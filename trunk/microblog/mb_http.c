@@ -603,7 +603,7 @@ gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 
 gint mb_http_data_write(gint fd, MbHttpData * data)
 {
-	gint retval, cur_packet_len;
+	gint retval, cur_packet_len, cur_error;
 	
 	if(data->packet == NULL) {
 		mb_http_data_prepare_write(data);
@@ -611,9 +611,12 @@ gint mb_http_data_write(gint fd, MbHttpData * data)
 	// Do SSL-write, then update cur_packet to proper position. Exit if already exceeding the length
 	purple_debug_info(MB_HTTPID, "writing data %s\n", data->cur_packet);
 	purple_debug_info(MB_HTTPID, "fd = %d\n", fd);
+	errno = 0;
 	retval = write(fd, data->cur_packet, MB_MAXBUFF);
+	purple_input_get_error(fd, &cur_error);
+	//cur_error = errno;
 	cur_packet_len = data->cur_packet - data->packet;
-	purple_debug_info(MB_HTTPID, "after write, retval = %d, packet_len = %d, cur_packetlen = %d\n", retval, data->packet_len, cur_packet_len);
+	purple_debug_info(MB_HTTPID, "after write, retval = %d, cur_error = %d, packet_len = %d, cur_packetlen = %d\n", retval, cur_error, data->packet_len, cur_packet_len);
 	if(retval >= (data->packet_len - cur_packet_len) )  {
 		// everything is written
 		data->state = MB_HTTP_STATE_FINISHED;
