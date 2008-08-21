@@ -611,6 +611,7 @@ gint mb_http_data_write(gint fd, MbHttpData * data)
 	// Do SSL-write, then update cur_packet to proper position. Exit if already exceeding the length
 	purple_debug_info(MB_HTTPID, "writing data %s\n", data->cur_packet);
 	purple_debug_info(MB_HTTPID, "fd = %d\n", fd);
+	purple_debug_info(MB_HTTPID, "maxbuf = %d\n", MB_MAXBUFF);
 	errno = 0;
 	retval = write(fd, data->cur_packet, MB_MAXBUFF);
 	purple_input_get_error(fd, &cur_error);

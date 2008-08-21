@@ -2,6 +2,11 @@
 	Microblog network processing (mostly for HTTP data)
  */
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include "internal.h"
 #include "mb_net.h"
 
 #include "debug.h"
@@ -98,6 +103,7 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	MbConnData * conn_data = data;
 	MbAccount * ta = conn_data->ta;
 	gint res, cur_error;
+	gchar buf[1024];
 	
 	purple_debug_info(MB_NET, "mb_conn_post_request, source = %d\n", source);
 	purple_input_remove(conn_data->conn_event_handle);
@@ -111,6 +117,11 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 		return;
 	}
 	
+	/*
+	purple_debug_info(MB_NET, "test reading something\n");
+	res = read(source, buf, sizeof(buf));
+	purple_debug_info(MB_NET, "res = %d\n", res);
+	*/
 	purple_debug_info(MB_NET, "posting request\n");
 	res = mb_http_data_write(source, conn_data->request);
 	cur_error = errno;
@@ -136,13 +147,38 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	}
 }
 
+typedef struct _TimerAdder {
+	gint fd;
+	MbConnData * conn_data;
+	PurpleInputCondition cond;
+} TimerAdder;
+
+static gboolean mb_conn_add_post_request(gpointer data)
+{
+	TimerAdder * adder = data;
+	MbConnData * conn_data = adder->conn_data;
+	
+	conn_data->conn_event_handle = purple_input_add(adder->fd, adder->cond, mb_conn_post_request, conn_data);
+	g_free(adder);
+	
+	return FALSE;
+}
+
 void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 {
 	MbConnData * conn_data = data;
 	MbAccount * ta = conn_data->ta;
+	TimerAdder * adder = NULL;
+	gint retval;
+	struct sockaddr_in in_addr;
+	socklen_t sock_len = sizeof(in_addr);
 	
 	purple_debug_info(MB_NET, "mb_conn_connect_cb, source = %d\n", source);
-	
+	retval = getsockname(source, &in_addr, &sock_len);
+	purple_debug_info(MB_NET, "retval from getsockname = %d\n", retval);
+	if(retval != -1) {
+		purple_debug_info(MB_NET, "ip address = %s:%d\n", inet_ntoa(in_addr.sin_addr), ntohs(in_addr.sin_port));
+	}
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
@@ -163,6 +199,14 @@ void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 		g_hash_table_insert(ta->conn_hash, tmp, conn_data);
 	}
 	purple_debug_info(MB_NET, "adding fd = %d to write event loop\n", source);
+
+	/*
+	adder = g_new(TimerAdder, 1);
+	adder->fd = source;
+	adder->cond = PURPLE_INPUT_WRITE;
+	adder->conn_data = conn_data;
+	purple_timeout_add_seconds(10, mb_conn_add_post_request, adder);
+	*/
 	conn_data->conn_event_handle = purple_input_add(source, PURPLE_INPUT_WRITE, mb_conn_post_request, conn_data);
 }
 
