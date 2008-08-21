@@ -1,4 +1,4 @@
-Source: microblog-purple
+Source: mbpurple
 Priority: extra
 Maintainer: Sugree Phatanapherom <sugree@gmail.com>
 Build-Depends: debhelper (>= 5), pkg-config, libpurple-dev
