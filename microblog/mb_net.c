@@ -1,12 +1,12 @@
 /*
 	Microblog network processing (mostly for HTTP data)
  */
- 
+
 #include "mb_net.h"
 
-#include <debug.h>
+#include "debug.h"
 
-static void mb_conn_connect_cb(gpointer data, gint source, const gchar * error_message);
+static void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message);
 static void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond);
 static void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond);
 static void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond);
@@ -115,7 +115,6 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	res = mb_http_data_write(source, conn_data->request);
 	cur_error = errno;
 	
-
 	purple_debug_info(MB_NET, "res = %d\n", res);
 	if(res < 0) {
 		if(cur_error == EAGAIN) {
@@ -137,14 +136,13 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	}
 }
 
-void mb_conn_connect_cb(gpointer data, gint source, const gchar * error_message)
+void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 {
 	MbConnData * conn_data = data;
 	MbAccount * ta = conn_data->ta;
-	gint res;
 	
 	purple_debug_info(MB_NET, "mb_conn_connect_cb, source = %d\n", source);
-
+	
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
@@ -152,6 +150,7 @@ void mb_conn_connect_cb(gpointer data, gint source, const gchar * error_message)
 		conn_data->conn_data = NULL;
 		return;
 	}
+
 	conn_data->conn_data = NULL;
 	if( error_message) {
 		purple_debug_info(MB_NET, "error_messsage = %s\n", error_message);
@@ -163,7 +162,7 @@ void mb_conn_connect_cb(gpointer data, gint source, const gchar * error_message)
 		(*tmp) = source;
 		g_hash_table_insert(ta->conn_hash, tmp, conn_data);
 	}
-
+	purple_debug_info(MB_NET, "adding fd = %d to write event loop\n", source);
 	conn_data->conn_event_handle = purple_input_add(source, PURPLE_INPUT_WRITE, mb_conn_post_request, conn_data);
 }
 
@@ -187,15 +186,23 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 	purple_debug_info(MB_NET, "mb_conn posting request\n");
 	while(conn_data->request->state != MB_HTTP_STATE_FINISHED) {
 		res = mb_http_data_ssl_write(ssl, conn_data->request);
-		if(res <= 0) break;
+		purple_debug_info(MB_NET, "sub-request posted\n");
+		if(res <= 0) {
+			break;
+		}
 	}
 	
-	if(res <= 0) {
+	purple_debug_info(MB_NET, "request posted\n");
+	if(res < 0) {
 		// error connecting
 		purple_debug_info(MB_NET, "error while posting request %s\n", conn_data->request->content->str);
-		purple_connection_error(ta->gc, _(conn_data->error_message));
-	} else {
+		purple_connection_error(ta->gc, _(conn_data->error_message ? conn_data->error_message : "error while sending request"));
+	} else if(conn_data->request->state == MB_HTTP_STATE_FINISHED) {
+		purple_debug_info(MB_NET, "request posting success\n");
 		purple_ssl_input_add(ssl, mb_conn_get_ssl_result, conn_data);
+	} else {
+		purple_debug_info(MB_NET, "can not send request in single chunk!\n");
+		purple_connection_error(ta->gc, _(conn_data->error_message ? conn_data->error_message : "sending request error, too little packet?"));
 	}
 }
 
@@ -325,10 +332,12 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 	res = mb_http_data_ssl_read(ssl, response);
 	cur_error = errno;
 	if( (res < 0) && (cur_error != EAGAIN) ) {
+		purple_debug_info(MB_NET, "packet error\n");
 		// error connecting or reading
 		purple_input_remove(ssl->inpa);
 		// First, chec if we already have everythings
 		if(response->state == MB_HTTP_STATE_FINISHED) {
+			purple_debug_info(MB_NET, "data is all here. state == finished\n");
 			// All is fine, proceed to handler
 			purple_input_remove(ssl->inpa);
 			if(conn_data->ssl_conn_data) {
@@ -338,6 +347,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 			}
 			call_handler = TRUE;
 		} else {
+			purple_debug_info(MB_NET, "really error\n");
 			// Free all data
 			mb_http_data_truncate(response);
 
@@ -373,6 +383,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 		purple_input_remove(ssl->inpa);
 		purple_ssl_input_add(ssl, mb_conn_get_ssl_result, conn_data);
 	} else if(res == 0) {
+		purple_debug_info(MB_NET, "connection closed, state = %d\n", response->state);
 		// we have all data
 		purple_input_remove(ssl->inpa);
 		if(conn_data->ssl_conn_data) {
@@ -384,23 +395,29 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 	} // global if else for connection state
 	
 	// Call handler here
+	purple_debug_info(MB_NET, "call_handler = %d\n", call_handler);
 	if(call_handler) {
 		// reassemble data
 		purple_debug_info(MB_NET, "got whole response = %s\n", response->content->str);
 		if(conn_data->handler) {
 			gint retval;
 			
+			purple_debug_info(MB_NET, "going to call handler\n");
 			retval = conn_data->handler(conn_data, conn_data->handler_data);
+			purple_debug_info(MB_NET, "handler returned, retval = %d\n", retval);
 			if(retval == 0) {
 				// Everything's good. Free data structure and go-on with usual works
+				purple_debug_info(MB_NET, "everything's ok, freeing data\n");
 				mb_conn_data_free(conn_data);
 			} else if(retval == -1) {
 				// Something's wrong. Requeue the whole process
+				purple_debug_info(MB_NET, "handler return -1, retry again\n");
 				mb_http_data_truncate(response);
 				mb_conn_process_request(conn_data);
 			}
 		} // if handler != NULL
 	}
+	purple_debug_info(MB_NET, "end get_ssl_result\n");
 }
 
 

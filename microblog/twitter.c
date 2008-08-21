@@ -315,6 +315,7 @@ gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		msg_txt = NULL;
 		from = NULL;
 		xml_str = NULL;
+		skip = FALSE;
 		
 		// ID
 		id_node = xmlnode_get_child(status, "id");
