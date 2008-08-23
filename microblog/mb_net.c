@@ -2,14 +2,35 @@
 	Microblog network processing (mostly for HTTP data)
  */
 
+#include <glib.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <glib/gi18n.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include "internal.h"
-#include "mb_net.h"
+#include <time.h>
 
-#include "debug.h"
+
+#ifndef G_GNUC_NULL_TERMINATED
+#  if __GNUC__ >= 4
+#    define G_GNUC_NULL_TERMINATED __attribute__((__sentinel__))
+#  else
+#    define G_GNUC_NULL_TERMINATED
+#  endif /* __GNUC__ >= 4 */
+#endif /* G_GNUC_NULL_TERMINATED */
+
+#ifdef _WIN32
+#	include <win32dep.h>
+#else
+#	include <arpa/inet.h>
+#	include <sys/socket.h>
+#	include <netinet/in.h>
+#endif
+
+#include <debug.h>
+#include "mb_net.h"
 
 static void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message);
 static void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond);
@@ -35,28 +56,47 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 	conn_data->max_retry = 0;
 	conn_data->action_on_error = MB_ERROR_NOACTION;
 	conn_data->conn_data = NULL;
-	conn_data->conn_event_handle = -1;
+	conn_data->conn_event_handle = 0;
 	conn_data->ssl_conn_data = NULL;
 	conn_data->is_ssl = is_ssl;
 	conn_data->request = mb_http_data_new();
 	conn_data->response = mb_http_data_new();
+	if(conn_data->is_ssl) {
+		conn_data->request->proto = MB_HTTPS;
+	} else {
+		conn_data->request->proto = MB_HTTP;
+	}
 	
 	return conn_data;
 }
 
 void mb_conn_data_free(MbConnData * conn_data)
 {
-	g_free(conn_data->host);
-	mb_http_data_free(conn_data->response);
-	mb_http_data_free(conn_data->request);
-	if(conn_data->error_message) {
-		g_free(conn_data->error_message);
-	}
+
 	if(conn_data->conn_data) {
+		purple_input_remove(conn_data->conn_event_handle);
+		purple_debug_info(MB_NET, "removing conn_data\n");
 		purple_proxy_connect_cancel_with_handle(conn_data);
 	}
 	if(conn_data->ssl_conn_data) {
+		purple_debug_info(MB_NET, "removing SSL event\n");
+		purple_input_remove(conn_data->ssl_conn_data->inpa);
+		purple_debug_info(MB_NET, "closing SSL connection\n");
 		purple_ssl_close(conn_data->ssl_conn_data);
+	}
+	purple_debug_info(MB_NET, "freeing the rest of data\n");
+	
+	if(conn_data->host) {
+		purple_debug_info(MB_NET, "freeing host name\n");
+		g_free(conn_data->host);
+	}
+	purple_debug_info(MB_NET, "freeing HTTP data->response\n");
+	mb_http_data_free(conn_data->response);
+	purple_debug_info(MB_NET, "freeing HTTP data->request\n");
+	mb_http_data_free(conn_data->request);
+	purple_debug_info(MB_NET, "freeing error message\n");
+	if(conn_data->error_message) {
+		g_free(conn_data->error_message);
 	}
 	g_free(conn_data);
 }
@@ -103,11 +143,10 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	MbConnData * conn_data = data;
 	MbAccount * ta = conn_data->ta;
 	gint res, cur_error;
-	gchar buf[1024];
 	
 	purple_debug_info(MB_NET, "mb_conn_post_request, source = %d\n", source);
 	purple_input_remove(conn_data->conn_event_handle);
-	conn_data->conn_event_handle = -1;
+	conn_data->conn_event_handle = 0;
 	
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
@@ -147,38 +186,13 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	}
 }
 
-typedef struct _TimerAdder {
-	gint fd;
-	MbConnData * conn_data;
-	PurpleInputCondition cond;
-} TimerAdder;
-
-static gboolean mb_conn_add_post_request(gpointer data)
-{
-	TimerAdder * adder = data;
-	MbConnData * conn_data = adder->conn_data;
-	
-	conn_data->conn_event_handle = purple_input_add(adder->fd, adder->cond, mb_conn_post_request, conn_data);
-	g_free(adder);
-	
-	return FALSE;
-}
-
 void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 {
 	MbConnData * conn_data = data;
 	MbAccount * ta = conn_data->ta;
-	TimerAdder * adder = NULL;
-	gint retval;
-	struct sockaddr_in in_addr;
-	socklen_t sock_len = sizeof(in_addr);
-	
+
 	purple_debug_info(MB_NET, "mb_conn_connect_cb, source = %d\n", source);
-	retval = getsockname(source, &in_addr, &sock_len);
-	purple_debug_info(MB_NET, "retval from getsockname = %d\n", retval);
-	if(retval != -1) {
-		purple_debug_info(MB_NET, "ip address = %s:%d\n", inet_ntoa(in_addr.sin_addr), ntohs(in_addr.sin_port));
-	}
+
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
@@ -254,6 +268,7 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 {
 	MbConnData * conn_data = data;
 	MbAccount *ta = conn_data->ta;
+	gboolean retval;
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
@@ -261,7 +276,8 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	purple_connection_error(ta->gc, _("Connection Error"));
 	if(conn_data->ssl_conn_data) {
 		purple_debug_info(MB_NET, "removing conn_data from hash table\n");
-		g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
+		retval = g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
+		purple_debug_info(MB_NET, "retval from g_hash_table_remove = %d\n", retval);
 		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
 		conn_data->ssl_conn_data = NULL;
 	}

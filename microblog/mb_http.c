@@ -7,6 +7,14 @@
 
 #include <purple.h>
 
+#ifdef _WIN32
+#	include <win32dep.h>
+#else
+#	include <arpa/inet.h>
+#	include <sys/socket.h>
+#	include <netinet/in.h>
+#endif
+
 #include "mb_http.h"
 
 // function below might be static instead
@@ -75,39 +83,50 @@ MbHttpData * mb_http_data_new(void)
 	return data;
 }
 void mb_http_data_free(MbHttpData * data) {
+	purple_debug_info(MB_HTTPID, "freeing http data\n");
+
 	if(data->host) {
+		purple_debug_info(MB_HTTPID, "freeing host\n");
 		g_free(data->host);
 	}
 	if(data->path) {
+		purple_debug_info(MB_HTTPID, "freeing path\n");
 		g_free(data->path);
 	}
 
 	if(data->headers) {
+		purple_debug_info(MB_HTTPID, "freeing header hash table\n");
 		g_hash_table_destroy(data->headers);
 	}
 	if(data->fixed_headers) {
+		purple_debug_info(MB_HTTPID, "freeing fixed headers\n");
 		g_free(data->fixed_headers);
 	}
 	data->headers_len = 0;
 	
 	if(data->params) {
+		purple_debug_info(MB_HTTPID, "freeing each parameter\n");
 		GList * it;
 		MbHttpParam * p;
-		
+
 		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
 			p = it->data;
+			purple_debug_info(MB_HTTPID, "freeing parameter, %s=%s\n", p->key, p->value);
 			mb_http_param_free(p);
 		}
+		purple_debug_info(MB_HTTPID, "freeing all params\n");
 		g_list_free(data->params);
 	}
 	if(data->content) {
+		purple_debug_info(MB_HTTPID, "freeing request\n");
 		g_string_free(data->content, TRUE);
 	}
 	
 	if(data->packet) {
+		purple_debug_info(MB_HTTPID, "freeing packet\n");
 		g_free(data->packet);
 	}
-	
+	purple_debug_info(MB_HTTPID, "freeing self\n");
 	g_free(data);
 }
 
@@ -559,13 +578,17 @@ void mb_http_data_set_basicauth(MbHttpData * data, const gchar * user, const gch
 	g_free(value_tmp);
 }
 
-gint mb_http_data_read(gint fd, MbHttpData * data)
+static gint _do_read(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 {
 	gint retval;
 	gchar * buffer;
 	
 	buffer = g_malloc0(MB_MAXBUFF + 1);
-	retval = read(fd, buffer, MB_MAXBUFF);
+	if(ssl) {
+		retval = purple_ssl_read(ssl, buffer, MB_MAXBUFF);
+	} else {
+		retval = read(fd, buffer, MB_MAXBUFF);
+	}
 	//purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
 	if(retval > 0) {
 		mb_http_data_post_read(data, buffer, retval);
@@ -578,81 +601,58 @@ gint mb_http_data_read(gint fd, MbHttpData * data)
 	g_free(buffer);
 	
 	return retval;
+}
+
+gint mb_http_data_read(gint fd, MbHttpData * data)
+{
+	return _do_read(fd, NULL, data);
 }
 
 gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 {
-	gint retval;
-	gchar * buffer;
-	
-	buffer = g_malloc0(MB_MAXBUFF + 1);
-	retval = purple_ssl_read(ssl, buffer, MB_MAXBUFF);
-	//purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
-	if(retval > 0) {
-		mb_http_data_post_read(data, buffer, retval);
-	} else if(retval == 0) {
-		data->state = MB_HTTP_STATE_FINISHED;
-		if(data->packet) {
-			g_free(data->packet);
-		}
-	}
-	g_free(buffer);
-	
-	return retval;
+	return _do_read(0, ssl, data);
 }
 
-gint mb_http_data_write(gint fd, MbHttpData * data)
-{
-	gint retval, cur_packet_len, cur_error;
-	
-	if(data->packet == NULL) {
-		mb_http_data_prepare_write(data);
-	}
-	// Do SSL-write, then update cur_packet to proper position. Exit if already exceeding the length
-	purple_debug_info(MB_HTTPID, "writing data %s\n", data->cur_packet);
-	purple_debug_info(MB_HTTPID, "fd = %d\n", fd);
-	purple_debug_info(MB_HTTPID, "maxbuf = %d\n", MB_MAXBUFF);
-	errno = 0;
-	retval = write(fd, data->cur_packet, MB_MAXBUFF);
-	purple_input_get_error(fd, &cur_error);
-	//cur_error = errno;
-	cur_packet_len = data->cur_packet - data->packet;
-	purple_debug_info(MB_HTTPID, "after write, retval = %d, cur_error = %d, packet_len = %d, cur_packetlen = %d\n", retval, cur_error, data->packet_len, cur_packet_len);
-	if(retval >= (data->packet_len - cur_packet_len) )  {
-		// everything is written
-		data->state = MB_HTTP_STATE_FINISHED;
-		g_free(data->packet);
-		data->cur_packet = data->packet = NULL;
-		data->packet_len = 0;
-	} else if( (retval > 0) && (retval < cur_packet_len)) {
-		data->cur_packet = data->cur_packet + retval;
-	}
-	purple_debug_info(MB_HTTPID, "finished writing packet\n");
-	return retval;
-}
-
-gint mb_http_data_ssl_write(PurpleSslConnection * ssl, MbHttpData * data)
+static gint _do_write(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 {
 	gint retval, cur_packet_len;
 	
+	purple_debug_info(MB_HTTPID, "preparing HTTP data chunk\n");
 	if(data->packet == NULL) {
 		mb_http_data_prepare_write(data);
 	}
 	// Do SSL-write, then update cur_packet to proper position. Exit if already exceeding the length
-	//purple_debug_info(MB_HTTPID, "writing data %s\n", data->cur_packet);
-	retval = purple_ssl_write(ssl, data->cur_packet, MB_MAXBUFF);
-	cur_packet_len = data->cur_packet - data->packet;
-	if(retval >= (data->packet_len - cur_packet_len) )  {
+	purple_debug_info(MB_HTTPID, "pushing data to network through SSL\n");
+	purple_debug_info(MB_HTTPID, "writing data %s\n", data->cur_packet);
+	cur_packet_len = data->packet_len - (data->cur_packet - data->packet);
+	if(ssl) {
+		retval = purple_ssl_write(ssl, data->cur_packet, cur_packet_len);
+	} else {
+		retval = write(fd, data->cur_packet, cur_packet_len);
+	}
+	if(retval >= cur_packet_len)  {
 		// everything is written
+		purple_debug_info(MB_HTTPID, "we sent all data\n");
 		data->state = MB_HTTP_STATE_FINISHED;
 		g_free(data->packet);
 		data->cur_packet = data->packet = NULL;
 		data->packet_len = 0;
 		//return retval;
 	} else if( (retval > 0) && (retval < cur_packet_len)) {
+		purple_debug_info(MB_HTTPID, "more data must be sent\n");
 		data->cur_packet = data->cur_packet + retval;
 	}
 	return retval;
+}
+
+gint mb_http_data_write(gint fd, MbHttpData * data)
+{
+	return _do_write(fd, NULL, data);
+}
+
+gint mb_http_data_ssl_write(PurpleSslConnection * ssl, MbHttpData * data)
+{
+	return _do_write(0, ssl, data);
 }
 
 #ifdef UTEST
