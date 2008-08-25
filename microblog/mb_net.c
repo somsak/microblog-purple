@@ -74,11 +74,15 @@ void mb_conn_data_free(MbConnData * conn_data)
 {
 
 	if(conn_data->conn_data) {
+		purple_debug_info(MB_NET, "removing connection %p from conn_hash\n", conn_data->conn_data);
+		g_hash_table_remove(conn_data->ta->conn_hash, conn_data->conn_data);
 		purple_input_remove(conn_data->conn_event_handle);
 		purple_debug_info(MB_NET, "removing conn_data\n");
 		purple_proxy_connect_cancel_with_handle(conn_data);
 	}
 	if(conn_data->ssl_conn_data) {
+		purple_debug_info(MB_NET, "removing connection %p from ssl_conn_hash\n", conn_data->ssl_conn_data);
+		g_hash_table_remove(conn_data->ta->ssl_conn_hash, conn_data->ssl_conn_data);
 		purple_debug_info(MB_NET, "removing SSL event\n");
 		purple_input_remove(conn_data->ssl_conn_data->inpa);
 		purple_debug_info(MB_NET, "closing SSL connection\n");
@@ -98,6 +102,7 @@ void mb_conn_data_free(MbConnData * conn_data)
 	if(conn_data->error_message) {
 		g_free(conn_data->error_message);
 	}
+	purple_debug_info(MB_NET, "freeing self at %p\n", conn_data);
 	g_free(conn_data);
 }
 
@@ -126,11 +131,11 @@ void mb_conn_process_request(MbConnData * data)
 		purple_debug_info(MB_NET, "connecting using SSL connection\n");
 		data->ssl_conn_data = purple_ssl_connect(ta->account, data->host, data->port, mb_conn_post_ssl_request, mb_conn_connect_ssl_error, data);
 		purple_debug_info(MB_NET, "after connect\n");
+		/*
 		if(data->ssl_conn_data != NULL) {
-			// add this to internal hash table
-			g_hash_table_insert(ta->ssl_conn_hash, data->ssl_conn_data, data);
 			purple_debug_info(MB_NET, "connect (seems to) success\n");
 		}
+		*/
 	} else {
 		purple_debug_info(MB_NET, "connecting using non-SSL connection to %s, %d\n", data->host, data->port);
 		data->conn_data = purple_proxy_connect(data, ta->account, data->host, data->port, mb_conn_connect_cb, data);
@@ -210,6 +215,7 @@ void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 		
 		tmp = g_new(gint, 1);
 		(*tmp) = source;
+		purple_debug_info(MB_NET, "adding connection %p to conn_hash with key = %d (%p) \n", conn_data, (*tmp), tmp);
 		g_hash_table_insert(ta->conn_hash, tmp, conn_data);
 	}
 	purple_debug_info(MB_NET, "adding fd = %d to write event loop\n", source);
@@ -235,11 +241,13 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
-		g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
 		purple_ssl_close(ssl);
 		conn_data->ssl_conn_data = NULL;
 		return;
 	}
+	// add this to internal hash table
+	purple_debug_info(MB_NET, "adding SSL connection %p to ssl_conn_hash with key = %p\n", conn_data, conn_data->ssl_conn_data);
+	g_hash_table_insert(ta->ssl_conn_hash, conn_data->ssl_conn_data, conn_data);
 	
 	purple_debug_info(MB_NET, "mb_conn posting request\n");
 	while(conn_data->request->state != MB_HTTP_STATE_FINISHED) {
@@ -275,9 +283,6 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	purple_debug_info(MB_NET, "ssl_error\n");
 	purple_connection_error(ta->gc, _("Connection Error"));
 	if(conn_data->ssl_conn_data) {
-		purple_debug_info(MB_NET, "removing conn_data from hash table\n");
-		retval = g_hash_table_remove(ta->ssl_conn_hash, conn_data->ssl_conn_data);
-		purple_debug_info(MB_NET, "retval from g_hash_table_remove = %d\n", retval);
 		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
 		conn_data->ssl_conn_data = NULL;
 	}

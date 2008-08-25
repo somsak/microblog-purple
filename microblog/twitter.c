@@ -592,7 +592,8 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 		}
 		purple_debug_info("twitter", "free all data\n");
 		*/
-		mb_conn_data_free(conn_data);
+		//mb_conn_data_free(conn_data);
+		purple_debug_info("twitter", "we have %p -> %p\n", key, value);
 	}	
 }
 
@@ -608,6 +609,7 @@ void mb_account_free(MbAccount * ta)
 	}
 
 	// new SSL-base connection hash
+	
 	if(ta->ssl_conn_hash) {
 		purple_debug_info("twitter", "closing all active connection\n");
 		g_hash_table_foreach(ta->ssl_conn_hash, mb_close_connection, (gpointer)TRUE);
@@ -954,9 +956,9 @@ static PurplePluginInfo info = {
 	0, /* flags */
 	NULL, /* dependencies */
 	PURPLE_PRIORITY_DEFAULT, /* priority */
-	"prpl-mbpurple", /* id */
-	"Twitter", /* name */
-	"0.1", /* version */
+	"prpl-mbpurple-twitter", /* id */
+	"TwitterIM", /* name */
+	MBPURPLE_VERSION, /* version */
 	"Twitter data feeder", /* summary */
 	"Twitter data feeder", /* description */
 	"Somsak Sriprayoonsakul <somsaks@gmail.com>", /* author */
