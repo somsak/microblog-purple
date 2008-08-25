@@ -592,8 +592,8 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 		}
 		purple_debug_info("twitter", "free all data\n");
 		*/
-		//mb_conn_data_free(conn_data);
 		purple_debug_info("twitter", "we have %p -> %p\n", key, value);
+		mb_conn_data_free(conn_data);
 	}	
 }
 
