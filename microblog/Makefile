@@ -8,7 +8,7 @@ PURPLE_LIBS = $(shell pkg-config --libs purple)
 LD = $(CC)
 CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC
 CFLAGS += $(PURPLE_CFLAGS)
-TWITTER_SRC = twitter.c util.c mb_http.c mb_net.c
+TWITTER_SRC = twitter.c mb_util.c mb_http.c mb_net.c
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
 TWITTER_OBJ = $(TWITTER_SRC:%.c=%.o)
 
