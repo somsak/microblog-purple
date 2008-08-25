@@ -39,7 +39,7 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##
 ##  SOURCES, OBJECTS
 ##
-CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall
+CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSION)\"
 C_SRC =	twitter.c mb_util.c mb_http.c mb_net.c
 H_SRC = $(C_SRC:%.c=%.h)
 IMG_SRC = twitter16.png twitter22.png twitter48.png
