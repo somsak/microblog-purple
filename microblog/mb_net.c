@@ -236,7 +236,7 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 {
 	MbConnData * conn_data = data;
 	MbAccount *ta = conn_data->ta;
-	gint res;
+	gint res = 0;
 	
 	purple_debug_info(MB_NET, "mb_conn_post_ssl_request\n");
 	
@@ -278,7 +278,6 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 {
 	MbConnData * conn_data = data;
 	MbAccount *ta = conn_data->ta;
-	gboolean retval;
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
