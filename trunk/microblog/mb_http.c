@@ -622,7 +622,6 @@ static gint _do_write(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 		mb_http_data_prepare_write(data);
 	}
 	// Do SSL-write, then update cur_packet to proper position. Exit if already exceeding the length
-	purple_debug_info(MB_HTTPID, "pushing data to network through SSL\n");
 	purple_debug_info(MB_HTTPID, "writing data %s\n", data->cur_packet);
 	cur_packet_len = data->packet_len - (data->cur_packet - data->packet);
 	if(ssl) {

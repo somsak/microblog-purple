@@ -125,6 +125,12 @@ typedef struct _TwitterMsg {
 	gint flag;
 } TwitterMsg;
 
+extern PurplePluginProtocolInfo twitter_prpl_info;
+extern const char * _TweetTimeLineNames[];
+extern const char * _TweetTimeLinePaths[];
+extern const char * _TweetTimeLineConfigs[];
+
+
 #ifdef __cplusplus
 }
 #endif

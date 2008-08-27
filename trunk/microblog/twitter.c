@@ -20,21 +20,6 @@
     Courtesy to eionrobb at gmail dot com
 */
 
-// Since Twitter has no concept of log-in/log-out, buddy list, and etc.
-// This plug-in will imitate those by
-// 1. Log-in - First activity with twitter
-// 2. Buddy List - List timelines
-//All actions are done over SSL
-//
-// Main process of this plug-in is:
-//
-// Initiator function (called by Purple) -> process_request -> post_request -> get_result -> handle request (action specific)
-//
-// 
-
-//#define PURPLE_PLUGIN <-- defined in compiler flags
-//
-
 #include <glib.h>
 #include <unistd.h>
 #include <errno.h>
@@ -652,13 +637,14 @@ void twitterim_login(PurpleAccount *acct)
 	// Create account data
 	ta = mb_account_new(acct);
 	twitter_host = g_strdup(purple_account_get_string(ta->account, "twitter_hostname", TW_HOST));
-	path = g_strdup(purple_account_get_string(ta->account, "twitter_verify_url", TW_VERIFY_PATH));
+	path = g_strdup(purple_account_get_string(ta->account, "twitter_verify", TW_VERIFY_PATH));
 	use_https = purple_account_get_bool(ta->account, "twitter_use_https", TRUE);
 	if(use_https) {
 		twitter_port = TW_HTTPS_PORT;
 	} else {
 		twitter_port = TW_HTTP_PORT;
 	}
+	purple_debug_info("twitter", "path = %s\n", path);
 	
 	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_verify_authen, use_https);
 	mb_conn_data_set_error(conn_data, "Authentication error", MB_ERROR_RAISE_ERROR);
@@ -791,7 +777,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 
 static void plugin_init(PurplePlugin *plugin)
 {
-
+	/*
 	PurpleAccountOption *option;
 	PurplePluginInfo *info = plugin->info;
 	PurplePluginProtocolInfo *prpl_info = info->extra_info;
@@ -820,7 +806,7 @@ static void plugin_init(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_status_update", TW_STATUS_UPDATE_PATH);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_verify", TW_VERIFY_PATH);
+	option = purple_account_option_string_new(_("Twitter account verification path"), "twitter_verify", TW_VERIFY_PATH);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	option = purple_account_option_string_new(_("Twitter Friends timeline path"),_TweetTimeLineConfigs[TL_FRIENDS], _TweetTimeLinePaths[TL_FRIENDS]);
@@ -831,11 +817,52 @@ static void plugin_init(PurplePlugin *plugin)
 	
 	option = purple_account_option_string_new(_("Twitter Public timeline path"), _TweetTimeLineConfigs[TL_PUBLIC],  _TweetTimeLinePaths[TL_PUBLIC]);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	*/
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
 {
+	PurpleAccountOption *option;
+	PurplePluginInfo *info = plugin->info;
+	PurplePluginProtocolInfo *prpl_info = info->extra_info;
+	
 	purple_debug_info("twitterim", "plugin_load\n");
+
+	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_myself", TRUE);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_bool_new(_("Enable reply link"), "twitter_reply_link", FALSE);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_int_new(_("Number of initial tweets"), "twitter_init_tweet", 15);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	option = purple_account_option_int_new(_("Maximum number of retry"), "twitter_global_retry", 3);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_bool_new(_("Use HTTPS"), "twitter_use_https", TRUE);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_status_update", TW_STATUS_UPDATE_PATH);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter account verification path"), "twitter_verify", TW_VERIFY_PATH);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter Friends timeline path"),_TweetTimeLineConfigs[TL_FRIENDS], _TweetTimeLinePaths[TL_FRIENDS]);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter User timeline path"), _TweetTimeLineConfigs[TL_USER], _TweetTimeLinePaths[TL_USER]);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	
+	option = purple_account_option_string_new(_("Twitter Public timeline path"), _TweetTimeLineConfigs[TL_PUBLIC],  _TweetTimeLinePaths[TL_PUBLIC]);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	return TRUE;
 }
 
@@ -863,7 +890,7 @@ void twitterim_set_status(PurpleAccount *acct, PurpleStatus *status) {
 
 }
 
-static PurplePluginProtocolInfo prpl_info = {
+PurplePluginProtocolInfo twitter_prpl_info = {
 	/* options */
 	OPT_PROTO_UNIQUE_CHATNAME,
 	NULL,                   /* user_splits */
@@ -947,6 +974,7 @@ static PurplePluginProtocolInfo prpl_info = {
 	(gpointer)sizeof(PurplePluginProtocolInfo) /* struct_size */
 };
 
+#ifndef TWITTER_API
 static PurplePluginInfo info = {
 	PURPLE_PLUGIN_MAGIC,
 	PURPLE_MAJOR_VERSION,
@@ -967,7 +995,7 @@ static PurplePluginInfo info = {
 	plugin_unload, /* unload */
 	NULL, /* destroy */
 	NULL, /* ui_info */
-	&prpl_info, /* extra_info */
+	&twitter_prpl_info, /* extra_info */
 	NULL, /* prefs_info */
 	twitterim_actions, /* actions */
 	NULL, /* padding */
@@ -977,3 +1005,4 @@ static PurplePluginInfo info = {
 };
 
 PURPLE_INIT_PLUGIN(twitterim, plugin_init, info);
+#endif
