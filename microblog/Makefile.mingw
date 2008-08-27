@@ -9,7 +9,7 @@ include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
 TARGET = libtwitter
 TYPE = PLUGIN
-VERSION = 0.1.1
+VERSION = 0.2.1
 SRCNAME = mbpurple
 
 # Static or Plugin...
@@ -77,18 +77,9 @@ $(OBJECTS): $(PURPLE_CONFIG_H) $(H_SRC)
 
 $(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
-
-mb_http.o : mb_http.c
-	$(CC) -DUTEST $(INCLUDE_PATHS) $(CFLAGS) -c $<
-
-testnet.o : testnet.c
-	$(CC) -DUTEST $(INCLUDE_PATHS) $(CFLAGS) -c $<
-
-testnet: testnet.o
-	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(DLL_LD_FLAGS) -o $@ 
 	
-mb_http_test: mb_http.o
-	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(DLL_LD_FLAGS) -o $@ 
+mb_http_test: mb_http.c
+	$(CC) -DUTEST $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(DLL_LD_FLAGS) -o $@ 
 	
 pidgin-microblog.exe: $(TARGET).dll twitter.nsi
 	makensis /DPRODUCT_VERSION=$(VERSION) twitter.nsi

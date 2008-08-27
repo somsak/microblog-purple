@@ -75,14 +75,16 @@ void mb_conn_data_free(MbConnData * conn_data)
 
 	if(conn_data->conn_data) {
 		purple_debug_info(MB_NET, "removing connection %p from conn_hash\n", conn_data->conn_data);
-		g_hash_table_remove(conn_data->ta->conn_hash, conn_data->conn_data);
+		//g_hash_table_remove(conn_data->ta->conn_hash, conn_data->conn_data);
+		g_hash_table_replace(conn_data->ta->conn_hash, conn_data->conn_data, NULL);
 		purple_input_remove(conn_data->conn_event_handle);
 		purple_debug_info(MB_NET, "removing conn_data\n");
 		purple_proxy_connect_cancel_with_handle(conn_data);
 	}
 	if(conn_data->ssl_conn_data) {
 		purple_debug_info(MB_NET, "removing connection %p from ssl_conn_hash\n", conn_data->ssl_conn_data);
-		g_hash_table_remove(conn_data->ta->ssl_conn_hash, conn_data->ssl_conn_data);
+		//g_hash_table_remove(conn_data->ta->ssl_conn_hash, conn_data->ssl_conn_data);
+		g_hash_table_replace(conn_data->ta->ssl_conn_hash, conn_data->ssl_conn_data, NULL);
 		purple_debug_info(MB_NET, "removing SSL event\n");
 		purple_input_remove(conn_data->ssl_conn_data->inpa);
 		purple_debug_info(MB_NET, "closing SSL connection\n");
