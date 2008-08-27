@@ -374,7 +374,7 @@ static void mb_http_data_header_assemble(gpointer key, gpointer value, gpointer 
 	MbHttpData * data = udata;
 	gint len;
 	
-	len = sprintf(data->cur_packet, "%s: %s\r\n", key, value);
+	len = sprintf(data->cur_packet, "%s: %s\r\n", (char *)key, (char *)value);
 	data->cur_packet += len;
 }
 
