@@ -45,7 +45,7 @@ typedef struct _MbConnData {
 	// should I keep conn_data data here? 
 	// I found that the conn_data will be freed immediately after connection established
 	// so this value will be nullify immediately after connect_cb
-	PurpleProxyConnectData * conn_data; 
+	//PurpleProxyConnectData * conn_data; 
 	guint conn_event_handle;
 	// SSL connection seems not being freed
 	PurpleSslConnection * ssl_conn_data;
