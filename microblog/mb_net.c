@@ -55,7 +55,7 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 	conn_data->retry = 0;
 	conn_data->max_retry = 0;
 	conn_data->action_on_error = MB_ERROR_NOACTION;
-	conn_data->conn_data = NULL;
+	//conn_data->conn_data = NULL;
 	conn_data->conn_event_handle = 0;
 	conn_data->ssl_conn_data = NULL;
 	conn_data->is_ssl = is_ssl;
@@ -73,18 +73,18 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 void mb_conn_data_free(MbConnData * conn_data)
 {
 
-	if(conn_data->conn_data) {
-		purple_debug_info(MB_NET, "removing connection %p from conn_hash\n", conn_data->conn_data);
+	if(conn_data->conn_event_handle) {
+		//purple_debug_info(MB_NET, "removing connection %p from conn_hash\n", conn_data->conn_data);
 		//g_hash_table_remove(conn_data->ta->conn_hash, conn_data->conn_data);
-		g_hash_table_replace(conn_data->ta->conn_hash, conn_data->conn_data, NULL);
-		purple_input_remove(conn_data->conn_event_handle);
-		purple_debug_info(MB_NET, "removing conn_data\n");
-		purple_proxy_connect_cancel_with_handle(conn_data);
+		purple_debug_info(MB_NET, "removing event handle, event_handle = %u\n", conn_data->conn_event_handle);
+		purple_input_remove(conn_data->conn_event_handle);	
 	}
-	if(conn_data->ssl_conn_data) {
-		purple_debug_info(MB_NET, "removing connection %p from ssl_conn_hash\n", conn_data->ssl_conn_data);
+	purple_debug_info(MB_NET, "removing conn_data\n");
+	purple_proxy_connect_cancel_with_handle(conn_data);
+	if(conn_data->ssl_conn_data != NULL) {
+		purple_debug_info(MB_NET, "ssl_conn_data = %p\n", conn_data->ssl_conn_data);
+		//purple_debug_info(MB_NET, "removing connection %p from ssl_conn_hash\n", conn_data->ssl_conn_data);
 		//g_hash_table_remove(conn_data->ta->ssl_conn_hash, conn_data->ssl_conn_data);
-		g_hash_table_replace(conn_data->ta->ssl_conn_hash, conn_data->ssl_conn_data, NULL);
 		purple_debug_info(MB_NET, "removing SSL event\n");
 		purple_input_remove(conn_data->ssl_conn_data->inpa);
 		purple_debug_info(MB_NET, "closing SSL connection\n");
@@ -140,7 +140,7 @@ void mb_conn_process_request(MbConnData * data)
 		*/
 	} else {
 		purple_debug_info(MB_NET, "connecting using non-SSL connection to %s, %d\n", data->host, data->port);
-		data->conn_data = purple_proxy_connect(data, ta->account, data->host, data->port, mb_conn_connect_cb, data);
+		purple_proxy_connect(data, ta->account, data->host, data->port, mb_conn_connect_cb, data);
 		purple_debug_info(MB_NET, "after connect\n");
 	}
 }
@@ -203,12 +203,12 @@ void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
-		purple_proxy_connect_cancel(conn_data->conn_data);
-		conn_data->conn_data = NULL;
+		purple_proxy_connect_cancel_with_handle(conn_data);
+		//conn_data->conn_data = NULL;
 		return;
 	}
 
-	conn_data->conn_data = NULL;
+	//conn_data->conn_data = NULL;
 	if( error_message) {
 		purple_debug_info(MB_NET, "error_messsage = %s\n", error_message);
 		purple_connection_error(ta->gc, _(error_message));
@@ -303,6 +303,7 @@ void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
 
 	//purple_debug_info(MB_NET, "new cur_result_pos = %d\n", tpd->cur_result_pos);
 	res = mb_http_data_read(source, response);
+	purple_debug_info(MB_NET, "result from read = %d\n", res);
 	cur_error = errno;
 	if( (res < 0) && (cur_error != EAGAIN) ) {
 		// error connecting or reading
@@ -314,7 +315,7 @@ void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
 			if(conn_data->conn_event_handle >= 0) {
 				g_hash_table_remove(ta->conn_hash, &source);
 				purple_proxy_connect_cancel_with_handle(conn_data);
-				conn_data->conn_data = NULL;			
+				//conn_data->conn_data = NULL;			
 			}
 			call_handler = TRUE;
 		} else {
@@ -324,7 +325,7 @@ void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
 			if(conn_data->conn_event_handle >= 0) {
 				g_hash_table_remove(ta->conn_hash, &source);
 				purple_proxy_connect_cancel_with_handle(conn_data);
-				conn_data->conn_data = NULL;
+				//conn_data->conn_data = NULL;
 			}
 			conn_data->retry += 1;
 			if(conn_data->retry <= conn_data->max_retry) {
@@ -355,11 +356,8 @@ void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
 	} else if(res == 0) {
 		// we have all data
 		purple_input_remove(conn_data->conn_event_handle);
-		if(conn_data->conn_data) {
-			g_hash_table_remove(ta->conn_hash, &source);
-			purple_proxy_connect_cancel_with_handle(conn_data);
-			conn_data->conn_data = NULL;
-		}
+		g_hash_table_remove(ta->conn_hash, &source);
+		purple_proxy_connect_cancel_with_handle(conn_data);
 		call_handler = TRUE;
 	} // global if else for connection state
 	

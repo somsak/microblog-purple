@@ -582,14 +582,15 @@ static gint _do_read(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 {
 	gint retval;
 	gchar * buffer;
-	
+
+	purple_debug_info(MB_HTTPID, "_do_read called\n");
 	buffer = g_malloc0(MB_MAXBUFF + 1);
 	if(ssl) {
 		retval = purple_ssl_read(ssl, buffer, MB_MAXBUFF);
 	} else {
 		retval = read(fd, buffer, MB_MAXBUFF);
 	}
-	//purple_debug_info(MB_HTTPID, "got data = #%s#\n", buffer);
+	purple_debug_info(MB_HTTPID, "retval = %d\n", retval);
 	if(retval > 0) {
 		mb_http_data_post_read(data, buffer, retval);
 	} else if(retval == 0) {
@@ -599,6 +600,7 @@ static gint _do_read(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 		}
 	}
 	g_free(buffer);
+	purple_debug_info(MB_HTTPID, "before return\n");
 	
 	return retval;
 }
