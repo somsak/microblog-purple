@@ -12,5 +12,5 @@ default: build
 
 build install clean: 
 	for dir in $(SUBDIRS); do \
-		make -C "$$dir"; \
+		make -C "$$dir" $@; \
 	done

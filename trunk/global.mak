@@ -39,6 +39,7 @@ LIBS += -lglib-2.0 \
 			-lintl \
 			-lws2_32 \
 			-lpurple
+			
 PURPLE_LIBS = -L$(GTK_TOP)/lib -L$(PURPLE_TOP) $(LIBS)
 PURPLE_CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSION)\" $(INCLUDE_PATHS)
 

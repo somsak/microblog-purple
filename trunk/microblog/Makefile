@@ -20,7 +20,7 @@ OBJECTS = $(TWITTER_OBJ)
 
 .PHONY: all clean install
 
-all: $(TARGETS)
+build: $(TARGETS)
 
 install: $(TARGETS)
 	rm -f $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
