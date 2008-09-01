@@ -74,7 +74,7 @@ static void twitgin_preinsert_cb(GtkTextBuffer *buffer, GtkTextIter *iter, gchar
 }
 
 static void create_twitter_label(PidginConversation *gtkconv) {
-	GtkWidget *label = gtk_label_new(_(TW_MAX_MESSAGE_SIZE_TEXT));
+	GtkWidget *label = gtk_label_new(TW_MAX_MESSAGE_SIZE_TEXT);
 	// int id;	
 	gtk_box_pack_end(GTK_BOX(gtkconv->toolbar), label, FALSE, FALSE, 0);	
 	gtk_widget_show(label);
@@ -93,7 +93,7 @@ static void remove_twitter_label(PidginConversation *gtkconv) {
 }
 
 static gboolean is_twitter_conversation(PurpleConversation *conv) {
-	return strcmp(conv->account->protocol_id, "prpl-somsaks-twitter")==0;
+	return strcmp(conv->account->protocol_id, "prpl-mbpurple-twitter")==0;
 }
 
 static void on_conversation_display(PidginConversation *gtkconv)
@@ -114,7 +114,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	PurpleAccount *acct;	
 	purple_debug_info("twitgin", "twittgin_uri_handler\n");	
 	// do not need to test, because the conversation window must be open before one can click
-	acct = purple_accounts_find(acct_id, "prpl-somsaks-twitter"); 
+	acct = purple_accounts_find(acct_id, "prpl-mbpurple-twitter"); 
 	if (g_ascii_strcasecmp(proto, "tw")!=0) return FALSE;	
 	purple_debug_info("twitgin", "found account with libtwtter\n");	
 	/* tw:rep?to=sender */
@@ -136,12 +136,15 @@ static PurpleNotifyUiOps twitgin_ops;
 static void *(*saved_notify_uri)(const char *uri);
 
 static void * twitgin_notify_uri(const char *uri) {
+	void * retval = NULL;
 	if(strncmp(uri,"tw:",3)==0) {
 		purple_debug_info("twitgin", "notify hooked: uri=%s\n", uri);	
 		purple_got_protocol_handler_uri(uri);		
+
 	} else {
-		saved_notify_uri(uri);
+		retval = saved_notify_uri(uri);
 	}
+	//return retval;
 }
 
 static gboolean plugin_load(PurplePlugin *plugin) 
@@ -216,7 +219,7 @@ static PurplePluginInfo info =
 
 	"gtktwitgin",                                   /**< id */
 	N_("Twitgin"),                                  /**< name */
-	DISPLAY_VERSION,                                /**< version */
+	MBPURPLE_VERSION,                                /**< version */
 	N_("Twitter Conversation."),                    /**< summary */
 	N_("Support Microblog-purple "
 	   "in the conversation window."),              /**< description */
