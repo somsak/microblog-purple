@@ -1,17 +1,20 @@
+#
+# Microblog protocol plug-in
+#
 
-VERSION = 0.2.1
-TARGETS = libtwitter.so
-PREFIX = /usr
+include ../global.mak
 
-PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
-PURPLE_LIBS = $(shell pkg-config --libs purple)
+TARGETS = libtwitter$(PLUGIN_SUFFIX)
+
+#PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
+#PURPLE_LIBS = $(shell pkg-config --libs purple)
 
 LD = $(CC)
-CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC -DMBPURPLE_VERSION=\"$(VERSION)\"
-CFLAGS += $(PURPLE_CFLAGS)
-TWITTER_SRC = twitter.c mb_util.c mb_http.c mb_net.c
+CFLAGS = -DMBPURPLE_VERSION=\"$(VERSION)\" $(PURPLE_CFLAGS)
+TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c
+TWITTER_H_SRC = $(TWITTER_C_SRC:%.c=%.h)
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
-TWITTER_OBJ = $(TWITTER_SRC:%.c=%.o)
+TWITTER_OBJ = $(TWITTER_C_SRC:%.c=%.o)
 
 OBJECTS = $(TWITTER_OBJ)
 
@@ -20,18 +23,26 @@ OBJECTS = $(TWITTER_OBJ)
 all: $(TARGETS)
 
 install: $(TARGETS)
-	install -m 0755 -d $(DESTDIR)$(PREFIX)/lib/purple-2
-	install -m 0755 -d $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/16
-	install -m 0755 -d $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/22
-	install -m 0755 -d $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/48
-
-	install -m 0644 libtwitter.so $(DESTDIR)$(PREFIX)/lib/purple-2/libtwitter.so
-	install -m 0644 twitter16.png $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/16/twitter.png
-	install -m 0644 twitter22.png $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/22/twitter.png
-	install -m 0644 twitter48.png $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/48/twitter.png
+	rm -f $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
+	install -m 0755 -d $(PURPLE_PLUGIN_DIR)
+	# for some reason, install -m0644 doesn't works on Windows (Access Denied when loading dll), use cp instead
+	cp libtwitter$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
+	for dir in 16 22 48; do \
+		(install -m 0755 -d $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir && \
+			install -m 0644 twitter$$dir.png $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/twitter.png ) \
+	done
 
 clean:
 	rm -f $(TARGETS) $(OBJECTS)
 
-libtwitter.so: $(TWITTER_OBJ)
-	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) -o libtwitter.so
+libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
+	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
+	
+pidgin-microblog.exe: $(TARGET).dll twitter.nsi
+	makensis /DPRODUCT_VERSION=$(VERSION) twitter.nsi
+
+dist: $(H_SRC) $(C_SRC) Makefile $(IMG_SRC)
+	rm -rf $(SRCNAME)-$(VERSION)
+	mkdir -p $(SRCNAME)-$(VERSION)
+	cp $^ $(SRCNAME)-$(VERSION)/
+	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/
