@@ -39,6 +39,7 @@ CFLAGS = -DMBPURPLE_VERSION=\"$(VERSION)\" $(PURPLE_CFLAGS) $(TWITGIN_INC_PATHS)
 TWITGIN_C_SRC = twitgin.c
 TWITGIN_H_SRC = $(TWITGIN_C_SRC:%.c=%.h)
 TWITGIN_OBJ = $(TWITGIN_C_SRC:%.c=%.o)
+DISTFILES = $(TWITGIN_C_SRC) Makefile
 
 OBJECTS = $(TWITGIN_OBJ)
 
@@ -58,8 +59,8 @@ clean:
 twitgin$(PLUGIN_SUFFIX): $(TWITGIN_OBJ)
 	$(LD) $(LDFLAGS) -shared $(TWITGIN_OBJ) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o twitgin$(PLUGIN_SUFFIX)
 
-dist: $(H_SRC) $(C_SRC) Makefile $(IMG_SRC)
-	rm -rf $(SRCNAME)-$(VERSION)
-	mkdir -p $(SRCNAME)-$(VERSION)
-	cp $^ $(SRCNAME)-$(VERSION)/
-	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/
+#dist: $(H_SRC) $(C_SRC) Makefile $(IMG_SRC)
+#	rm -rf $(SRCNAME)-$(VERSION)
+#	mkdir -p $(SRCNAME)-$(VERSION)
+#	cp $^ $(SRCNAME)-$(VERSION)/
+#	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/

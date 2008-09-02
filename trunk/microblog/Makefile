@@ -15,6 +15,7 @@ TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c
 TWITTER_H_SRC = $(TWITTER_C_SRC:%.c=%.h)
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
 TWITTER_OBJ = $(TWITTER_C_SRC:%.c=%.o)
+DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) Makefile
 
 OBJECTS = $(TWITTER_OBJ)
 
@@ -38,11 +39,11 @@ clean:
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
 	
-pidgin-microblog.exe: $(TARGET).dll twitter.nsi
-	makensis /DPRODUCT_VERSION=$(VERSION) twitter.nsi
+#pidgin-microblog.exe: $(TARGET).dll twitter.nsi
+#	makensis /DPRODUCT_VERSION=$(VERSION) twitter.nsi
 
-dist: $(H_SRC) $(C_SRC) Makefile $(IMG_SRC)
-	rm -rf $(SRCNAME)-$(VERSION)
-	mkdir -p $(SRCNAME)-$(VERSION)
-	cp $^ $(SRCNAME)-$(VERSION)/
-	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/
+#dist: $(H_SRC) $(C_SRC) Makefile $(IMG_SRC)
+#	rm -rf $(SRCNAME)-$(VERSION)
+#	mkdir -p $(SRCNAME)-$(VERSION)
+#	cp $^ $(SRCNAME)-$(VERSION)/
+#	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/

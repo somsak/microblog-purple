@@ -2,8 +2,7 @@
 # Global header for all makefile
 #
 
-# VERSION of the whole package
-VERSION := 0.2.1
+-include ../version.mak
 
 # PIDGIN_TREE_TOP is only meaningful on Windows, point it to top directory of Pidgin. IT MUST BE A RELATIVE PATH
 # It MUST realitve to each subdirectory (microblog, twitgin)
@@ -60,3 +59,7 @@ PURPLE_PROTOCOL_PIXMAP_DIR := $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR := $(DESTDIR)$(PREFIX)/lib/purple-2/
 
 endif
+
+dist: $(DISTFILES)
+	mkdir ../$(PACKAGE)-$(VERSION)/`basename $$PWD`
+	cp -f $(DISTFILES) ../$(PACKAGE)-$(VERSION)/`basename $$PWD`/
