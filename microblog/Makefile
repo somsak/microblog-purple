@@ -39,3 +39,8 @@ clean:
 
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
+
+mb_http.o: mb_http.c mb_http.h
+mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h
+mb_util.o: mb_util.c
+twitter.o: twitter.c mb_net.h mb_http.h twitter.h mb_util.h
