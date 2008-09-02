@@ -8,6 +8,9 @@ include ../global.mak
 
 TARGETS = twitgin$(PLUGIN_SUFFIX)
 
+LD = $(CC)
+
+ifeq ($(strip $(IS_WIN32)), 1)
 TWITGIN_INC_PATHS += -I$(GTK_TOP)/include/gtk-2.0 \
 			-I$(GTK_TOP)/include/pango-1.0 \
 			-I$(GTK_TOP)/include/atk-1.0 \
@@ -15,6 +18,7 @@ TWITGIN_INC_PATHS += -I$(GTK_TOP)/include/gtk-2.0 \
 			-I$(GTK_TOP)/lib/gtk-2.0/include \
 			-I$(PIDGIN_TOP) \
 			-I$(PIDGIN_TOP)/win32 
+
 
 LIB_PATHS += -L$(GTK_TOP)/lib \
 			-L$(PURPLE_TOP) \
@@ -27,9 +31,13 @@ LIBS =	-lgtk-win32-2.0 \
 			-lintl \
 			-lpurple \
 			-lpidgin
-
-LD = $(CC)
 CFLAGS = $(PURPLE_CFLAGS) $(TWITGIN_INC_PATHS)
+else
+CFLAGS = $(PURPLE_CFLAGS) $(PIDGIN_CFLAGS)
+LIB_PATHS = 
+LIBS = $(PIDGIN_LIBS)
+endif
+
 TWITGIN_C_SRC = twitgin.c
 TWITGIN_H_SRC = $(TWITGIN_C_SRC:%.c=%.h)
 TWITGIN_OBJ = $(TWITGIN_C_SRC:%.c=%.o)

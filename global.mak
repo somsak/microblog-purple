@@ -58,6 +58,9 @@ PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
 PURPLE_CFLAGS += -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\" -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 PLUGIN_SUFFIX := .so
 
+PIDGIN_LIBS = $(shell pkg-config --libs pidgin)
+PIDGIN_CFLAGS = $(shell pkg-config --cflags pidgin)
+
 PURPLE_PROTOCOL_PIXMAP_DIR := $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/
 PURPLE_PLUGIN_DIR := $(DESTDIR)$(PREFIX)/lib/purple-2/
 
