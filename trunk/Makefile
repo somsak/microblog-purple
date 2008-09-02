@@ -25,3 +25,11 @@ distdir:
 dist: distdir
 	tar -zcvf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION)
 	rm -rf $(PACKAGE)-$(VERSION)
+
+windist: pidgin-microblog-$(VERSION).exe
+
+pidgin-microblog.exe: build mbpurple.nsi
+	makensis /DPRODUCT_VERSION=$(VERSION) mbpurple.nsi
+
+pidgin-microblog-$(VERSION).exe: pidgin-microblog.exe
+	mv -f $< $@
