@@ -15,6 +15,9 @@ PREFIX := /usr
 # Is this WIN32?
 IS_WIN32 = $(shell (uname -a | grep -q -i cygwin) && echo 1 || echo 0)
 
+# for override those attributes
+-include ../local.mak
+
 ifeq ($(strip $(IS_WIN32)), 1)
 # WIN32
 # Use makefile and headers supplied by Pidgin 
