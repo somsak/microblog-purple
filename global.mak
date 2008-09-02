@@ -55,7 +55,7 @@ else
 # LINUX and others, use pkg-config
 PURPLE_LIBS = $(shell pkg-config --libs purple)
 PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
-PURPLE_CFLAGS += DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\" -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
+PURPLE_CFLAGS += -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\" -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 PLUGIN_SUFIX := .so
 
 PURPLE_PROTOCOL_PIXMAP_DIR := $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/
