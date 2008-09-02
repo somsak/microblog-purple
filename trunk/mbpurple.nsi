@@ -55,9 +55,9 @@ Section "MainSection" SEC01
     SetOverwrite try
     
 	SetOutPath "$PidginDir\pixmaps\pidgin"
-	File "/oname=protocols\16\twitter.png" "twitter16.png"
-	File "/oname=protocols\22\twitter.png" "twitter22.png"
-	File "/oname=protocols\48\twitter.png" "twitter48.png"
+	File "/oname=protocols\16\twitter.png" "microblog\twitter16.png"
+	File "/oname=protocols\22\twitter.png" "microblog\twitter22.png"
+	File "/oname=protocols\48\twitter.png" "microblog\twitter48.png"
 
     SetOverwrite try
 	copy:
@@ -65,7 +65,8 @@ Section "MainSection" SEC01
 		Delete "$PidginDir\plugins\libtwitter.dll"
 		IfErrors dllbusy
 		SetOutPath "$PidginDir\plugins"
-	    File "libtwitter.dll"
+	    File "microblog\libtwitter.dll"
+		File "twitgin\twitgin.dll"
 		writeUninstaller "$PidginDir\pidgin-microblog-uninst.exe"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}  - Twitter support for Pidgin"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
@@ -85,6 +86,7 @@ Section "Uninstall"
 	
 	uninstall: 
 		Delete "$PidginDir\plugins\libtwitter.dll"
+		Delete "$PidginDir\plugins\twitgin.dll"
 		IfErrors dllbusy
 		Delete "$PidginDir\pidgin-microblog-uninst.exe"
 		DeleteRegKey "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}"
