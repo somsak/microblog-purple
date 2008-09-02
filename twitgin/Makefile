@@ -44,7 +44,6 @@ build: $(TARGETS)
 install: $(TARGETS)
 	rm -f $(PURPLE_PLUGIN_DIR)/twitgin$(PLUGIN_SUFFIX)
 	install -m 0755 -d $(PURPLE_PLUGIN_DIR)
-	# for some reason, install -m0644 doesn't works on Windows (Access Denied when loading dll), use cp instead
 	cp twitgin$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/twitgin$(PLUGIN_SUFFIX)
 
 clean:
@@ -53,8 +52,3 @@ clean:
 twitgin$(PLUGIN_SUFFIX): $(TWITGIN_OBJ)
 	$(LD) $(LDFLAGS) -shared $(TWITGIN_OBJ) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o twitgin$(PLUGIN_SUFFIX)
 
-#dist: $(H_SRC) $(C_SRC) Makefile $(IMG_SRC)
-#	rm -rf $(SRCNAME)-$(VERSION)
-#	mkdir -p $(SRCNAME)-$(VERSION)
-#	cp $^ $(SRCNAME)-$(VERSION)/
-#	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/

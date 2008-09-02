@@ -28,7 +28,6 @@ build: $(TARGETS)
 install: $(TARGETS)
 	rm -f $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
 	install -m 0755 -d $(PURPLE_PLUGIN_DIR)
-	# for some reason, install -m0644 doesn't works on Windows (Access Denied when loading dll), use cp instead
 	cp libtwitter$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
 	for dir in 16 22 48; do \
 		(install -m 0755 -d $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir && \
@@ -40,12 +39,3 @@ clean:
 
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
-	
-#pidgin-microblog.exe: $(TARGET).dll twitter.nsi
-#	makensis /DPRODUCT_VERSION=$(VERSION) twitter.nsi
-
-#dist: $(H_SRC) $(C_SRC) Makefile $(IMG_SRC)
-#	rm -rf $(SRCNAME)-$(VERSION)
-#	mkdir -p $(SRCNAME)-$(VERSION)
-#	cp $^ $(SRCNAME)-$(VERSION)/
-#	tar -zcvf $(SRCNAME)-$(VERSION).tar.gz $(SRCNAME)-$(VERSION)/
