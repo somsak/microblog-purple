@@ -2,17 +2,11 @@
 # Microblog protocol plug-in
 #
 
+all: build 
+
 include ../global.mak
 
 TARGETS = twitgin$(PLUGIN_SUFFIX)
-
-INCLUDE_PATHS +=	-I. \
-			-I$(GTK_TOP)/include \
-			-I$(GTK_TOP)/include/glib-2.0 \
-			-I$(GTK_TOP)/lib/glib-2.0/include \
-			-I$(PURPLE_TOP) \
-			-I$(PURPLE_TOP)/win32 \
-			-I$(PIDGIN_TREE_TOP)
 
 TWITGIN_INC_PATHS += -I$(GTK_TOP)/include/gtk-2.0 \
 			-I$(GTK_TOP)/include/pango-1.0 \
@@ -21,7 +15,7 @@ TWITGIN_INC_PATHS += -I$(GTK_TOP)/include/gtk-2.0 \
 			-I$(GTK_TOP)/lib/gtk-2.0/include \
 			-I$(PIDGIN_TOP) \
 			-I$(PIDGIN_TOP)/win32 
-			
+
 LIB_PATHS += -L$(GTK_TOP)/lib \
 			-L$(PURPLE_TOP) \
 			-L$(PIDGIN_TOP)
@@ -35,7 +29,7 @@ LIBS =	-lgtk-win32-2.0 \
 			-lpidgin
 
 LD = $(CC)
-CFLAGS = -DMBPURPLE_VERSION=\"$(VERSION)\" $(PURPLE_CFLAGS) $(TWITGIN_INC_PATHS)
+CFLAGS = $(PURPLE_CFLAGS) $(TWITGIN_INC_PATHS)
 TWITGIN_C_SRC = twitgin.c
 TWITGIN_H_SRC = $(TWITGIN_C_SRC:%.c=%.h)
 TWITGIN_OBJ = $(TWITGIN_C_SRC:%.c=%.o)
