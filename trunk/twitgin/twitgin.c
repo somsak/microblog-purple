@@ -21,20 +21,29 @@
 #include <config.h>
 #endif
 
-#include "internal.h"
+#include <glib.h>
+#include <glib/gi18n.h>
 
-#include "version.h"
+#ifndef G_GNUC_NULL_TERMINATED
+#  if __GNUC__ >= 4
+#    define G_GNUC_NULL_TERMINATED __attribute__((__sentinel__))
+#  else
+#    define G_GNUC_NULL_TERMINATED
+#  endif /* __GNUC__ >= 4 */
+#endif /* G_GNUC_NULL_TERMINATED */
 
-#include "pidgin.h"
-#include "account.h"
-#include "core.h"
-#include "gtkconv.h"
-#include "gtkplugin.h"
-#include "gtkimhtml.h"
-#include "gtkutils.h"
+//#include "internal.h"
+#include <pidgin.h>
+#include <account.h>
+#include <core.h>
 #include <debug.h>
-#include "gtknotify.h"
-#include "util.h"
+#include <gtkconv.h>
+#include <util.h>
+#include <version.h>
+#include <gtkplugin.h>
+#include <gtkimhtml.h>
+#include <gtkutils.h>
+#include <gtknotify.h>
 
 #define TW_MAX_MESSAGE_SIZE 140
 #define TW_MAX_MESSAGE_SIZE_TEXT "140"
@@ -218,13 +227,13 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,                        /**< priority */
 
 	"gtktwitgin",                                   /**< id */
-	N_("Twitgin"),                                  /**< name */
+	"Twitgin",                                  /**< name */
 	MBPURPLE_VERSION,                                /**< version */
-	N_("Twitter Conversation."),                    /**< summary */
-	N_("Support Microblog-purple "
-	   "in the conversation window."),              /**< description */
+	"Twitter Conversation.",                    /**< summary */
+	"Support Microblog-purple "
+	   "in the conversation window.",              /**< description */
 	"Chanwit Kaewkasi <chanwit@gmail.com>",         /**< author */
-	PURPLE_WEBSITE,                                 /**< homepage */
+	"http://microblog-purple.googlecode.com",                                 /**< homepage */
 	plugin_load,                                    /**< load */
 	plugin_unload,                                  /**< unload */
 	NULL,                                           /**< destroy */
