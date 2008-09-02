@@ -33,7 +33,7 @@
 #endif /* G_GNUC_NULL_TERMINATED */
 
 //#include "internal.h"
-#include <pidgin.h>
+//#include <pidgin.h>
 #include <account.h>
 #include <core.h>
 #include <debug.h>
