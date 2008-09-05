@@ -1,4 +1,4 @@
-usr/lib/purple-2/lib*.so
+usr/lib/purple-2/*.so
 usr/share/pixmaps/pidgin/protocols/16/*.png
 usr/share/pixmaps/pidgin/protocols/22/*.png
 usr/share/pixmaps/pidgin/protocols/48/*.png

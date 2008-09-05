@@ -1,8 +1,14 @@
+mbpurple (0.2.1-1~getdeb1) hardy; urgency=low
+
+  * New upstream version
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Tue, 02 Sep 2008 23:16:32 +0700
+
 mbpurple (0.1.2-1~getdeb1) hardy; urgency=low
 
   * New upstream version
 
- -- Sugree Phatanapherom <sugree@gmail.com>  Sat, 16 Aug 2008 21:53:33 +0700
+ -- Sugree Phatanapherom <sugree@gmail.com>  Tue, 02 Sep 2008 23:15:21 +0700
 
 microblog-purple (0.1-1~getdeb1) hardy; urgency=low
 
