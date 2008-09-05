@@ -156,6 +156,7 @@ static void * twitgin_notify_uri(const char *uri) {
 		retval = saved_notify_uri(uri);
 	}
 	//return retval;
+	return NULL;
 }
 
 static gboolean plugin_load(PurplePlugin *plugin) 
