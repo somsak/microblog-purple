@@ -62,6 +62,10 @@ PLUGIN_SUFFIX := .so
 PURPLE_PROTOCOL_PIXMAP_DIR := $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols/
 PURPLE_PLUGIN_DIR := $(DESTDIR)$(PREFIX)/lib/purple-2/
 
+PIDGIN_LIBS = $(shell pkg-config --libs pidgin)
+PIDGIN_CFLAGS = -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
+PIDGIN_CFLAGS += $(shell pkg-config --cflags pidgin)
+PIDGIN_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 endif
 
 dist: $(DISTFILES)
