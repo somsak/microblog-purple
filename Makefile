@@ -10,7 +10,7 @@ SUBDIRS = microblog twitgin
 
 default: build
 
-build install clean: 
+build install uninstall clean: 
 	for dir in $(SUBDIRS); do \
 		make -C "$$dir" $@; \
 	done

@@ -54,6 +54,9 @@ install: $(TARGETS)
 	install -m 0755 -d $(PURPLE_PLUGIN_DIR)
 	cp twitgin$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/twitgin$(PLUGIN_SUFFIX)
 
+uninstall: 
+	rm -f $(PURPLE_PLUGIN_DIR)/twitgin$(PLUGIN_SUFFIX)
+
 clean:
 	rm -f $(TARGETS) $(OBJECTS)
 

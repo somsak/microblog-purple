@@ -67,12 +67,13 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 		conn_data->request->proto = MB_HTTP;
 	}
 	
+	purple_debug_info(MB_NET, "new: create conn_data = %p\n", conn_data);
 	return conn_data;
 }
 
 void mb_conn_data_free(MbConnData * conn_data)
 {
-
+	purple_debug_info(MB_NET, "free: conn_data = %p\n", conn_data);
 	if(conn_data->conn_event_handle) {
 		//purple_debug_info(MB_NET, "removing connection %p from conn_hash\n", conn_data->conn_data);
 		//g_hash_table_remove(conn_data->ta->conn_hash, conn_data->conn_data);
@@ -126,7 +127,7 @@ void mb_conn_process_request(MbConnData * data)
 {
 	MbAccount *ta = data->ta;
 	
-	purple_debug_info(MB_NET, "mb_conn_process_request\n");
+	purple_debug_info(MB_NET, "mb_conn_process_request, conn_data = %p\n", data);
 
 	purple_debug_info(MB_NET, "connecting to %s on port %hd\n", data->host, data->port);
 	if(data->is_ssl) {
@@ -151,7 +152,7 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	MbAccount * ta = conn_data->ta;
 	gint res, cur_error;
 	
-	purple_debug_info(MB_NET, "mb_conn_post_request, source = %d\n", source);
+	purple_debug_info(MB_NET, "mb_conn_post_request, source = %d, conn_data = %p\n", source, conn_data);
 	purple_input_remove(conn_data->conn_event_handle);
 	conn_data->conn_event_handle = 0;
 	
@@ -198,7 +199,7 @@ void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 	MbConnData * conn_data = data;
 	MbAccount * ta = conn_data->ta;
 
-	purple_debug_info(MB_NET, "mb_conn_connect_cb, source = %d\n", source);
+	purple_debug_info(MB_NET, "mb_conn_connect_cb, source = %d, conn_data = %p\n", source, conn_data);
 
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
@@ -238,7 +239,7 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 	MbAccount *ta = conn_data->ta;
 	gint res = 0;
 	
-	purple_debug_info(MB_NET, "mb_conn_post_ssl_request\n");
+	purple_debug_info(MB_NET, "mb_conn_post_ssl_request, conn_data = %p\n", conn_data);
 	
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
@@ -299,7 +300,7 @@ void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
 	gint res, cur_error;
 	gboolean call_handler = FALSE;
 	
-	purple_debug_info(MB_NET, "mb_conn_get_result\n");
+	purple_debug_info(MB_NET, "mb_conn_get_result, conn_data = %p\n", conn_data);
 
 	//purple_debug_info(MB_NET, "new cur_result_pos = %d\n", tpd->cur_result_pos);
 	res = mb_http_data_read(source, response);
@@ -390,7 +391,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 	gint res, cur_error;
 	gboolean call_handler = FALSE;
 	
-	purple_debug_info(MB_NET, "mb_conn_get_ssl_result\n");
+	purple_debug_info(MB_NET, "mb_conn_get_ssl_result, conn_data = %p\n", conn_data);
 
 	//purple_debug_info(MB_NET, "new cur_result_pos = %d\n", tpd->cur_result_pos);
 	res = mb_http_data_ssl_read(ssl, response);
