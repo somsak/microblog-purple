@@ -12,7 +12,7 @@ TARGETS = libtwitter$(PLUGIN_SUFFIX)
 #PURPLE_LIBS = $(shell pkg-config --libs purple)
 
 LD = $(CC)
-CFLAGS = $(PURPLE_CFLAGS)
+CFLAGS = $(PURPLE_CFLAGS) -g
 TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c
 TWITTER_H_SRC = $(TWITTER_C_SRC:%.c=%.h)
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
