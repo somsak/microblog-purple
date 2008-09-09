@@ -21,6 +21,12 @@ DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) Makefile
 
 OBJECTS = $(TWITTER_OBJ)
 
+ifeq ($(strip $(IS_WIN32)), 1)
+LIBEFENCE = 
+else
+LIBEFENCE = -lefence
+endif
+
 .PHONY: all clean install 
 
 build: $(TARGETS)
@@ -45,7 +51,7 @@ clean:
 	rm -f $(TARGETS) $(OBJECTS)
 
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
-	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) -lefence $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
+	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(LIBEFENCE) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
 
 mb_http.o: mb_http.c mb_http.h
 mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h
