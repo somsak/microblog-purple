@@ -34,11 +34,18 @@ install: $(TARGETS)
 			install -m 0644 twitter$$dir.png $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/twitter.png ) \
 	done
 
+uninstall: 
+	rm -f $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
+	for dir in 16 22 48; do \
+		(rm -f $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/twitter.png ) \
+	done
+
+
 clean:
 	rm -f $(TARGETS) $(OBJECTS)
 
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
-	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
+	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) -lefence $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
 
 mb_http.o: mb_http.c mb_http.h
 mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h
