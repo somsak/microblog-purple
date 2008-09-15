@@ -9,6 +9,22 @@ So what's the different between this and Twitter IM? The answer is this would be
 
 The plug-in is inspired by [http://code.google.com/p/pidgin-facebookchat/ FacebookChat project]
 
+= Installation =
+== Linux ==
+
+For Ubuntu 8.04 Hardy Heron, we have PPA repository.
+
+{{{
+deb http://ppa.launchpad.net/sugree/ubuntu hardy main
+deb-src http://ppa.launchpad.net/sugree/ubuntu hardy main
+}}}
+
+Simply install `pidgin-microblog`.
+
+{{{
+sudo apt-get install pidgin-microblog
+}}}
+
 = Building the code =
 == Windows build ==
  # Follow [http://developer.pidgin.im/wiki/BuildingWinPidgin Building on Windows HOWTO]
@@ -17,5 +33,6 @@ The plug-in is inspired by [http://code.google.com/p/pidgin-facebookchat/ Facebo
  # `make -f Makefile.mingw install`
  # The built dll (libtwitter.dll) will be installed at pidgin-2.x.x/win32-install-dir/plugins. All images will be installed there too. Run the new pidgin from `win32-install-dir` directory and it'll just work. You can copy the generated libtwitter.dll to your normal Pidgin installation directory. Don't forget to also copy all png images to the correct path.
  # If you want to build windows installer, type `make -f Makefile.mingw pidgin-microblog.exe` instead.
+
 == Linux build ==
 TBD
