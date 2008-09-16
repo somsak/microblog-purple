@@ -54,18 +54,20 @@ PLUGIN_SUFFIX := .dll
 else
 # LINUX and others, use pkg-config
 PURPLE_LIBS = $(shell pkg-config --libs purple)
-PURPLE_CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
+PURPLE_CFLAGS = $(CFLAGS) -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
 PURPLE_CFLAGS += $(shell pkg-config --cflags purple)
 PURPLE_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 PLUGIN_SUFFIX := .so
 
 PURPLE_PROTOCOL_PIXMAP_DIR := $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols
-PURPLE_PLUGIN_DIR := $(DESTDIR)$(PREFIX)/lib/purple-2
+PURPLE_PLUGIN_DIR := $(DESTDIR)$(LIBDIR)/purple-2
 
 PIDGIN_LIBS = $(shell pkg-config --libs pidgin)
-PIDGIN_CFLAGS = -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
+PIDGIN_CFLAGS = $(CFLAGS) -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
 PIDGIN_CFLAGS += $(shell pkg-config --cflags pidgin)
 PIDGIN_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
+
+LDFLAGS := $(shell (echo $(PIDGIN_CFLAGS) $(PURPLE_CFLAGS)| tr ' ' '\n' | awk '!a[$$0]++' | tr '\n' ' '))
 endif
 
 dist: $(DISTFILES)
