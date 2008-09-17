@@ -5,6 +5,7 @@
 include version.mak
 
 SUBDIRS = microblog twitgin
+DISTFILES = COPYING global.mak Makefile mbpurple.nsi README.txt version.mak
 
 .PHONY: all install clean build distdir
 
@@ -21,6 +22,7 @@ distdir:
 	for dir in $(SUBDIRS); do \
 		make -C "$$dir" dist; \
 	done
+	cp -f $(DISTFILES) $(PACKAGE)-$(VERSION)/
 
 dist: distdir
 	tar -zcvf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION)

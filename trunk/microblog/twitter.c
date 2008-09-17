@@ -971,7 +971,7 @@ PurplePluginProtocolInfo twitter_prpl_info = {
 	NULL,                   /* unregister_user */
 	NULL,                   /* send_attention */
 	NULL,                   /* attention_types */
-	(gpointer)sizeof(PurplePluginProtocolInfo) /* struct_size */
+	sizeof(PurplePluginProtocolInfo) /* struct_size */
 };
 
 #ifndef TWITTER_API

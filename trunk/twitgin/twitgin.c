@@ -77,12 +77,12 @@ static void twitgin_entry_buffer_on_changed(PidginConversation *gtkconv) {
 }
 
 /* Editable stuff */
-static void twitgin_preinsert_cb(GtkTextBuffer *buffer, GtkTextIter *iter, gchar *text, gint len, GtkIMHtml *imhtml) {
+//static void twitgin_preinsert_cb(GtkTextBuffer *buffer, GtkTextIter *iter, gchar *text, gint len, GtkIMHtml *imhtml) {
 	// TODO: 
 	// if(strcmp(text,"tw:")==0) {
 	//	g_signal_stop_emission_by_name(buffer, "insert-text");	
 	// }	
-}
+//}
 
 static void create_twitter_label(PidginConversation *gtkconv) {
 	GtkWidget *label = gtk_label_new(TW_MAX_MESSAGE_SIZE_TEXT);

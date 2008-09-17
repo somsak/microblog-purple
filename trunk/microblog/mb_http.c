@@ -429,7 +429,7 @@ static void mb_http_data_prepare_write(MbHttpData * data)
 	
 	// content-length, if needed
 	if(data->content) {
-		len = sprintf(cur_packet, "Content-Length: %d\r\n", data->content->len);
+		len = sprintf(cur_packet, "Content-Length: %d\r\n", (int)data->content->len);
 		cur_packet += len;
 	}
 	
