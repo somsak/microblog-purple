@@ -11,6 +11,7 @@ PIDGIN_TREE_TOP := ../../pidgin-2.5.0
 # For Linux
 DESTDIR := 
 PREFIX := /usr
+LIBDIR := $(PREFIX)/lib
 
 # Is this WIN32?
 IS_WIN32 = $(shell (uname -a | grep -q -i cygwin) && echo 1 || echo 0)
