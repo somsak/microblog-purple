@@ -6,7 +6,7 @@ all: build
 
 include ../global.mak
 
-TARGETS = libtwitter$(PLUGIN_SUFFIX)
+TARGETS = libtwitter$(PLUGIN_SUFFIX) mbchprpl$(EXE_SUFFIX)
 
 #PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
 #PURPLE_LIBS = $(shell pkg-config --libs purple)
@@ -46,6 +46,9 @@ clean:
 
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
+
+mbchprpl$(EXE_SUFFIX): mbchprpl.o
+	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@ 
 
 mb_http.o: mb_http.c mb_http.h
 mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h
