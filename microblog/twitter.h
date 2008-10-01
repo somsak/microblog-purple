@@ -24,6 +24,7 @@
 #endif /* G_GNUC_NULL_TERMINATED */
 
 #include <sslconn.h>
+#include <prpl.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -130,6 +131,13 @@ extern const char * _TweetTimeLineNames[];
 extern const char * _TweetTimeLinePaths[];
 extern const char * _TweetTimeLineConfigs[];
 
+extern void twitter_set_status(PurpleAccount *acct, PurpleStatus *status);
+extern GList * twitter_statuses(PurpleAccount *acct);
+extern gchar * twitter_status_text(PurpleBuddy *buddy);
+extern void twitter_login(PurpleAccount *acct);
+extern void twitter_close(PurpleConnection *gc);
+extern int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags);
+extern void twitter_buddy_free(PurpleBuddy * buddy);
 
 #ifdef __cplusplus
 }

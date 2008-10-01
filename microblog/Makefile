@@ -13,7 +13,7 @@ TARGETS = libtwitter$(PLUGIN_SUFFIX) mbchprpl$(EXE_SUFFIX)
 
 CFLAGS := $(PURPLE_CFLAGS)
 LD = $(CC)
-TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c
+TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c twitterim.c
 TWITTER_H_SRC = $(TWITTER_C_SRC:%.c=%.h)
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
 TWITTER_OBJ = $(TWITTER_C_SRC:%.c=%.o)
@@ -54,3 +54,4 @@ mb_http.o: mb_http.c mb_http.h
 mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h
 mb_util.o: mb_util.c
 twitter.o: twitter.c mb_net.h mb_http.h twitter.h mb_util.h
+twitterim.o: twitterim.c twitter.h mb_net.h mb_util.h mb_http.h

@@ -123,28 +123,7 @@ static void twitterim_free_tlr(TwitterTimeLineReq * tlr)
 	g_free(tlr);
 }
 
-const char * twitterim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
-{
-	return "twitter";
-}
-
-GList * twitterim_actions(PurplePlugin *plugin, gpointer context)
-{
-	GList *m = NULL;
-	/*
-	PurplePluginAction *act;
-
-	act = purple_plugin_action_new(_("Set Facebook status..."), twitterim_set_status_cb);
-	m = g_list_append(m, act);
-	
-	act = purple_plugin_action_new(_("Search for buddies..."), twitterim_search_users);
-	m = g_list_append(m, act);
-	*/
-	
-	return m;
-}
-
-GList * twitterim_statuses(PurpleAccount *acct)
+GList * twitter_statuses(PurpleAccount *acct)
 {
 	GList *types = NULL;
 	PurpleStatusType *status;
@@ -161,7 +140,7 @@ GList * twitterim_statuses(PurpleAccount *acct)
 	return types;
 }
 
-void twitterim_buddy_free(PurpleBuddy * buddy)
+void twitter_buddy_free(PurpleBuddy * buddy)
 {
 	TwitterBuddy * tbuddy = buddy->proto_data;
 	
@@ -624,7 +603,7 @@ void mb_account_free(MbAccount * ta)
 	g_free(ta);
 }
 
-void twitterim_login(PurpleAccount *acct)
+void twitter_login(PurpleAccount *acct)
 {
 	MbAccount *ta = NULL;
 	MbConnData * conn_data = NULL;
@@ -632,7 +611,7 @@ void twitterim_login(PurpleAccount *acct)
 	gchar * path = NULL;
 	gboolean use_https = TRUE;
 	
-	purple_debug_info("twitter", "twitterim_login\n");
+	purple_debug_info("twitter", "twitter_login\n");
 	
 	// Create account data
 	ta = mb_account_new(acct);
@@ -665,16 +644,16 @@ void twitterim_login(PurpleAccount *acct)
 }
 
 
-void twitterim_close(PurpleConnection *gc)
+void twitter_close(PurpleConnection *gc)
 {
 	MbAccount *ta = gc->proto_data;
 
-	purple_debug_info("twitter", "twitterim_close\n");
+	purple_debug_info("twitter", "twitter_close\n");
 	mb_account_free(ta);
 	gc->proto_data = NULL;
 }
 
-gint twitterim_send_im_handler(MbConnData * conn_data, gpointer data)
+gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 {
 	MbAccount * ta = conn_data->ta;
 	MbHttpData * response = conn_data->response;
@@ -724,7 +703,7 @@ gint twitterim_send_im_handler(MbConnData * conn_data, gpointer data)
 	return 0;
 }
 
-int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
+int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
 	TwitterAccount * ta = gc->proto_data;
 	MbConnData * conn_data = NULL;
@@ -750,7 +729,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 	} else {
 		twitter_port = TW_HTTP_PORT;
 	}
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_send_im_handler, use_https);
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_send_im_handler, use_https);
 	mb_conn_data_set_error(conn_data, "Sending status error", MB_ERROR_NOACTION);
 	mb_conn_data_set_retry(conn_data, 0);
 	conn_data->request->type = HTTP_POST;
@@ -775,104 +754,7 @@ int twitterim_send_im(PurpleConnection *gc, const gchar *who, const gchar *messa
 }
 
 
-static void plugin_init(PurplePlugin *plugin)
-{
-	/*
-	PurpleAccountOption *option;
-	PurplePluginInfo *info = plugin->info;
-	PurplePluginProtocolInfo *prpl_info = info->extra_info;
-
-	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_myself", TRUE);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_bool_new(_("Enable reply link"), "twitter_reply_link", FALSE);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_int_new(_("Number of initial tweets"), "twitter_init_tweet", 15);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-
-	option = purple_account_option_int_new(_("Maximum number of retry"), "twitter_global_retry", 3);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-
-	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_bool_new(_("Use HTTPS"), "twitter_use_https", TRUE);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_status_update", TW_STATUS_UPDATE_PATH);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter account verification path"), "twitter_verify", TW_VERIFY_PATH);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter Friends timeline path"),_TweetTimeLineConfigs[TL_FRIENDS], _TweetTimeLinePaths[TL_FRIENDS]);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter User timeline path"), _TweetTimeLineConfigs[TL_USER], _TweetTimeLinePaths[TL_USER]);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter Public timeline path"), _TweetTimeLineConfigs[TL_PUBLIC],  _TweetTimeLinePaths[TL_PUBLIC]);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	*/
-}
-
-gboolean plugin_load(PurplePlugin *plugin)
-{
-	PurpleAccountOption *option;
-	PurplePluginInfo *info = plugin->info;
-	PurplePluginProtocolInfo *prpl_info = info->extra_info;
-	
-	purple_debug_info("twitterim", "plugin_load\n");
-
-	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_myself", TRUE);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_bool_new(_("Enable reply link"), "twitter_reply_link", FALSE);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_int_new(_("Number of initial tweets"), "twitter_init_tweet", 15);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-
-	option = purple_account_option_int_new(_("Maximum number of retry"), "twitter_global_retry", 3);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-
-	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_bool_new(_("Use HTTPS"), "twitter_use_https", TRUE);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_status_update", TW_STATUS_UPDATE_PATH);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter account verification path"), "twitter_verify", TW_VERIFY_PATH);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter Friends timeline path"),_TweetTimeLineConfigs[TL_FRIENDS], _TweetTimeLinePaths[TL_FRIENDS]);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter User timeline path"), _TweetTimeLineConfigs[TL_USER], _TweetTimeLinePaths[TL_USER]);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	option = purple_account_option_string_new(_("Twitter Public timeline path"), _TweetTimeLineConfigs[TL_PUBLIC],  _TweetTimeLinePaths[TL_PUBLIC]);
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	return TRUE;
-}
-
-gboolean plugin_unload(PurplePlugin *plugin)
-{
-	purple_debug_info("twitterim", "plugin_unload\n");
-	return TRUE;
-}
-
-gchar * twitterim_status_text(PurpleBuddy *buddy)
+gchar * twitter_status_text(PurpleBuddy *buddy)
 {
 	TwitterBuddy * tbuddy = buddy->proto_data;
 	
@@ -883,126 +765,9 @@ gchar * twitterim_status_text(PurpleBuddy *buddy)
 }
 
 // There's no concept of status in TwitterIM for now
-void twitterim_set_status(PurpleAccount *acct, PurpleStatus *status) {
+void twitter_set_status(PurpleAccount *acct, PurpleStatus *status) {
   const char *msg = purple_status_get_attr_string(status, "message");
   purple_debug_info("twitterim", "setting %s's status to %s: %s\n",
                     acct->username, purple_status_get_name(status), msg);
 
 }
-
-PurplePluginProtocolInfo twitter_prpl_info = {
-	/* options */
-	OPT_PROTO_UNIQUE_CHATNAME,
-	NULL,                   /* user_splits */
-	NULL,                   /* protocol_options */
-	//NO_BUDDY_ICONS          /* icon_spec */
-	{   /* icon_spec, a PurpleBuddyIconSpec */
-		"png,jpg,gif",                   /* format */
-		0,                               /* min_width */
-		0,                               /* min_height */
-		50,                             /* max_width */
-		50,                             /* max_height */
-		10000,                           /* max_filesize */
-		PURPLE_ICON_SCALE_DISPLAY,       /* scale_rules */
-	},
-	twitterim_list_icon,   /* list_icon */
-	NULL,                   /* list_emblems */
-	twitterim_status_text, /* status_text */
-//	twitterim_tooltip_text,/* tooltip_text */
-	NULL,
-	twitterim_statuses,    /* status_types */
-	NULL,                   /* blist_node_menu */
-	NULL,                   /* chat_info */
-	NULL,                   /* chat_info_defaults */
-	twitterim_login,       /* login */
-	twitterim_close,       /* close */
-	twitterim_send_im,     /* send_im */
-	NULL,                   /* set_info */
-//	twitterim_send_typing, /* send_typing */
-	NULL,
-//	twitterim_get_info,    /* get_info */
-	NULL,
-	twitterim_set_status,/* set_status */
-	NULL,                   /* set_idle */
-	NULL,                   /* change_passwd */
-//	twitterim_add_buddy,   /* add_buddy */
-	NULL,
-	NULL,                   /* add_buddies */
-//	twitterim_remove_buddy,/* remove_buddy */
-	NULL,
-	NULL,                   /* remove_buddies */
-	NULL,                   /* add_permit */
-	NULL,                   /* add_deny */
-	NULL,                   /* rem_permit */
-	NULL,                   /* rem_deny */
-	NULL,                   /* set_permit_deny */
-	NULL,                   /* join_chat */
-	NULL,                   /* reject chat invite */
-	NULL,                   /* get_chat_name */
-	NULL,                   /* chat_invite */
-	NULL,                   /* chat_leave */
-	NULL,                   /* chat_whisper */
-	NULL,                   /* chat_send */
-	NULL,                   /* keepalive */
-	NULL,                   /* register_user */
-	NULL,                   /* get_cb_info */
-	NULL,                   /* get_cb_away */
-	NULL,                   /* alias_buddy */
-	NULL,                   /* group_buddy */
-	NULL,                   /* rename_group */
-	twitterim_buddy_free,  /* buddy_free */
-	NULL,                   /* convo_closed */
-	purple_normalize_nocase,/* normalize */
-	NULL,                   /* set_buddy_icon */
-	NULL,                   /* remove_group */
-	NULL,                   /* get_cb_real_name */
-	NULL,                   /* set_chat_topic */
-	NULL,                   /* find_blist_chat */
-	NULL,                   /* roomlist_get_list */
-	NULL,                   /* roomlist_cancel */
-	NULL,                   /* roomlist_expand_category */
-	NULL,                   /* can_receive_file */
-	NULL,                   /* send_file */
-	NULL,                   /* new_xfer */
-	NULL,                   /* offline_message */
-	NULL,                   /* whiteboard_prpl_ops */
-	NULL,                   /* send_raw */
-	NULL,                   /* roomlist_room_serialize */
-	NULL,                   /* unregister_user */
-	NULL,                   /* send_attention */
-	NULL,                   /* attention_types */
-	sizeof(PurplePluginProtocolInfo) /* struct_size */
-};
-
-#ifndef TWITTER_API
-static PurplePluginInfo info = {
-	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,
-	PURPLE_MINOR_VERSION,
-	PURPLE_PLUGIN_PROTOCOL, /* type */
-	NULL, /* ui_requirement */
-	0, /* flags */
-	NULL, /* dependencies */
-	PURPLE_PRIORITY_DEFAULT, /* priority */
-	"prpl-mbpurple-twitter", /* id */
-	"TwitterIM", /* name */
-	MBPURPLE_VERSION, /* version */
-	"Twitter data feeder", /* summary */
-	"Twitter data feeder", /* description */
-	"Somsak Sriprayoonsakul <somsaks@gmail.com>", /* author */
-	"http://microblog-purple.googlecode.com/", /* FIXME: homepage */
-	plugin_load, /* load */
-	plugin_unload, /* unload */
-	NULL, /* destroy */
-	NULL, /* ui_info */
-	&twitter_prpl_info, /* extra_info */
-	NULL, /* prefs_info */
-	twitterim_actions, /* actions */
-	NULL, /* padding */
-	NULL,
-	NULL,
-	NULL
-};
-
-PURPLE_INIT_PLUGIN(twitterim, plugin_init, info);
-#endif
