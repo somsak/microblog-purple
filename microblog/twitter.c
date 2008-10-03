@@ -72,12 +72,6 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 "Connection: Close\r\n" \
 "Pragma: no-cache\r\n";
 
-const char * _TweetTimeLineNames[] = {
-	"twitter.com",
-	"twuser",
-	"twpublic",
-};
-
 static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 
 static TwitterBuddy * twitter_new_buddy()
@@ -147,7 +141,7 @@ void twitter_fetch_first_new_messages(TwitterAccount * ta)
 	TwitterTimeLineReq * tlr = twitter_new_tlr();
 	
 	tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE)));
-	tlr->name = g_strdup(_TweetTimeLineNames[TL_FRIENDS]);
+	tlr->name = g_strdup(tc_def(TC_FRIENDS_USER));
 	tlr->timeline_id = TL_FRIENDS;
 	tlr->count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
 	twitter_fetch_new_messages(ta, tlr);
@@ -161,13 +155,14 @@ gboolean twitter_fetch_all_new_messages(gpointer data)
 	gint i;
 	
 	for(i = TC_FRIENDS_TIMELINE; i <= TC_PUBLIC_TIMELINE; i++) {
-		if(!purple_find_buddy(ta->account, _TweetTimeLineNames[i])) {
+		//FIXME: i + 1 is not a very good strategy here
+		if(!purple_find_buddy(ta->account, tc_def(i + 1))) {
 			purple_debug_info("twitter", "skipping %s\n", tlr->name);
 			continue;
 		}
 		tlr = twitter_new_tlr();
 		tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(i), tc_def(i)));
-		tlr->name = g_strdup(_TweetTimeLineNames[i]);
+		tlr->name = g_strdup(tc_def(i + 1));
 		tlr->timeline_id = i;
 		tlr->count = TW_STATUS_COUNT_MAX;
 		twitter_fetch_new_messages(ta, tlr);
@@ -450,10 +445,10 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 	
 	// Add timeline as "fake" user
 	// Is TL_FRIENDS already exist?
-	if ( (buddy = purple_find_buddy(ta->account, _TweetTimeLineNames[TL_FRIENDS])) == NULL)
+	if ( (buddy = purple_find_buddy(ta->account, tc_def(TC_FRIENDS_USER))) == NULL)
 	{
-		purple_debug_info("twitter", "creating new buddy list for %s\n", _TweetTimeLineNames[TL_FRIENDS]);
-		buddy = purple_buddy_new(ta->account, _TweetTimeLineNames[TL_FRIENDS], NULL);
+		purple_debug_info("twitter", "creating new buddy list for %s\n", tc_def(TC_FRIENDS_USER));
+		buddy = purple_buddy_new(ta->account, tc_def(TC_FRIENDS_USER), NULL);
 		if (twitter_group == NULL)
 		{
 			purple_debug_info("twitter", "creating new Twitter group\n");
@@ -467,7 +462,7 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 			tbuddy->buddy = buddy;
 			tbuddy->ta = ta;
 			tbuddy->uid = TL_FRIENDS;
-			tbuddy->name = g_strdup(_TweetTimeLineNames[TL_FRIENDS]);
+			tbuddy->name = g_strdup(tc_def(TC_FRIENDS_USER));
 		}
 		purple_blist_add_buddy(buddy, NULL, twitter_group, NULL);
 	}
