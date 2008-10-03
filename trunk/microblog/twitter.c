@@ -78,21 +78,9 @@ const char * _TweetTimeLineNames[] = {
 	"twpublic",
 };
 
-const char * _TweetTimeLinePaths[] = {
-	"/statuses/friends_timeline.xml",
-	"/statuses/user_timeline.xml",
-	"/statuses/public_timeline.xml",
-};
+static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 
-const char * _TweetTimeLineConfigs[] = {
-	"twitter_friends_timeline",
-	"twitter_user_timeline",
-	"twitter_public_timeline",
-};
-
-static void twitterim_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
-
-static TwitterBuddy * twitterim_new_buddy()
+static TwitterBuddy * twitter_new_buddy()
 {
 	TwitterBuddy * buddy = g_new(TwitterBuddy, 1);
 	
@@ -106,7 +94,7 @@ static TwitterBuddy * twitterim_new_buddy()
 	return buddy;
 }
 
-static TwitterTimeLineReq * twitterim_new_tlr()
+static TwitterTimeLineReq * twitter_new_tlr()
 {
 	TwitterTimeLineReq * tlr = g_new(TwitterTimeLineReq, 1);
 	tlr->path = NULL;
@@ -116,7 +104,7 @@ static TwitterTimeLineReq * twitterim_new_tlr()
 	return tlr;
 }
 
-static void twitterim_free_tlr(TwitterTimeLineReq * tlr)
+static void twitter_free_tlr(TwitterTimeLineReq * tlr)
 {
 	if(tlr->path != NULL) g_free(tlr->path);
 	if(tlr->name != NULL) g_free(tlr->name);
@@ -154,40 +142,40 @@ void twitter_buddy_free(PurpleBuddy * buddy)
 }
 
 // Function to fetch first batch of new message
-void twitterim_fetch_first_new_messages(TwitterAccount * ta)
+void twitter_fetch_first_new_messages(TwitterAccount * ta)
 {
-	TwitterTimeLineReq * tlr = twitterim_new_tlr();
+	TwitterTimeLineReq * tlr = twitter_new_tlr();
 	
-	tlr->path = g_strdup(purple_account_get_string(ta->account, _TweetTimeLineConfigs[TL_FRIENDS], _TweetTimeLinePaths[TL_FRIENDS]));
+	tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE)));
 	tlr->name = g_strdup(_TweetTimeLineNames[TL_FRIENDS]);
 	tlr->timeline_id = TL_FRIENDS;
-	tlr->count = purple_account_get_int(ta->account, "twitter_init_tweet", TW_INIT_TWEET);
-	twitterim_fetch_new_messages(ta, tlr);
+	tlr->count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
+	twitter_fetch_new_messages(ta, tlr);
 }
 
 // Function to fetch all new messages periodically
-gboolean twitterim_fetch_all_new_messages(gpointer data)
+gboolean twitter_fetch_all_new_messages(gpointer data)
 {
 	TwitterAccount * ta = data;
 	TwitterTimeLineReq * tlr = NULL;
 	gint i;
 	
-	for(i = 0; i < TL_LAST; i++) {
+	for(i = TC_FRIENDS_TIMELINE; i <= TC_PUBLIC_TIMELINE; i++) {
 		if(!purple_find_buddy(ta->account, _TweetTimeLineNames[i])) {
 			purple_debug_info("twitter", "skipping %s\n", tlr->name);
 			continue;
 		}
-		tlr = twitterim_new_tlr();
-		tlr->path = g_strdup(purple_account_get_string(ta->account, _TweetTimeLineConfigs[i], _TweetTimeLinePaths[i]));
+		tlr = twitter_new_tlr();
+		tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(i), tc_def(i)));
 		tlr->name = g_strdup(_TweetTimeLineNames[i]);
 		tlr->timeline_id = i;
 		tlr->count = TW_STATUS_COUNT_MAX;
-		twitterim_fetch_new_messages(ta, tlr);
+		twitter_fetch_new_messages(ta, tlr);
 	}
 	return TRUE;
 }
 
-gchar* twitterim_format_symbols(gchar* src) {
+gchar* twitter_format_symbols(gchar* src) {
 	gchar* tmp_buffer = g_malloc(TW_FORMAT_BUFFER);
 	int i = 0;
 	int new_i = 0;
@@ -223,13 +211,13 @@ gchar* twitterim_format_symbols(gchar* src) {
 }
 
 #if 0
-static void twitterim_list_sent_id_hash(gpointer key, gpointer value, gpointer user_data)
+static void twitter_list_sent_id_hash(gpointer key, gpointer value, gpointer user_data)
 {
 	purple_debug_info("twitter", "key/value = %s/%s\n", key, value);
 }
 #endif
 
-gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
+gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 {
 	MbAccount * ta = conn_data->ta;
 	const gchar * username;
@@ -253,32 +241,32 @@ gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	
 	if(response->status == HTTP_MOVED_TEMPORARILY) {
 		// no new messages
-		twitterim_free_tlr(tlr);
+		twitter_free_tlr(tlr);
 		purple_debug_info("twitter", "no new messages\n");
 		return 0;
 	}
 	if(response->status != HTTP_OK) {
-		twitterim_free_tlr(tlr);
+		twitter_free_tlr(tlr);
 		purple_debug_info("twitter", "something's wrong with the message\n");
 		return 0; //< should we return -1 instead?
 	}
 	if(response->content_len == 0) {
 		purple_debug_info("twitter", "no data to parse\n");
-		twitterim_free_tlr(tlr);
+		twitter_free_tlr(tlr);
 		return 0;
 	}
 	purple_debug_info("twitter", "http_data = #%s#\n", response->content->str);
 	top = xmlnode_from_str(response->content->str, -1);
 	if(top == NULL) {
 		purple_debug_info("twitter", "failed to parse XML data\n");
-		twitterim_free_tlr(tlr);
+		twitter_free_tlr(tlr);
 		return 0;
 	}
 	purple_debug_info("twitter", "successfully parse XML\n");
 	status = xmlnode_get_child(top, "status");
 	purple_debug_info("twitter", "timezone = %ld\n", timezone);
 	
-	hide_myself = purple_account_get_bool(ta->account, "twitter_hide_myself", TRUE);
+	hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	
 	while(status) {
 		msg_txt = NULL;
@@ -295,7 +283,7 @@ gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		if(hide_myself) {
 			purple_debug_info("twitter", "checking for duplicate message\n");
 #if 0
-			g_hash_table_foreach(ta->sent_id_hash, twitterim_list_sent_id_hash, NULL);
+			g_hash_table_foreach(ta->sent_id_hash, twitter_list_sent_id_hash, NULL);
 #endif			
 			if(g_hash_table_remove(ta->sent_id_hash, xml_str)  == TRUE) {
 				// Dupplicate ID, moved to next value
@@ -355,7 +343,7 @@ gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			} else {
 				name_color = g_strdup("darkred");
 			}
-			if(purple_account_get_bool(ta->account, "twitter_reply_link", FALSE)) {
+			if(purple_account_get_bool(ta->account, tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK))) {
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", name_color, from, username, from, msg_txt);
 			} else {
 				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b>%s:</b></font> %s", name_color, from, msg_txt);
@@ -384,7 +372,7 @@ gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			
 			ta->last_msg_id = cur_msg->id;
 			if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
-				fmt_txt = twitterim_format_symbols(cur_msg->msg_txt);
+				fmt_txt = twitter_format_symbols(cur_msg->msg_txt);
 				serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
 				g_free(fmt_txt);
 			}
@@ -398,14 +386,14 @@ gint twitterim_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	}
 	g_list_free(msg_list);
 	xmlnode_free(top);
-	twitterim_free_tlr(tlr);
+	twitter_free_tlr(tlr);
 	return 0;
 }
 
 //
 // Check for new message periodically
 //
-static void twitterim_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
+static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 {
 	MbConnData * conn_data;
 	MbHttpData * request;
@@ -415,15 +403,15 @@ static void twitterim_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tl
 	
 	purple_debug_info("twitter", "fetch_new_messages\n");
 
-	twitter_host = g_strdup(purple_account_get_string(ta->account, "twitter_hostname", TW_HOST));
-	use_https = purple_account_get_bool(ta->account, "twitter_use_https", TRUE);
+	twitter_host = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	if(use_https) {
 		twitter_port = TW_HTTPS_PORT;
 	} else {
 		twitter_port = TW_HTTP_PORT;
 	}
 	
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_fetch_new_messages_handler, use_https);
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_fetch_new_messages_handler, use_https);
 	mb_conn_data_set_error(conn_data, "Fetching status error", MB_ERROR_NOACTION);
 	mb_conn_data_set_retry(conn_data, 0);
 	
@@ -435,7 +423,7 @@ static void twitterim_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tl
 	mb_http_data_set_path(request, tlr->path);
 	mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
 	mb_http_data_set_header(request, "Host", twitter_host);
-	mb_http_data_set_basicauth(request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
+	mb_http_data_set_basicauth(request, purple_account_get_username(ta->account),purple_account_get_password(ta->account));
 	mb_http_data_add_param_int(request, "count", tlr->count);
 	if(ta->last_msg_id > 0) {
 		mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
@@ -449,7 +437,7 @@ static void twitterim_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tl
 //
 // Generate 'fake' buddy list for Twitter
 // For now, we only add TwFriends, TwUsers, and TwPublic
-void twitterim_get_buddy_list(TwitterAccount * ta)
+void twitter_get_buddy_list(TwitterAccount * ta)
 {
 	PurpleBuddy *buddy;
 	TwitterBuddy *tbuddy;
@@ -474,7 +462,7 @@ void twitterim_get_buddy_list(TwitterAccount * ta)
 		}
 		purple_debug_info("twitter", "setting protocol-specific buddy information to purplebuddy\n");
 		if(buddy->proto_data == NULL) {
-			tbuddy = twitterim_new_buddy();
+			tbuddy = twitter_new_buddy();
 			buddy->proto_data = tbuddy;
 			tbuddy->buddy = buddy;
 			tbuddy->ta = ta;
@@ -487,20 +475,20 @@ void twitterim_get_buddy_list(TwitterAccount * ta)
 	// We'll deal with public and users timeline later
 }
 
-gint twitterim_verify_authen(MbConnData * conn_data, gpointer data)
+gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
 {
 	MbAccount * ta = conn_data->ta;
 	MbHttpData * response = conn_data->response;
 	
 	if(response->status == HTTP_OK) {
-		gint interval = purple_account_get_int(conn_data->ta->account, "twitter_msg_refresh_rate", TW_INTERVAL);
+		gint interval = purple_account_get_int(conn_data->ta->account, tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
 		
 		purple_connection_set_state(conn_data->ta->gc, PURPLE_CONNECTED);
 		conn_data->ta->state = PURPLE_CONNECTED;
-		twitterim_get_buddy_list(conn_data->ta);
+		twitter_get_buddy_list(conn_data->ta);
 		purple_debug_info("twitter", "refresh interval = %d\n", interval);
-		conn_data->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitterim_fetch_all_new_messages, conn_data->ta);
-		twitterim_fetch_first_new_messages(conn_data->ta);
+		conn_data->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, conn_data->ta);
+		twitter_fetch_first_new_messages(conn_data->ta);
 		return 0;
 	} else {
 		purple_connection_set_state(conn_data->ta->gc, PURPLE_DISCONNECTED);
@@ -615,9 +603,9 @@ void twitter_login(PurpleAccount *acct)
 	
 	// Create account data
 	ta = mb_account_new(acct);
-	twitter_host = g_strdup(purple_account_get_string(ta->account, "twitter_hostname", TW_HOST));
-	path = g_strdup(purple_account_get_string(ta->account, "twitter_verify", TW_VERIFY_PATH));
-	use_https = purple_account_get_bool(ta->account, "twitter_use_https", TRUE);
+	twitter_host = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_VERIFY_PATH), tc_def(TC_VERIFY_PATH)));
+	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_int(TC_USE_HTTPS));
 	if(use_https) {
 		twitter_port = TW_HTTPS_PORT;
 	} else {
@@ -625,9 +613,9 @@ void twitter_login(PurpleAccount *acct)
 	}
 	purple_debug_info("twitter", "path = %s\n", path);
 	
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitterim_verify_authen, use_https);
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_verify_authen, use_https);
 	mb_conn_data_set_error(conn_data, "Authentication error", MB_ERROR_RAISE_ERROR);
-	mb_conn_data_set_retry(conn_data, purple_account_get_int(acct, "twitter_global_retry", TW_MAX_RETRY));
+	mb_conn_data_set_retry(conn_data, purple_account_get_int(acct, tc_name(TC_GLOBAL_RETRY), tc_def_int(TC_GLOBAL_RETRY)));
 	
 	conn_data->request->type = HTTP_GET;
 	mb_http_data_set_host(conn_data->request, twitter_host);
@@ -668,7 +656,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 		return -1;
 	}
 	
-	if(!purple_account_get_bool(ta->account, "twitter_hide_myself", TRUE)) {
+	if(!purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF))) {
 		return 0;
 	}
 	
@@ -720,9 +708,9 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
 	
 	// connection
-	twitter_host = g_strdup(purple_account_get_string(ta->account, "twitter_hostname", TW_HOST));
-	path = g_strdup(purple_account_get_string(ta->account, "twitter_status_update", TW_STATUS_UPDATE_PATH));
-	use_https = purple_account_get_bool(ta->account, "twitter_use_https", TRUE);
+	twitter_host = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_STATUS_UPDATE), tc_def(TC_STATUS_UPDATE)));
+	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	
 	if(use_https) {
 		twitter_port = TW_HTTPS_PORT;
@@ -767,7 +755,7 @@ gchar * twitter_status_text(PurpleBuddy *buddy)
 // There's no concept of status in TwitterIM for now
 void twitter_set_status(PurpleAccount *acct, PurpleStatus *status) {
   const char *msg = purple_status_get_attr_string(status, "message");
-  purple_debug_info("twitterim", "setting %s's status to %s: %s\n",
+  purple_debug_info("twitter", "setting %s's status to %s: %s\n",
                     acct->username, purple_status_get_name(status), msg);
 
 }
