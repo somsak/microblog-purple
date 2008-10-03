@@ -62,6 +62,8 @@
 
 #include "twitter.h"
 
+TwitterConfig * _tw_conf = NULL;
+
 static void plugin_init(PurplePlugin *plugin)
 {
 }
@@ -73,48 +75,87 @@ gboolean plugin_load(PurplePlugin *plugin)
 	PurplePluginProtocolInfo *prpl_info = info->extra_info;
 	
 	purple_debug_info("twitterim", "plugin_load\n");
+	_tw_conf = (TwitterConfig *)g_malloc(TC_MAX * sizeof(TwitterConfig));
 
-	option = purple_account_option_bool_new(_("Hide myself in conversation"), "twitter_hide_myself", TRUE);
+	_tw_conf[TC_HIDE_SELF].conf = g_strdup("twitter_hide_myself");
+	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
+	option = purple_account_option_bool_new(_("Hide myself in conversation"), tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_bool_new(_("Enable reply link"), "twitter_reply_link", FALSE);
+	_tw_conf[TC_REPLY_LINK].conf = g_strdup("twitter_hide_myself");
+	_tw_conf[TC_REPLY_LINK].def_bool = TRUE;
+	option = purple_account_option_bool_new(_("Enable reply link"), tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), "twitter_msg_refresh_rate", 60);
+	_tw_conf[TC_MSG_REFRESH_RATE].conf = g_strdup("twitter_msg_refresh_rate");
+	_tw_conf[TC_MSG_REFRESH_RATE].def_int = 60;
+	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_int_new(_("Number of initial tweets"), "twitter_init_tweet", 15);
+	_tw_conf[TC_INITIAL_TWEET].conf = g_strdup("twitter_init_tweet");
+	_tw_conf[TC_INITIAL_TWEET].def_int = 15;
+	option = purple_account_option_int_new(_("Number of initial tweets"), tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
-	option = purple_account_option_int_new(_("Maximum number of retry"), "twitter_global_retry", 3);
+	_tw_conf[TC_GLOBAL_RETRY].conf = g_strdup("twitter_global_retry");
+	_tw_conf[TC_GLOBAL_RETRY].def_int = 3 ;
+	option = purple_account_option_int_new(_("Maximum number of retry"), tc_name(TC_GLOBAL_RETRY), tc_def_int(TC_GLOBAL_RETRY));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
-	option = purple_account_option_string_new(_("Twitter hostname"), "twitter_hostname", "twitter.com");
+	_tw_conf[TC_HOST].conf = g_strdup("twitter_hostname");
+	_tw_conf[TC_HOST].def_str = g_strdup("twitter.com");
+	option = purple_account_option_string_new(_("Twitter hostname"), tc_name(TC_HOST), tc_def(TC_HOST));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_bool_new(_("Use HTTPS"), "twitter_use_https", TRUE);
+	_tw_conf[TC_USE_HTTPS].conf = g_strdup("twitter_use_https");
+	_tw_conf[TC_USE_HTTPS].def_bool = TRUE;
+	option = purple_account_option_bool_new(_("Use HTTPS"), tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_string_new(_("Twitter status update path"), "twitter_status_update", TW_STATUS_UPDATE_PATH);
+	_tw_conf[TC_STATUS_UPDATE].conf = g_strdup("twitter_status_update");
+	_tw_conf[TC_STATUS_UPDATE].def_str = g_strdup("/statuses/update.xml");
+	option = purple_account_option_string_new(_("Twitter status update path"), tc_name(TC_STATUS_UPDATE), tc_def(TC_STATUS_UPDATE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_string_new(_("Twitter account verification path"), "twitter_verify", TW_VERIFY_PATH);
+	_tw_conf[TC_VERIFY_PATH].conf = g_strdup("twitter_verify");
+	_tw_conf[TC_VERIFY_PATH].def_str = g_strdup("/account/verify_credentials.xml");
+	option = purple_account_option_string_new(_("Twitter account verification path"), tc_name(TC_VERIFY_PATH), tc_def(TC_VERIFY_PATH));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_string_new(_("Twitter Friends timeline path"),_TweetTimeLineConfigs[TL_FRIENDS], _TweetTimeLinePaths[TL_FRIENDS]);
+	_tw_conf[TC_FRIENDS_TIMELINE].conf = g_strdup("twitter_friends_timeline");
+	_tw_conf[TC_FRIENDS_TIMELINE].def_str = g_strdup("/statuses/friends_timeline.xml");
+	option = purple_account_option_string_new(_("Twitter Friends timeline path"), tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_string_new(_("Twitter User timeline path"), _TweetTimeLineConfigs[TL_USER], _TweetTimeLinePaths[TL_USER]);
+	_tw_conf[TC_USER_TIMELINE].conf = g_strdup("twitter_user_timeline");
+	_tw_conf[TC_USER_TIMELINE].def_str = g_strdup("/statuses/user_timeline.xml");
+	option = purple_account_option_string_new(_("Twitter User timeline path"), tc_name(TC_USER_TIMELINE), tc_def(TC_USER_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	option = purple_account_option_string_new(_("Twitter Public timeline path"), _TweetTimeLineConfigs[TL_PUBLIC],  _TweetTimeLinePaths[TL_PUBLIC]);
+	_tw_conf[TC_PUBLIC_TIMELINE].conf = g_strdup("twitter_public_timeline");
+	_tw_conf[TC_PUBLIC_TIMELINE].def_str = g_strdup("/statuses/public_timeline.xml");
+	option = purple_account_option_string_new(_("Twitter Public timeline path"), tc_name(TC_PUBLIC_TIMELINE), tc_def(TC_PUBLIC_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	return TRUE;
 }
 
 gboolean plugin_unload(PurplePlugin *plugin)
 {
+	gint i;
+
 	purple_debug_info("twitterim", "plugin_unload\n");
+
+	g_free(_tw_conf[TC_HOST].def_str);
+	g_free(_tw_conf[TC_STATUS_UPDATE].def_str);
+	g_free(_tw_conf[TC_VERIFY_PATH].def_str);
+	g_free(_tw_conf[TC_FRIENDS_TIMELINE].def_str);
+	g_free(_tw_conf[TC_USER_TIMELINE].def_str);
+	g_free(_tw_conf[TC_PUBLIC_TIMELINE].def_str);
+	for(i = 0; i < TC_MAX; i++) {
+		g_free(_tw_conf[i].conf);
+	}
+
+	g_free(_tw_conf);
 	return TRUE;
 }
 

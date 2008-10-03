@@ -31,7 +31,6 @@ extern "C" {
 #endif
  
 #define TW_HOST "twitter.com"
-#define TW_PORT 443
 #define TW_HTTP_PORT 80
 #define TW_HTTPS_PORT 443
 #define TW_AGENT "curl/7.18.0 (i486-pc-linux-gnu) libcurl/7.18.0 OpenSSL/0.9.8g zlib/1.2.3.3 libidn/1.1"
@@ -41,10 +40,7 @@ extern "C" {
 #define TW_INTERVAL 60
 #define TW_STATUS_COUNT_MAX 200
 #define TW_INIT_TWEET 15
-#define TW_STATUS_UPDATE_PATH "/statuses/update.xml"
-#define TW_VERIFY_PATH "/account/verify_credentials.xml"
 #define TW_STATUS_TXT_MAX 140
-//#define TW_AGENT_SOURCE "libpurplemicroblogplugin"
 #define TW_AGENT_SOURCE "mbpidgin"
 
 #define TW_FORMAT_BUFFER 2048
@@ -131,6 +127,46 @@ extern const char * _TweetTimeLineNames[];
 extern const char * _TweetTimeLinePaths[];
 extern const char * _TweetTimeLineConfigs[];
 
+/*
+ * Twitter Configuration
+ */
+enum _TweetConfig {
+	TC_HIDE_SELF = 0,
+	TC_REPLY_LINK,
+	TC_MSG_REFRESH_RATE,
+	TC_INITIAL_TWEET,
+	TC_GLOBAL_RETRY,
+	TC_HOST,
+	TC_USE_HTTPS,
+	TC_STATUS_UPDATE,
+	TC_VERIFY_PATH,
+	TC_FRIENDS_TIMELINE,
+	TC_USER_TIMELINE,
+	TC_PUBLIC_TIMELINE,
+	TC_MAX,
+};
+
+
+typedef struct _TwitterConfig {
+	gchar * conf; //< configuration name
+	union {
+		gchar * def_str; //< default value to be used
+		gint def_int; 
+		gboolean def_bool;
+	};
+} TwitterConfig;
+
+extern TwitterConfig * _tw_conf;
+
+/* Alias for easier usage of these values */
+#define tc_name(name) _tw_conf[name].conf
+#define tc_def(name) _tw_conf[name].def_str
+#define tc_def_int(name) _tw_conf[name].def_int
+#define tc_def_bool(name) _tw_conf[name].def_bool
+
+/*
+ * Protocol functions
+ */
 extern void twitter_set_status(PurpleAccount *acct, PurpleStatus *status);
 extern GList * twitter_statuses(PurpleAccount *acct);
 extern gchar * twitter_status_text(PurpleBuddy *buddy);
