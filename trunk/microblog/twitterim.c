@@ -75,7 +75,7 @@ gboolean plugin_load(PurplePlugin *plugin)
 	PurplePluginProtocolInfo *prpl_info = info->extra_info;
 	
 	purple_debug_info("twitterim", "plugin_load\n");
-	_tw_conf = (TwitterConfig *)g_malloc(TC_MAX * sizeof(TwitterConfig));
+	_tw_conf = (TwitterConfig *)g_malloc0(TC_MAX * sizeof(TwitterConfig));
 
 	_tw_conf[TC_HIDE_SELF].conf = g_strdup("twitter_hide_myself");
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
@@ -136,6 +136,12 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_tw_conf[TC_PUBLIC_TIMELINE].def_str = g_strdup("/statuses/public_timeline.xml");
 	option = purple_account_option_string_new(_("Twitter Public timeline path"), tc_name(TC_PUBLIC_TIMELINE), tc_def(TC_PUBLIC_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	// and now for non-option global
+	_tw_conf[TC_FRIENDS_USER].def_str = g_strdup("twitter.com");
+	_tw_conf[TC_PUBLIC_USER].def_str = g_strdup("twpublic");
+	_tw_conf[TC_USER_USER].def_str = g_strdup("twuser");
+
 	return TRUE;
 }
 
@@ -151,8 +157,11 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	g_free(_tw_conf[TC_FRIENDS_TIMELINE].def_str);
 	g_free(_tw_conf[TC_USER_TIMELINE].def_str);
 	g_free(_tw_conf[TC_PUBLIC_TIMELINE].def_str);
+	g_free(_tw_conf[TC_FRIENDS_USER].def_str);
+	g_free(_tw_conf[TC_PUBLIC_USER].def_str);
+	g_free(_tw_conf[TC_USER_USER].def_str);
 	for(i = 0; i < TC_MAX; i++) {
-		g_free(_tw_conf[i].conf);
+		if(_tw_conf[i].conf) g_free(_tw_conf[i].conf);
 	}
 
 	g_free(_tw_conf);
