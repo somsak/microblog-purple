@@ -6,17 +6,25 @@ all: build
 
 include ../global.mak
 
-TARGETS = libtwitter$(PLUGIN_SUFFIX) mbchprpl$(EXE_SUFFIX)
+TARGETS = libtwitter$(PLUGIN_SUFFIX) libidentica$(PLUGIN_SUFFIX) mbchprpl$(EXE_SUFFIX)
 
 #PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
 #PURPLE_LIBS = $(shell pkg-config --libs purple)
 
 CFLAGS := $(PURPLE_CFLAGS)
 LD = $(CC)
+
+
 TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c twitterim.c
 TWITTER_H_SRC = $(TWITTER_C_SRC:%.c=%.h)
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
 TWITTER_OBJ = $(TWITTER_C_SRC:%.c=%.o)
+
+IDENTICA_C_SRC = identica.c mb_util.c mb_http.c mb_net.c twitter.c
+IDENTICA_H_SRC = $(IDENTICA_C_SRC:%.c=%.h)
+IDENTICA_IMG = identica16.png identica22.png identica48.png
+IDENTICA_OBJ = $(IDENTICA_C_SRC:%.c=%.o)
+
 DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) Makefile
 
 OBJECTS = $(TWITTER_OBJ)
@@ -45,13 +53,17 @@ clean:
 	rm -f $(TARGETS) $(OBJECTS)
 
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
-	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o libtwitter$(PLUGIN_SUFFIX)
+	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
+
+libidentica$(PLUGIN_SUFFIX): $(IDENTICA_OBJ)
+	$(LD) $(LDFLAGS) -shared $(IDENTICA_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
 
 mbchprpl$(EXE_SUFFIX): mbchprpl.o
 	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@ 
 
 mb_http.o: mb_http.c mb_http.h
-mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h
+mb_net.o: mb_net.c mb_net.h mb_http.h
 mb_util.o: mb_util.c
 twitter.o: twitter.c mb_net.h mb_http.h twitter.h mb_util.h
-twitterim.o: twitterim.c twitter.h mb_net.h mb_util.h mb_http.h
+twitterim.o: twitter.o
+identica.o: twitter.o
