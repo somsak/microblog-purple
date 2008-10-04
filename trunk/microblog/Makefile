@@ -27,19 +27,23 @@ IDENTICA_OBJ = $(IDENTICA_C_SRC:%.c=%.o)
 
 DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) Makefile
 
-OBJECTS = $(TWITTER_OBJ)
+OBJECTS = $(TWITTER_OBJ) $(IDENTICA_OBJ)
 
 .PHONY: all clean install 
 
 build: $(TARGETS)
 
 install: $(TARGETS)
-	rm -f $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
+	for prpl in twitter identica; do \
+		rm -f $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX); \
+	done
 	install -m 0755 -d $(PURPLE_PLUGIN_DIR)
-	cp libtwitter$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
-	for dir in 16 22 48; do \
-		(install -m 0755 -d $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir && \
-			install -m 0644 twitter$$dir.png $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/twitter.png ) \
+	for prpl in twitter identica; do \
+		( cp lib$$prpl$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX) && \
+		for dir in 16 22 48; do \
+			(install -m 0755 -d $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir && \
+				install -m 0644 $$prpl$$dir.png $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/$$prpl.png ) \
+		done ) \
 	done
 
 uninstall: 

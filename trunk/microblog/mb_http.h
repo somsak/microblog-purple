@@ -77,6 +77,8 @@ typedef struct _MbHttpData {
 	
 	// content
 	GString * content;
+	// Chunked, in case of Transfer-Encoding: chunked
+	GString * chunked_content;
 	gint content_len;
 	// For receiving side, content_len is the size of content, determined by content-length header
 	// For sending side, content_len is never used.

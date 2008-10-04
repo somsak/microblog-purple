@@ -8,9 +8,20 @@
 # It MUST realitve to each subdirectory (microblog, twitgin)
 PIDGIN_TREE_TOP := ../../pidgin-2.5.0
 
+IS_PIDGIN = $(shell pkg-config --atleast-version=2.0 pidgin && echo 1 || echo 0)
+IS_CARRIER = $(shell pkg-config --atleast-version=2.0 carrier && echo 1 || echo 0)
+
+ifeq ($(strip $(IS_PIDGIN)), 1)
+	PIDGIN_NAME := pidgin
+else 
+ifeq ($(strip $(IS_CARRIER)), 1)
+        PIDGIN_NAME := carrier
+endif
+endif
+
 # For Linux
 DESTDIR := 
-PREFIX := /usr
+PREFIX := $(shell pkg-config --prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
 LIBDIR := $(PREFIX)/lib
 
 # Is this WIN32?
@@ -49,6 +60,7 @@ PURPLE_CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSI
 PURPLE_PROTOCOL_PIXMAP_DIR = $(PURPLE_INSTALL_DIR)/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR = $(PURPLE_INSTALL_PLUGINS_DIR)
 PLUGIN_SUFFIX := .dll
+EXE_SUFFIX := .exe
 
 #include $(PIDGIN_COMMON_RULES)
 
@@ -59,13 +71,14 @@ PURPLE_CFLAGS = $(CFLAGS) -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(V
 PURPLE_CFLAGS += $(shell pkg-config --cflags purple)
 PURPLE_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 PLUGIN_SUFFIX := .so
+EXE_SUFFIX := 
 
 PURPLE_PROTOCOL_PIXMAP_DIR := $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR := $(DESTDIR)$(LIBDIR)/purple-2
 
-PIDGIN_LIBS = $(shell pkg-config --libs pidgin)
+PIDGIN_LIBS = $(shell pkg-config --libs $(PIDGIN_NAME))
 PIDGIN_CFLAGS = $(CFLAGS) -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
-PIDGIN_CFLAGS += $(shell pkg-config --cflags pidgin)
+PIDGIN_CFLAGS += $(shell pkg-config --cflags $(PIDGIN_NAME))
 PIDGIN_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 
 LDFLAGS := $(shell (echo $(PIDGIN_CFLAGS) $(PURPLE_CFLAGS)| tr ' ' '\n' | awk '!a[$$0]++' | tr '\n' ' '))
