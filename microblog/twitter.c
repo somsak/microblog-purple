@@ -441,7 +441,7 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 	purple_debug_info("twitter", "buddy list for account %s\n", ta->account->username);
 
 	//Check if the twitter group already exists
-	twitter_group = purple_find_group("Twitter");
+	twitter_group = purple_find_group(tc_def(TC_USER_GROUP));
 	
 	// Add timeline as "fake" user
 	// Is TL_FRIENDS already exist?
@@ -452,7 +452,7 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 		if (twitter_group == NULL)
 		{
 			purple_debug_info("twitter", "creating new Twitter group\n");
-			twitter_group = purple_group_new("Twitter");
+			twitter_group = purple_group_new(tc_def(TC_USER_GROUP));
 			purple_blist_add_group(twitter_group, NULL);
 		}
 		purple_debug_info("twitter", "setting protocol-specific buddy information to purplebuddy\n");

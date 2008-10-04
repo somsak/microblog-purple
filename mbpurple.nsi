@@ -38,6 +38,8 @@ SetCompressor lzma
 ; Language files
 !insertmacro MUI_LANGUAGE "English"
 
+!define SHELLFOLDERS "Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
+ 
 ; MUI end ------
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
@@ -65,8 +67,10 @@ Section "MainSection" SEC01
 		Delete "$PidginDir\plugins\libtwitter.dll"
 		IfErrors dllbusy
 		SetOutPath "$PidginDir\plugins"
-	    File "microblog\libtwitter.dll"
+		File "microblog\libtwitter.dll"
 		File "twitgin\twitgin.dll"
+		SetOutPath "$PidginDir"
+		File "microblog\mbchprpl.exe"
 		writeUninstaller "$PidginDir\pidgin-microblog-uninst.exe"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}  - Twitter support for Pidgin"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
@@ -78,6 +82,7 @@ Section "MainSection" SEC01
 	cancel:
 		Abort "Installation of pidgin-microblog aborted"
 	after_copy:
+		Call FixAccount
 		
 SectionEnd
 
@@ -127,3 +132,15 @@ FunctionEnd
 Function RunPidgin
 	ExecShell "" "$PidginDir\pidgin.exe"
 FunctionEnd
+
+Function FixAccount
+  ReadRegStr $0 HKCU "${SHELLFOLDERS}" AppData
+	StrCmp $0 "" 0 +2
+		ReadRegStr $0 HKLM "${SHELLFOLDERS}" "Common AppData"
+	StrCmp $0 "" 0 +2
+		StrCpy $0 "$WINDIR\Application Data"
+	IfFileExists "$0\Roaming\.purple\accounts.xml" cont
+  cont: 
+	ExecWait "$PidginDir\mbchprpl.exe"
+FunctionEnd
+

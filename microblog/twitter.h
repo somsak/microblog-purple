@@ -146,6 +146,7 @@ enum _TweetConfig {
 	TC_PUBLIC_USER,
 	TC_USER_TIMELINE,
 	TC_USER_USER,
+	TC_USER_GROUP,
 	TC_MAX,
 };
 

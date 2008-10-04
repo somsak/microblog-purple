@@ -74,74 +74,75 @@ gboolean plugin_load(PurplePlugin *plugin)
 	PurplePluginInfo *info = plugin->info;
 	PurplePluginProtocolInfo *prpl_info = info->extra_info;
 	
-	purple_debug_info("twitterim", "plugin_load\n");
+	purple_debug_info("idcim", "plugin_load\n");
 	_tw_conf = (TwitterConfig *)g_malloc0(TC_MAX * sizeof(TwitterConfig));
 
-	_tw_conf[TC_HIDE_SELF].conf = g_strdup("twitter_hide_myself");
+	_tw_conf[TC_HIDE_SELF].conf = g_strdup("idc_hide_myself");
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_REPLY_LINK].conf = g_strdup("twitter_hide_myself");
+	_tw_conf[TC_REPLY_LINK].conf = g_strdup("idc_hide_myself");
 	_tw_conf[TC_REPLY_LINK].def_bool = TRUE;
 	option = purple_account_option_bool_new(_("Enable reply link"), tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_MSG_REFRESH_RATE].conf = g_strdup("twitter_msg_refresh_rate");
+	_tw_conf[TC_MSG_REFRESH_RATE].conf = g_strdup("idc_msg_refresh_rate");
 	_tw_conf[TC_MSG_REFRESH_RATE].def_int = 60;
 	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_INITIAL_TWEET].conf = g_strdup("twitter_init_tweet");
+	_tw_conf[TC_INITIAL_TWEET].conf = g_strdup("idc_init_tweet");
 	_tw_conf[TC_INITIAL_TWEET].def_int = 15;
 	option = purple_account_option_int_new(_("Number of initial tweets"), tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
-	_tw_conf[TC_GLOBAL_RETRY].conf = g_strdup("twitter_global_retry");
+	_tw_conf[TC_GLOBAL_RETRY].conf = g_strdup("idc_global_retry");
 	_tw_conf[TC_GLOBAL_RETRY].def_int = 3 ;
 	option = purple_account_option_int_new(_("Maximum number of retry"), tc_name(TC_GLOBAL_RETRY), tc_def_int(TC_GLOBAL_RETRY));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
-	_tw_conf[TC_HOST].conf = g_strdup("twitter_hostname");
-	_tw_conf[TC_HOST].def_str = g_strdup("twitter.com");
-	option = purple_account_option_string_new(_("Hostname"), tc_name(TC_HOST), tc_def(TC_HOST));
+	_tw_conf[TC_HOST].conf = g_strdup("idc_hostname");
+	_tw_conf[TC_HOST].def_str = g_strdup("identi.ca");
+	option = purple_account_option_string_new(_("Identi.ca hostname"), tc_name(TC_HOST), tc_def(TC_HOST));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_USE_HTTPS].conf = g_strdup("twitter_use_https");
-	_tw_conf[TC_USE_HTTPS].def_bool = TRUE;
-	option = purple_account_option_bool_new(_("Use HTTPS"), tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+	/*
+	 * No HTTPS for Identi.ca for now
+	 */
+	_tw_conf[TC_USE_HTTPS].conf = g_strdup("idc_use_https");
+	_tw_conf[TC_USE_HTTPS].def_bool = FALSE;
 	
-	_tw_conf[TC_STATUS_UPDATE].conf = g_strdup("twitter_status_update");
-	_tw_conf[TC_STATUS_UPDATE].def_str = g_strdup("/statuses/update.xml");
+	_tw_conf[TC_STATUS_UPDATE].conf = g_strdup("idc_status_update");
+	_tw_conf[TC_STATUS_UPDATE].def_str = g_strdup("/api/statuses/update.xml");
 	option = purple_account_option_string_new(_("Status update path"), tc_name(TC_STATUS_UPDATE), tc_def(TC_STATUS_UPDATE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_VERIFY_PATH].conf = g_strdup("twitter_verify");
-	_tw_conf[TC_VERIFY_PATH].def_str = g_strdup("/account/verify_credentials.xml");
+	_tw_conf[TC_VERIFY_PATH].conf = g_strdup("idc_verify");
+	_tw_conf[TC_VERIFY_PATH].def_str = g_strdup("/api/account/verify_credentials.xml");
 	option = purple_account_option_string_new(_("Account verification path"), tc_name(TC_VERIFY_PATH), tc_def(TC_VERIFY_PATH));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_FRIENDS_TIMELINE].conf = g_strdup("twitter_friends_timeline");
-	_tw_conf[TC_FRIENDS_TIMELINE].def_str = g_strdup("/statuses/friends_timeline.xml");
+	_tw_conf[TC_FRIENDS_TIMELINE].conf = g_strdup("idc_friends_timeline");
+	_tw_conf[TC_FRIENDS_TIMELINE].def_str = g_strdup("/api/statuses/friends_timeline.xml");
 	option = purple_account_option_string_new(_("Friends timeline path"), tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_USER_TIMELINE].conf = g_strdup("twitter_user_timeline");
-	_tw_conf[TC_USER_TIMELINE].def_str = g_strdup("/statuses/user_timeline.xml");
+	_tw_conf[TC_USER_TIMELINE].conf = g_strdup("idc_user_timeline");
+	_tw_conf[TC_USER_TIMELINE].def_str = g_strdup("/api/statuses/user_timeline.xml");
 	option = purple_account_option_string_new(_("User timeline path"), tc_name(TC_USER_TIMELINE), tc_def(TC_USER_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_PUBLIC_TIMELINE].conf = g_strdup("twitter_public_timeline");
-	_tw_conf[TC_PUBLIC_TIMELINE].def_str = g_strdup("/statuses/public_timeline.xml");
+	_tw_conf[TC_PUBLIC_TIMELINE].conf = g_strdup("idc_public_timeline");
+	_tw_conf[TC_PUBLIC_TIMELINE].def_str = g_strdup("/api/statuses/public_timeline.xml");
 	option = purple_account_option_string_new(_("Public timeline path"), tc_name(TC_PUBLIC_TIMELINE), tc_def(TC_PUBLIC_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	// and now for non-option global
-	_tw_conf[TC_FRIENDS_USER].def_str = g_strdup("twitter.com");
-	_tw_conf[TC_PUBLIC_USER].def_str = g_strdup("twpublic");
-	_tw_conf[TC_USER_USER].def_str = g_strdup("twuser");
-	_tw_conf[TC_USER_GROUP].def_str = g_strdup("Twitter");
+	_tw_conf[TC_FRIENDS_USER].def_str = g_strdup("identi.ca");
+	_tw_conf[TC_PUBLIC_USER].def_str = g_strdup("idcpublic");
+	_tw_conf[TC_USER_USER].def_str = g_strdup("idcuser");
+	_tw_conf[TC_USER_GROUP].def_str = g_strdup("Identi.ca");
 
 	return TRUE;
 }
@@ -150,7 +151,7 @@ gboolean plugin_unload(PurplePlugin *plugin)
 {
 	gint i;
 
-	purple_debug_info("twitterim", "plugin_unload\n");
+	purple_debug_info("idcim", "plugin_unload\n");
 
 	g_free(_tw_conf[TC_HOST].def_str);
 	g_free(_tw_conf[TC_STATUS_UPDATE].def_str);
@@ -169,21 +170,21 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
-const char * twitterim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
+const char * idcim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 {
-	return "twitter";
+	return "identica";
 }
 
-GList * twitterim_actions(PurplePlugin *plugin, gpointer context)
+GList * idcim_actions(PurplePlugin *plugin, gpointer context)
 {
 	GList *m = NULL;
 	/*
 	PurplePluginAction *act;
 
-	act = purple_plugin_action_new(_("Set Facebook status..."), twitterim_set_status_cb);
+	act = purple_plugin_action_new(_("Set Facebook status..."), idcim_set_status_cb);
 	m = g_list_append(m, act);
 	
-	act = purple_plugin_action_new(_("Search for buddies..."), twitterim_search_users);
+	act = purple_plugin_action_new(_("Search for buddies..."), idcim_search_users);
 	m = g_list_append(m, act);
 	*/
 	
@@ -207,10 +208,10 @@ PurplePluginProtocolInfo twitter_prpl_info = {
 		10000,                           /* max_filesize */
 		PURPLE_ICON_SCALE_DISPLAY,       /* scale_rules */
 	},
-	twitterim_list_icon,   /* list_icon */
+	idcim_list_icon,   /* list_icon */
 	NULL,                   /* list_emblems */
 	twitter_status_text, /* status_text */
-//	twitterim_tooltip_text,/* tooltip_text */
+//	idcim_tooltip_text,/* tooltip_text */
 	NULL,
 	twitter_statuses,    /* status_types */
 	NULL,                   /* blist_node_menu */
@@ -220,17 +221,17 @@ PurplePluginProtocolInfo twitter_prpl_info = {
 	twitter_close,       /* close */
 	twitter_send_im,     /* send_im */
 	NULL,                   /* set_info */
-//	twitterim_send_typing, /* send_typing */
+//	idcim_send_typing, /* send_typing */
 	NULL,
-//	twitterim_get_info,    /* get_info */
+//	idcim_get_info,    /* get_info */
 	NULL,
 	twitter_set_status,/* set_status */
 	NULL,                   /* set_idle */
 	NULL,                   /* change_passwd */
-//	twitterim_add_buddy,   /* add_buddy */
+//	idcim_add_buddy,   /* add_buddy */
 	NULL,
 	NULL,                   /* add_buddies */
-//	twitterim_remove_buddy,/* remove_buddy */
+//	idcim_remove_buddy,/* remove_buddy */
 	NULL,
 	NULL,                   /* remove_buddies */
 	NULL,                   /* add_permit */
@@ -285,11 +286,11 @@ static PurplePluginInfo info = {
 	0, /* flags */
 	NULL, /* dependencies */
 	PURPLE_PRIORITY_DEFAULT, /* priority */
-	"prpl-mbpurple-twitter", /* id */
-	"TwitterIM", /* name */
+	"prpl-mbpurple-identica", /* id */
+	"Identi.ca", /* name */
 	MBPURPLE_VERSION, /* version */
-	"Twitter data feeder", /* summary */
-	"Twitter data feeder", /* description */
+	"Identi.ca data feeder", /* summary */
+	"Identi.ca data feeder", /* description */
 	"Somsak Sriprayoonsakul <somsaks@gmail.com>", /* author */
 	"http://microblog-purple.googlecode.com/", /* homepage */
 	plugin_load, /* load */
@@ -298,11 +299,11 @@ static PurplePluginInfo info = {
 	NULL, /* ui_info */
 	&twitter_prpl_info, /* extra_info */
 	NULL, /* prefs_info */
-	twitterim_actions, /* actions */
+	idcim_actions, /* actions */
 	NULL, /* padding */
 	NULL,
 	NULL,
 	NULL
 };
 
-PURPLE_INIT_PLUGIN(twitterim, plugin_init, info);
+PURPLE_INIT_PLUGIN(idcim, plugin_init, info);

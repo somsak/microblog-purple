@@ -72,6 +72,7 @@ MbHttpData * mb_http_data_new(void)
 	data->params = NULL;
 	data->params_len = 0;
 	data->content = NULL;
+	data->chunked_content = NULL;
 	data->content_len = 0;
 	data->status = -1;
 	data->type = HTTP_GET; //< default is get
@@ -120,6 +121,10 @@ void mb_http_data_free(MbHttpData * data) {
 	if(data->content) {
 		purple_debug_info(MB_HTTPID, "freeing request\n");
 		g_string_free(data->content, TRUE);
+	}
+	if(data->chunked_content) {
+		purple_debug_info(MB_HTTPID, "freeing chunked request\n");
+		g_string_free(data->chunked_content, TRUE);
 	}
 	
 	if(data->packet) {
@@ -514,12 +519,21 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 						
 						if(strcasecmp(key, "Content-Length") == 0) {
 							data->content_len = (gint)strtoul(value, NULL, 10);
+						} else if (strcasecmp(key, "Transfer-Encoding") == 0) {
+							// Actually I should check for the value
+							// AFAIK, Transfer-Encoding only valid value is chunked
+							// Anyways, this is for identi.ca 
+							purple_debug_info(MB_HTTPID, "chunked data transfer\n");
+							if(data->chunked_content) {
+								g_string_free(data->chunked_content, TRUE);
+							}
+							data->chunked_content = g_string_new(NULL);
 						}
 						mb_http_data_set_header(data, key, value);
 					} else {
 						// invalid header?
 						// do nothing for now
-						purple_debug_info("microblog", "an invalid line? line = #%s#", cur_pos);
+						purple_debug_info(MB_HTTPID, "an invalid line? line = #%s#", cur_pos);
 					}
 				}
 				if(content_start) {
@@ -532,7 +546,12 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 				if(data->content != NULL) {
 					g_string_free(data->content, TRUE);
 				}
-				data->content = g_string_new_len(content_start, whole_len - (content_start - data->packet));
+				if(data->chunked_content) {
+					data->chunked_content = g_string_new_len(content_start, whole_len - (content_start - data->packet));
+					data->content = g_string_new(NULL);
+				} else {
+					data->content = g_string_new_len(content_start, whole_len - (content_start - data->packet));
+				}
 				g_free(data->packet);
 				data->cur_packet = data->packet = NULL;
 				data->packet_len = 0;
@@ -552,9 +571,49 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 			}
 			break;
 		case MB_HTTP_STATE_CONTENT :
-			g_string_append_len(data->content, buf, buf_len);
-			if(data->content->len >= data->content_len) {
-				data->state = MB_HTTP_STATE_FINISHED;
+			if(data->chunked_content) {
+				g_string_append_len(data->chunked_content, buf, buf_len);
+				// decode the chunked content and put it in content
+				for(;;) {
+					purple_debug_info(MB_HTTPID, "current data in chunked_content = #%s#\n", data->chunked_content->str);
+					cur_pos = strstr(data->chunked_content->str, "\r\n");
+					if(!cur_pos) {
+						// Content will only be what can be decoded
+						purple_debug_info(MB_HTTPID, "can't find any CRLF\n");
+						break;
+					}
+					if(cur_pos == data->chunked_content->str) {
+						g_string_erase(data->chunked_content, 0, 2);
+						continue;
+					}
+					(*cur_pos) = '\0';
+					cur_pos_len = strtoul(data->chunked_content->str, NULL, 16);
+					purple_debug_info(MB_HTTPID, "chunk length = %d, %x\n", cur_pos_len, cur_pos_len);
+					(*cur_pos) = '\r';
+					if(cur_pos_len == 0) {
+						// we got everything
+						purple_debug_info(MB_HTTPID, "got 0 size chunk, end of message\n");
+						data->state = MB_HTTP_STATE_FINISHED;
+						data->content_len = data->content->len;
+						break;
+					}
+					if( (data->chunked_content->len - (cur_pos - data->chunked_content->str)) >= cur_pos_len ) {
+						// copy the string to content, then shift the rest of chunked_content
+						purple_debug_info(MB_HTTPID, "appending chunk\n");
+						g_string_append_len(data->content, cur_pos + 2, cur_pos_len);
+						purple_debug_info(MB_HTTPID, "current content = #%s#\n", data->content->str);
+						g_string_erase(data->chunked_content, 0, (cur_pos + 2 + cur_pos_len) - data->chunked_content->str);
+					} else {
+						// we need more data
+						purple_debug_info(MB_HTTPID, "data is not enough, need more\n");
+						break;
+					}
+				}
+			} else {
+				g_string_append_len(data->content, buf, buf_len);
+				if(data->content->len >= data->content_len) {
+					data->state = MB_HTTP_STATE_FINISHED;
+				}
 			}
 			break;
 		case MB_HTTP_STATE_FINISHED :
@@ -591,6 +650,7 @@ static gint _do_read(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 		retval = read(fd, buffer, MB_MAXBUFF);
 	}
 	purple_debug_info(MB_HTTPID, "retval = %d\n", retval);
+	purple_debug_info(MB_HTTPID, "buffer = %s\n", buffer);
 	if(retval > 0) {
 		mb_http_data_post_read(data, buffer, retval);
 	} else if(retval == 0) {
@@ -600,7 +660,7 @@ static gint _do_read(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 		}
 	}
 	g_free(buffer);
-	purple_debug_info(MB_HTTPID, "before return\n");
+	purple_debug_info(MB_HTTPID, "before return in _do_read\n");
 	
 	return retval;
 }
