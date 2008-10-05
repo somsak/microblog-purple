@@ -160,7 +160,6 @@ gboolean twitter_fetch_all_new_messages(gpointer data)
 			purple_debug_info("twitter", "skipping %s\n", tlr->name);
 			continue;
 		}
-		purple_debug_info("twitter", "fetching updates for %s\n", tlr->name);
 		tlr = twitter_new_tlr();
 		tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(i), tc_def(i)));
 		tlr->name = g_strdup(tc_def(i + 1));
