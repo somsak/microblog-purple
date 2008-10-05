@@ -466,6 +466,7 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 	gint cur_pos_len, whole_len;
 	gchar * delim, * cur_pos, *content_start = NULL;
 	gchar * key, *value, *key_value_sep;
+	gboolean continue_to_next_state = FALSE;
 	
 	if(buf_len <= 0) return;
 	switch(data->state) {
@@ -528,6 +529,7 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 								g_string_free(data->chunked_content, TRUE);
 							}
 							data->chunked_content = g_string_new(NULL);
+							// Need to goes into CONTENT state to decode the first chunk
 						}
 						mb_http_data_set_header(data, key, value);
 					} else {
@@ -549,6 +551,8 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 				if(data->chunked_content) {
 					data->chunked_content = g_string_new_len(content_start, whole_len - (content_start - data->packet));
 					data->content = g_string_new(NULL);
+					continue_to_next_state = TRUE;
+					purple_debug_info(MB_HTTPID, "we'll continue to next state (STATE_CONTENT)\n");
 				} else {
 					data->content = g_string_new_len(content_start, whole_len - (content_start - data->packet));
 				}
@@ -569,10 +573,15 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 					data->cur_packet = data->packet + tmp_len;
 				}
 			}
-			break;
+			if(!continue_to_next_state) {
+				break;
+			}
 		case MB_HTTP_STATE_CONTENT :
 			if(data->chunked_content) {
-				g_string_append_len(data->chunked_content, buf, buf_len);
+				if(!continue_to_next_state) { //< already have buffer from previous state
+					// Buffer is not already here
+					g_string_append_len(data->chunked_content, buf, buf_len);
+				}
 				// decode the chunked content and put it in content
 				for(;;) {
 					purple_debug_info(MB_HTTPID, "current data in chunked_content = #%s#\n", data->chunked_content->str);

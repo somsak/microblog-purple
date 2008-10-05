@@ -154,15 +154,17 @@ gboolean twitter_fetch_all_new_messages(gpointer data)
 	TwitterTimeLineReq * tlr = NULL;
 	gint i;
 	
-	for(i = TC_FRIENDS_TIMELINE; i <= TC_PUBLIC_TIMELINE; i++) {
+	for(i = TC_FRIENDS_TIMELINE; i <= TC_USER_TIMELINE; i+=2) {
 		//FIXME: i + 1 is not a very good strategy here
 		if(!purple_find_buddy(ta->account, tc_def(i + 1))) {
 			purple_debug_info("twitter", "skipping %s\n", tlr->name);
 			continue;
 		}
+		purple_debug_info("twitter", "fetching updates for %s\n", tlr->name);
 		tlr = twitter_new_tlr();
 		tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(i), tc_def(i)));
 		tlr->name = g_strdup(tc_def(i + 1));
+		purple_debug_info("twitter", "fetching updates from %s to %s\n", tlr->path, tlr->name);
 		tlr->timeline_id = i;
 		tlr->count = TW_STATUS_COUNT_MAX;
 		twitter_fetch_new_messages(ta, tlr);
