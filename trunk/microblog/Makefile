@@ -6,7 +6,8 @@ all: build
 
 include ../global.mak
 
-TARGETS = libtwitter$(PLUGIN_SUFFIX) libidentica$(PLUGIN_SUFFIX) mbchprpl$(EXE_SUFFIX)
+TARGETS = libtwitter$(PLUGIN_SUFFIX) libidentica$(PLUGIN_SUFFIX) liblaconica$(PLUGIN_SUFFIX) mbchprpl$(EXE_SUFFIX)
+PRPLS = twitter identica laconica
 
 #PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
 #PURPLE_LIBS = $(shell pkg-config --libs purple)
@@ -25,20 +26,28 @@ IDENTICA_H_SRC = $(IDENTICA_C_SRC:%.c=%.h)
 IDENTICA_IMG = identica16.png identica22.png identica48.png
 IDENTICA_OBJ = $(IDENTICA_C_SRC:%.c=%.o)
 
-DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) Makefile
+laconica.o: identica.c
+	$(COMPILE.c) $(OUTPUT_OPTION) -DLACONICA $<
 
-OBJECTS = $(TWITTER_OBJ) $(IDENTICA_OBJ)
+LACONICA_C_SRC = mb_util.c mb_http.c mb_net.c twitter.c
+LACONICA_H_SRC = $(LACONICA_C_SRC:%.c=%.h)
+LACONICA_IMG = laconica16.png laconica22.png laconica48.png
+LACONICA_OBJ = laconica.o $(LACONICA_C_SRC:%c.=%.o)
+
+DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) $(IDENTICA_C_SRC) $(LACONICA_C_SRC) Makefile
+
+OBJECTS = $(TWITTER_OBJ) $(IDENTICA_OBJ) $(LACONICA_OBJ)
 
 .PHONY: all clean install 
 
 build: $(TARGETS)
 
 install: $(TARGETS)
-	for prpl in twitter identica; do \
+	for prpl in $(PRPLS); do \
 		rm -f $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX); \
 	done
 	install -m 0755 -d $(PURPLE_PLUGIN_DIR)
-	for prpl in twitter identica; do \
+	for prpl in $(PRPLS); do \
 		( cp lib$$prpl$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX) && \
 		for dir in 16 22 48; do \
 			(install -m 0755 -d $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir && \
@@ -47,7 +56,9 @@ install: $(TARGETS)
 	done
 
 uninstall: 
-	rm -f $(PURPLE_PLUGIN_DIR)/libtwitter$(PLUGIN_SUFFIX)
+	for prpl in $(PRPLS); do \
+		rm -f $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX); \
+	done
 	for dir in 16 22 48; do \
 		(rm -f $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/twitter.png ) \
 	done
@@ -61,6 +72,9 @@ libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 
 libidentica$(PLUGIN_SUFFIX): $(IDENTICA_OBJ)
 	$(LD) $(LDFLAGS) -shared $(IDENTICA_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
+
+liblaconica$(PLUGIN_SUFFIX): $(IDENTICA_OBJ)
+	$(LD) $(LDFLAGS) -shared $(LACONICA_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
 
 mbchprpl$(EXE_SUFFIX): mbchprpl.o
 	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@ 
