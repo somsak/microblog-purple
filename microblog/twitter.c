@@ -73,6 +73,7 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 "Pragma: no-cache\r\n";
 
 static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
+static void get_user_host(TwitterAccount * ta, char ** user_name, char ** host);
 
 static TwitterBuddy * twitter_new_buddy()
 {
@@ -393,13 +394,13 @@ static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 {
 	MbConnData * conn_data;
 	MbHttpData * request;
-	gchar * twitter_host;
+	gchar * twitter_host, * user_name;
 	gboolean use_https;
 	gint twitter_port;
 	
 	purple_debug_info("twitter", "fetch_new_messages\n");
 
-	twitter_host = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+	get_user_host(ta, &user_name, &twitter_host);
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	if(use_https) {
 		twitter_port = TW_HTTPS_PORT;
@@ -419,7 +420,7 @@ static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	mb_http_data_set_path(request, tlr->path);
 	mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
 	mb_http_data_set_header(request, "Host", twitter_host);
-	mb_http_data_set_basicauth(request, purple_account_get_username(ta->account),purple_account_get_password(ta->account));
+	mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
 	mb_http_data_add_param_int(request, "count", tlr->count);
 	if(ta->last_msg_id > 0) {
 		mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
@@ -428,6 +429,7 @@ static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);
+	g_free(user_name);
 }
 
 //
@@ -587,19 +589,35 @@ void mb_account_free(MbAccount * ta)
 	g_free(ta);
 }
 
+static void get_user_host(TwitterAccount * ta, char ** user_name, char ** host)
+{
+	char * at_sign = NULL;
+
+	(*user_name) = g_strdup(purple_account_get_username(ta->account));
+	if( (at_sign = strchr(*user_name, '@')) == NULL) {
+		(*host) = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+	} else {
+		(*at_sign) = '\0';
+		(*host) = g_strdup( at_sign + 1 );
+	}
+}
+
 void twitter_login(PurpleAccount *acct)
 {
 	MbAccount *ta = NULL;
 	MbConnData * conn_data = NULL;
 	gchar * twitter_host = NULL;
-	gchar * path = NULL;
+	gchar * path = NULL, *user_name;
 	gboolean use_https = TRUE;
 	
 	purple_debug_info("twitter", "twitter_login\n");
 	
 	// Create account data
 	ta = mb_account_new(acct);
-	twitter_host = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+
+	get_user_host(ta, &user_name, &twitter_host);
+
+	purple_debug_info("twitter", "user_name = %s\n", user_name);
 	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_VERIFY_PATH), tc_def(TC_VERIFY_PATH)));
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_int(TC_USE_HTTPS));
 	if(use_https) {
@@ -618,11 +636,12 @@ void twitter_login(PurpleAccount *acct)
 	mb_http_data_set_path(conn_data->request, path);
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
-	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
+	mb_http_data_set_basicauth(conn_data->request, user_name, purple_account_get_password(ta->account));
 
 	//purple_proxy_connect(NULL, ta->account, twitter_host, twitter_port, test_connect_cb, NULL);
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);
+	g_free(user_name);
 	g_free(path);
 	
 }
@@ -691,7 +710,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 {
 	TwitterAccount * ta = gc->proto_data;
 	MbConnData * conn_data = NULL;
-	gchar * post_data = NULL, * tmp_msg_txt = NULL;
+	gchar * post_data = NULL, * tmp_msg_txt = NULL, * user_name = NULL;
 	gint msg_len, twitter_port, len;
 	gchar * twitter_host, * path;
 	gboolean use_https;
@@ -704,7 +723,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
 	
 	// connection
-	twitter_host = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+	get_user_host(ta, &user_name, &twitter_host);
 	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_STATUS_UPDATE), tc_def(TC_STATUS_UPDATE)));
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	
@@ -722,7 +741,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
-	mb_http_data_set_basicauth(conn_data->request, 	purple_account_get_username(ta->account),purple_account_get_password(ta->account));
+	mb_http_data_set_basicauth(conn_data->request, 	user_name,purple_account_get_password(ta->account));
 	
 	post_data = g_malloc(TW_MAXBUFF);
 	len = snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
@@ -730,6 +749,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);
+	g_free(user_name);
 	g_free(path);
 	g_free(post_data);
 	g_free(tmp_msg_txt);

@@ -32,7 +32,7 @@ laconica.o: identica.c
 LACONICA_C_SRC = mb_util.c mb_http.c mb_net.c twitter.c
 LACONICA_H_SRC = $(LACONICA_C_SRC:%.c=%.h)
 LACONICA_IMG = laconica16.png laconica22.png laconica48.png
-LACONICA_OBJ = laconica.o $(LACONICA_C_SRC:%c.=%.o)
+LACONICA_OBJ = $(LACONICA_C_SRC:%.c=%.o) laconica.o
 
 DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) $(IDENTICA_C_SRC) $(LACONICA_C_SRC) Makefile
 
@@ -73,7 +73,7 @@ libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 libidentica$(PLUGIN_SUFFIX): $(IDENTICA_OBJ)
 	$(LD) $(LDFLAGS) -shared $(IDENTICA_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
 
-liblaconica$(PLUGIN_SUFFIX): $(IDENTICA_OBJ)
+liblaconica$(PLUGIN_SUFFIX): $(LACONICA_OBJ)
 	$(LD) $(LDFLAGS) -shared $(LACONICA_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
 
 mbchprpl$(EXE_SUFFIX): mbchprpl.o
