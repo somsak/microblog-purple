@@ -132,7 +132,7 @@ gboolean plugin_load(PurplePlugin *plugin)
 #else
 	split = purple_account_user_split_new(_("Server"), "lahoni.ca", '@');
 	prpl_info->user_splits = g_list_append(prpl_info->user_splits, split);
-
+	
 #endif
 	
 	/*
@@ -200,7 +200,11 @@ gboolean plugin_unload(PurplePlugin *plugin)
 
 const char * idcim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 {
+#ifndef LACONICA
 	return "identica";
+#else
+	return "laconica";
+#endif
 }
 
 GList * idcim_actions(PurplePlugin *plugin, gpointer context)
