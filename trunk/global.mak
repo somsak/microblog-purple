@@ -21,7 +21,7 @@ endif
 
 # For Linux
 DESTDIR := 
-PREFIX := $(shell pkg-config --prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
+PREFIX := $(shell pkg-config --variable=prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
 LIBDIR := $(PREFIX)/lib
 
 # Is this WIN32?

@@ -79,6 +79,7 @@ typedef struct _TwitterAccount {
 	time_t last_msg_time;
 	GHashTable * sent_id_hash;
 } TwitterAccount;
+typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
 
 struct _TwitterProxyData;
 
@@ -178,6 +179,8 @@ extern void twitter_login(PurpleAccount *acct);
 extern void twitter_close(PurpleConnection *gc);
 extern int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags);
 extern void twitter_buddy_free(PurpleBuddy * buddy);
+extern char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean reply_link);
+extern void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host);
 
 #ifdef __cplusplus
 }
