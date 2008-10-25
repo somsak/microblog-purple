@@ -21,6 +21,7 @@
 */
 
 #include <glib.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -73,7 +74,6 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 "Pragma: no-cache\r\n";
 
 static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
-static void get_user_host(TwitterAccount * ta, char ** user_name, char ** host);
 
 static TwitterBuddy * twitter_new_buddy()
 {
@@ -227,8 +227,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
-	gboolean hide_myself, skip = FALSE;
-	gchar * name_color;
+	gboolean hide_myself, skip = FALSE, reply_link;
 	
 	purple_debug_info("twitter", "fetch_new_messages_handler\n");
 	
@@ -334,22 +333,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			if(skip) {
 				cur_msg->flag |= TW_MSGFLAG_SKIP;
 			}
-
-			if (g_strrstr(msg_txt, username) || !g_str_equal(from, username)) {
-				name_color = g_strdup("darkblue");
-			} else {
-				name_color = g_strdup("darkred");
-			}
-			if(purple_account_get_bool(ta->account, tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK))) {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b><a href=\"tw:reply?to=%s&account=%s\">%s</a>:</b></font> %s", name_color, from, username, from, msg_txt);
-			} else {
-				cur_msg->msg_txt = g_strdup_printf("<font color=\"%s\"><b>%s:</b></font> %s", name_color, from, msg_txt);
-			}
-			g_free(name_color);
-			g_free(from);
-			g_free(avatar_url);
-			g_free(msg_txt);
-			//serv_got_im(tpd->ta->gc, tlr->name, real_msg, PURPLE_MESSAGE_RECV, msg_time_t);
+			cur_msg->msg_txt = msg_txt;
 			
 			//purple_debug_info("twitter", "appending message with id = %llu\n", cur_id);
 			msg_list = g_list_append(msg_list, cur_msg);
@@ -362,6 +346,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	// reverse the list and append it
 	// only if id > last_msg_id
 	msg_list = g_list_reverse(msg_list);
+	reply_link = purple_account_get_bool(ta->account, tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK));
 	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
 		cur_msg = it->data;
 		if(cur_msg->id > ta->last_msg_id) { //< should we still double check this? It's already being covered by since_id
@@ -369,12 +354,14 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			
 			ta->last_msg_id = cur_msg->id;
 			if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
-				fmt_txt = twitter_format_symbols(cur_msg->msg_txt);
+				fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
 				serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
 				g_free(fmt_txt);
 			}
 		}
 		g_free(cur_msg->msg_txt);
+		g_free(cur_msg->from);
+		g_free(cur_msg->avatar_url);
 		g_free(cur_msg);
 		it->data = NULL;
 	}
@@ -386,6 +373,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	twitter_free_tlr(tlr);
 	return 0;
 }
+
 
 //
 // Check for new message periodically
@@ -400,7 +388,7 @@ static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	
 	purple_debug_info("twitter", "fetch_new_messages\n");
 
-	get_user_host(ta, &user_name, &twitter_host);
+	twitter_get_user_host(ta, &user_name, &twitter_host);
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	if(use_https) {
 		twitter_port = TW_HTTPS_PORT;
@@ -589,19 +577,6 @@ void mb_account_free(MbAccount * ta)
 	g_free(ta);
 }
 
-static void get_user_host(TwitterAccount * ta, char ** user_name, char ** host)
-{
-	char * at_sign = NULL;
-
-	(*user_name) = g_strdup(purple_account_get_username(ta->account));
-	if( (at_sign = strchr(*user_name, '@')) == NULL) {
-		(*host) = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
-	} else {
-		(*at_sign) = '\0';
-		(*host) = g_strdup( at_sign + 1 );
-	}
-}
-
 void twitter_login(PurpleAccount *acct)
 {
 	MbAccount *ta = NULL;
@@ -615,7 +590,7 @@ void twitter_login(PurpleAccount *acct)
 	// Create account data
 	ta = mb_account_new(acct);
 
-	get_user_host(ta, &user_name, &twitter_host);
+	twitter_get_user_host(ta, &user_name, &twitter_host);
 
 	purple_debug_info("twitter", "user_name = %s\n", user_name);
 	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_VERIFY_PATH), tc_def(TC_VERIFY_PATH)));
@@ -719,11 +694,18 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 
 	// prepare message to send
 	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
-	msg_len = strlen(message);
+	msg_len = strlen(tmp_msg_txt);
+	/*
+	 * We'll rely on message truncat services
+	if(msg_len > TW_STATUS_TXT_MAX) {
+		g_free(tmp_msg_txt);
+		return -E2BIG;
+	}
+	*/
 	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
 	
 	// connection
-	get_user_host(ta, &user_name, &twitter_host);
+	twitter_get_user_host(ta, &user_name, &twitter_host);
 	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_STATUS_UPDATE), tc_def(TC_STATUS_UPDATE)));
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	

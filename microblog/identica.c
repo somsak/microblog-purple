@@ -72,11 +72,11 @@
 
 #else
 
-#define LOG_ID "lhcim"
-#define _FRIENDS_USER "lahoni.ca"
-#define _PUBLIC_USER "lhcpublic"
-#define _USER_USER "lhcuser"
-#define _USER_GROUP "Lahoni.ca"
+#define LOG_ID "lcim"
+#define _FRIENDS_USER "laconi.ca"
+#define _PUBLIC_USER "lcpublic"
+#define _USER_USER "lcuser"
+#define _USER_GROUP "Laconi.ca"
 
 
 #endif
@@ -130,7 +130,7 @@ gboolean plugin_load(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("Identi.ca hostname"), tc_name(TC_HOST), tc_def(TC_HOST));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 #else
-	split = purple_account_user_split_new(_("Server"), "lahoni.ca", '@');
+	split = purple_account_user_split_new(_("Server"), "laconi.ca", '@');
 	prpl_info->user_splits = g_list_append(prpl_info->user_splits, split);
 	
 #endif
@@ -351,5 +351,5 @@ static PurplePluginInfo info = {
 #ifndef LACONICA
 PURPLE_INIT_PLUGIN(idcim, plugin_init, info);
 #else
-PURPLE_INIT_PLUGIN(lhcim, plugin_init, info);
+PURPLE_INIT_PLUGIN(lcim, plugin_init, info);
 #endif

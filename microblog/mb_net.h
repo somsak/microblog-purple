@@ -14,7 +14,7 @@ extern "C" {
 
 #define MB_NET "mb_net"
 
-typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
+//typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
 
 enum mb_error_action {
 	MB_ERROR_NOACTION = 0,

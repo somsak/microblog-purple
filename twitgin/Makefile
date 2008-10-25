@@ -17,7 +17,8 @@ TWITGIN_INC_PATHS += -I$(GTK_TOP)/include/gtk-2.0 \
 			-I$(GTK_TOP)/include/cairo \
 			-I$(GTK_TOP)/lib/gtk-2.0/include \
 			-I$(PIDGIN_TOP) \
-			-I$(PIDGIN_TOP)/win32 
+			-I$(PIDGIN_TOP)/win32  \
+			-I../microblog/
 
 
 LIB_PATHS += -L$(GTK_TOP)/lib \
@@ -33,12 +34,12 @@ LIBS =	-lgtk-win32-2.0 \
 			-lpidgin
 CFLAGS := $(PURPLE_CFLAGS) $(TWITGIN_INC_PATHS)
 else
-CFLAGS := $(PURPLE_CFLAGS) $(PIDGIN_CFLAGS)
+CFLAGS := $(PURPLE_CFLAGS) $(PIDGIN_CFLAGS) -I../microblog/
 LIB_PATHS = 
 LIBS = $(PIDGIN_LIBS)
 endif
 
-TWITGIN_C_SRC = twitgin.c
+TWITGIN_C_SRC = twitgin.c ../microblog/twitter_util.c
 TWITGIN_H_SRC = $(TWITGIN_C_SRC:%.c=%.h)
 TWITGIN_OBJ = $(TWITGIN_C_SRC:%.c=%.o)
 DISTFILES = $(TWITGIN_C_SRC) Makefile
