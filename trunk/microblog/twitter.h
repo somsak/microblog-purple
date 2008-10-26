@@ -50,6 +50,7 @@ enum _TweetTimeLine {
 	TL_FRIENDS = 0,
 	TL_USER = 1,
 	TL_PUBLIC = 2,
+	TL_REPLIES = 3,
 	TL_LAST,
 };
 
@@ -65,6 +66,9 @@ typedef struct _TwitterTimeLineReq {
 	gint timeline_id;
 	guint count;
 } TwitterTimeLineReq;
+
+extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, unsigned int id);
+extern void twitter_free_tlr(TwitterTimeLineReq * tlr);
 
 typedef struct _TwitterAccount {
 	PurpleAccount *account;
@@ -148,6 +152,8 @@ enum _TweetConfig {
 	TC_USER_TIMELINE,
 	TC_USER_USER,
 	TC_USER_GROUP,
+	TC_REPLIES_TIMELINE,
+	TC_REPLIES_USER,
 	TC_MAX,
 };
 
@@ -181,6 +187,7 @@ extern int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *
 extern void twitter_buddy_free(PurpleBuddy * buddy);
 extern char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean reply_link);
 extern void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host);
+extern void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 
 #ifdef __cplusplus
 }

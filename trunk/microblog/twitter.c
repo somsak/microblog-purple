@@ -63,6 +63,8 @@
 
 #include "twitter.h"
 
+#define DBGID "twitter"
+
 //static const char twitter_host[] = "twitter.com";
 static gint twitter_port = 443;
 static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
@@ -72,8 +74,6 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 "X-Twitter-Client-Url: " TW_AGENT_DESC_URL "\r\n" \
 "Connection: Close\r\n" \
 "Pragma: no-cache\r\n";
-
-static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 
 static TwitterBuddy * twitter_new_buddy()
 {
@@ -89,17 +89,17 @@ static TwitterBuddy * twitter_new_buddy()
 	return buddy;
 }
 
-static TwitterTimeLineReq * twitter_new_tlr()
+TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, unsigned int count)
 {
 	TwitterTimeLineReq * tlr = g_new(TwitterTimeLineReq, 1);
-	tlr->path = NULL;
-	tlr->name = NULL;
-	tlr->count = 0;
-	tlr->timeline_id = -1;
+	tlr->path = g_strdup(path);
+	tlr->name = g_strdup(name);
+	tlr->count = count;
+	tlr->timeline_id = id;
 	return tlr;
 }
 
-static void twitter_free_tlr(TwitterTimeLineReq * tlr)
+void twitter_free_tlr(TwitterTimeLineReq * tlr)
 {
 	if(tlr->path != NULL) g_free(tlr->path);
 	if(tlr->name != NULL) g_free(tlr->name);
@@ -139,12 +139,15 @@ void twitter_buddy_free(PurpleBuddy * buddy)
 // Function to fetch first batch of new message
 void twitter_fetch_first_new_messages(TwitterAccount * ta)
 {
-	TwitterTimeLineReq * tlr = twitter_new_tlr();
+	TwitterTimeLineReq * tlr;
+	const gchar * tl_path;
+	int count;
 	
-	tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE)));
-	tlr->name = g_strdup(tc_def(TC_FRIENDS_USER));
-	tlr->timeline_id = TL_FRIENDS;
-	tlr->count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
+	count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
+	purple_debug_info(DBGID, "count = %d\n", count);
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, count);
 	twitter_fetch_new_messages(ta, tlr);
 }
 
@@ -154,63 +157,26 @@ gboolean twitter_fetch_all_new_messages(gpointer data)
 	TwitterAccount * ta = data;
 	TwitterTimeLineReq * tlr = NULL;
 	gint i;
+	const gchar * tl_path;
 	
 	for(i = TC_FRIENDS_TIMELINE; i <= TC_USER_TIMELINE; i+=2) {
 		//FIXME: i + 1 is not a very good strategy here
 		if(!purple_find_buddy(ta->account, tc_def(i + 1))) {
-			purple_debug_info("twitter", "skipping %s\n", tlr->name);
+			purple_debug_info(DBGID, "skipping %s\n", tlr->name);
 			continue;
 		}
-		tlr = twitter_new_tlr();
-		tlr->path = g_strdup(purple_account_get_string(ta->account, tc_name(i), tc_def(i)));
-		tlr->name = g_strdup(tc_def(i + 1));
-		purple_debug_info("twitter", "fetching updates from %s to %s\n", tlr->path, tlr->name);
-		tlr->timeline_id = i;
-		tlr->count = TW_STATUS_COUNT_MAX;
+		tl_path = purple_account_get_string(ta->account, tc_name(i), tc_def(i));
+		tlr = twitter_new_tlr(tl_path, tc_def(i + 1), i, TW_STATUS_COUNT_MAX);
+		purple_debug_info(DBGID, "fetching updates from %s to %s\n", tlr->path, tlr->name);
 		twitter_fetch_new_messages(ta, tlr);
 	}
 	return TRUE;
 }
 
-gchar* twitter_format_symbols(gchar* src) {
-	gchar* tmp_buffer = g_malloc(TW_FORMAT_BUFFER);
-	int i = 0;
-	int new_i = 0;
-	while(src[i] != '\0') {
-		if(src[i]=='@' || src[i]=='#') {
-			gchar sym = src[i];
-			i++; // goto next char
-			gchar* name = g_malloc(TW_FORMAT_NAME_MAX);
-			// if it's a proper name, extract it
-			int j = 0;
-			while((src[i]>='a' && src[i] <='z') || (src[i]>='A' && src[i] <='Z') || (src[i]>='0' && src[i] <='9') || src[i]=='_' || src[i]=='-') {
-				name[j++] = src[i++];
-			}
-			name[j]='\0';
-			gchar* fmt_name;
-			if(sym=='@') { // for @ create a hyper link <a href="http://twitter.com/%s">%s</a>
-				fmt_name = g_strdup_printf("@<a href=\"http://twitter.com/%s\">%s</a>",name,name);
-			} else {
-				fmt_name = g_strdup_printf("#<a href=\"http://search.twitter.com/search?q=%%23%s\">%s</a>",name,name);
-			}
-			int k=0;
-			while(fmt_name[k] != '\0') {
-				tmp_buffer[new_i++] = fmt_name[k++];
-			}
-			g_free(fmt_name);
-			g_free(name);
-		} else {
-			tmp_buffer[new_i++] = src[i++];
-		}
-	}
-	tmp_buffer[new_i]='\0';
-	return tmp_buffer;
-}
-
 #if 0
 static void twitter_list_sent_id_hash(gpointer key, gpointer value, gpointer user_data)
 {
-	purple_debug_info("twitter", "key/value = %s/%s\n", key, value);
+	purple_debug_info(DBGID, "key/value = %s/%s\n", key, value);
 }
 #endif
 
@@ -229,38 +195,38 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	TwitterMsg * cur_msg = NULL;
 	gboolean hide_myself, skip = FALSE, reply_link;
 	
-	purple_debug_info("twitter", "fetch_new_messages_handler\n");
+	purple_debug_info(DBGID, "fetch_new_messages_handler\n");
 	
-	purple_debug_info("twitter", "received result from %s\n", tlr->path);
+	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
 	
 	username = (const gchar *)purple_account_get_username(ta->account);
 	
 	if(response->status == HTTP_MOVED_TEMPORARILY) {
 		// no new messages
 		twitter_free_tlr(tlr);
-		purple_debug_info("twitter", "no new messages\n");
+		purple_debug_info(DBGID, "no new messages\n");
 		return 0;
 	}
 	if(response->status != HTTP_OK) {
 		twitter_free_tlr(tlr);
-		purple_debug_info("twitter", "something's wrong with the message\n");
+		purple_debug_info(DBGID, "something's wrong with the message\n");
 		return 0; //< should we return -1 instead?
 	}
 	if(response->content_len == 0) {
-		purple_debug_info("twitter", "no data to parse\n");
+		purple_debug_info(DBGID, "no data to parse\n");
 		twitter_free_tlr(tlr);
 		return 0;
 	}
-	purple_debug_info("twitter", "http_data = #%s#\n", response->content->str);
+	purple_debug_info(DBGID, "http_data = #%s#\n", response->content->str);
 	top = xmlnode_from_str(response->content->str, -1);
 	if(top == NULL) {
-		purple_debug_info("twitter", "failed to parse XML data\n");
+		purple_debug_info(DBGID, "failed to parse XML data\n");
 		twitter_free_tlr(tlr);
 		return 0;
 	}
-	purple_debug_info("twitter", "successfully parse XML\n");
+	purple_debug_info(DBGID, "successfully parse XML\n");
 	status = xmlnode_get_child(top, "status");
-	purple_debug_info("twitter", "timezone = %ld\n", timezone);
+	purple_debug_info(DBGID, "timezone = %ld\n", timezone);
 	
 	hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	
@@ -277,13 +243,13 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		}
 		// Check for duplicate message
 		if(hide_myself) {
-			purple_debug_info("twitter", "checking for duplicate message\n");
+			purple_debug_info(DBGID, "checking for duplicate message\n");
 #if 0
 			g_hash_table_foreach(ta->sent_id_hash, twitter_list_sent_id_hash, NULL);
 #endif			
 			if(g_hash_table_remove(ta->sent_id_hash, xml_str)  == TRUE) {
 				// Dupplicate ID, moved to next value
-				purple_debug_info("twitter", "duplicate id = %s\n", xml_str);
+				purple_debug_info(DBGID, "duplicate id = %s\n", xml_str);
 				skip = TRUE;
 			}
 		}
@@ -295,7 +261,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		if(time_node) {
 			xml_str = xmlnode_get_data_unescaped(time_node);
 		}
-		purple_debug_info("twitter", "msg time = %s\n", xml_str);
+		purple_debug_info(DBGID, "msg time = %s\n", xml_str);
 		msg_time_t = mb_mktime(xml_str) - timezone;
 		if(last_msg_time_t < msg_time_t) {
 			last_msg_time_t = msg_time_t;
@@ -324,7 +290,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		if(from && msg_txt) {
 			cur_msg = g_new(TwitterMsg, 1);
 			
-			purple_debug_info("twitter", "from = %s, msg = %s\n", from, msg_txt);
+			purple_debug_info(DBGID, "from = %s, msg = %s\n", from, msg_txt);
 			cur_msg->id = cur_id;
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
@@ -335,13 +301,13 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			}
 			cur_msg->msg_txt = msg_txt;
 			
-			//purple_debug_info("twitter", "appending message with id = %llu\n", cur_id);
+			//purple_debug_info(DBGID, "appending message with id = %llu\n", cur_id);
 			msg_list = g_list_append(msg_list, cur_msg);
 		}
 		count++;
 		status = xmlnode_get_next_twin(status);
 	}
-	purple_debug_info("twitter", "we got %d messages\n", count);
+	purple_debug_info(DBGID, "we got %d messages\n", count);
 	
 	// reverse the list and append it
 	// only if id > last_msg_id
@@ -378,7 +344,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 //
 // Check for new message periodically
 //
-static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
+void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 {
 	MbConnData * conn_data;
 	MbHttpData * request;
@@ -386,7 +352,7 @@ static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	gboolean use_https;
 	gint twitter_port;
 	
-	purple_debug_info("twitter", "fetch_new_messages\n");
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 
 	twitter_get_user_host(ta, &user_name, &twitter_host);
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
@@ -409,6 +375,7 @@ static void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
 	mb_http_data_set_header(request, "Host", twitter_host);
 	mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
+	purple_debug_info(DBGID, "tlr->count = %d\n", tlr->count);
 	mb_http_data_add_param_int(request, "count", tlr->count);
 	if(ta->last_msg_id > 0) {
 		mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
@@ -429,7 +396,7 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 	TwitterBuddy *tbuddy;
 	PurpleGroup *twitter_group = NULL;
 
-	purple_debug_info("twitter", "buddy list for account %s\n", ta->account->username);
+	purple_debug_info(DBGID, "buddy list for account %s\n", ta->account->username);
 
 	//Check if the twitter group already exists
 	twitter_group = purple_find_group(tc_def(TC_USER_GROUP));
@@ -438,15 +405,15 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 	// Is TL_FRIENDS already exist?
 	if ( (buddy = purple_find_buddy(ta->account, tc_def(TC_FRIENDS_USER))) == NULL)
 	{
-		purple_debug_info("twitter", "creating new buddy list for %s\n", tc_def(TC_FRIENDS_USER));
+		purple_debug_info(DBGID, "creating new buddy list for %s\n", tc_def(TC_FRIENDS_USER));
 		buddy = purple_buddy_new(ta->account, tc_def(TC_FRIENDS_USER), NULL);
 		if (twitter_group == NULL)
 		{
-			purple_debug_info("twitter", "creating new Twitter group\n");
+			purple_debug_info(DBGID, "creating new Twitter group\n");
 			twitter_group = purple_group_new(tc_def(TC_USER_GROUP));
 			purple_blist_add_group(twitter_group, NULL);
 		}
-		purple_debug_info("twitter", "setting protocol-specific buddy information to purplebuddy\n");
+		purple_debug_info(DBGID, "setting protocol-specific buddy information to purplebuddy\n");
 		if(buddy->proto_data == NULL) {
 			tbuddy = twitter_new_buddy();
 			buddy->proto_data = tbuddy;
@@ -472,7 +439,7 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
 		purple_connection_set_state(conn_data->ta->gc, PURPLE_CONNECTED);
 		conn_data->ta->state = PURPLE_CONNECTED;
 		twitter_get_buddy_list(conn_data->ta);
-		purple_debug_info("twitter", "refresh interval = %d\n", interval);
+		purple_debug_info(DBGID, "refresh interval = %d\n", interval);
 		conn_data->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, conn_data->ta);
 		twitter_fetch_first_new_messages(conn_data->ta);
 		return 0;
@@ -488,7 +455,7 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 {
 	MbAccount * ta = NULL;
 	
-	purple_debug_info("twitter", "mb_account_new\n");
+	purple_debug_info(DBGID, "mb_account_new\n");
 	ta = g_new(MbAccount, 1);
 	ta->account = acct;
 	ta->gc = acct->gc;
@@ -507,65 +474,65 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 {
 	MbConnData *conn_data = value;
 	
-	purple_debug_info("twitter", "closing each connection\n");
+	purple_debug_info(DBGID, "closing each connection\n");
 	if(conn_data) {
 		/*
-		purple_debug_info("twitter", "is_https = %d\n", is_https);
+		purple_debug_info(DBGID, "is_https = %d\n", is_https);
 		if(is_https) {
 			PurpleSslConnection * ssl = NULL;
 			
 			ssl = conn_data->ssl_conn_data;
 			if(ssl) {
-				purple_debug_info("twitter", "removing current ssl socket from eventloop\n");
+				purple_debug_info(DBGID, "removing current ssl socket from eventloop\n");
 				purple_input_remove(ssl->inpa);
 			}
-			purple_debug_info("twitter", "closing SSL socket\n");
+			purple_debug_info(DBGID, "closing SSL socket\n");
 		} else {
-			purple_debug_info("twitter", "cancelling connection with handle = %p\n", conn_data);
+			purple_debug_info(DBGID, "cancelling connection with handle = %p\n", conn_data);
 			purple_proxy_connect_cancel_with_handle(conn_data);
 			if(conn_data->conn_event_handle >= 0) {
-				purple_debug_info("twitter", "removing event handle\n");
+				purple_debug_info(DBGID, "removing event handle\n");
 				purple_input_remove(conn_data->conn_event_handle);
 			}
 		}
-		purple_debug_info("twitter", "free all data\n");
+		purple_debug_info(DBGID, "free all data\n");
 		*/
-		purple_debug_info("twitter", "we have %p -> %p\n", key, value);
+		purple_debug_info(DBGID, "we have %p -> %p\n", key, value);
 		mb_conn_data_free(conn_data);
 	}	
 }
 
 void mb_account_free(MbAccount * ta)
 {	
-	purple_debug_info("twitter", "mb_account_free\n");
+	purple_debug_info(DBGID, "mb_account_free\n");
 	
 	ta->state = PURPLE_DISCONNECTED;
 	
 	if(ta->timeline_timer != -1) {
-		purple_debug_info("twitter", "removing timer\n");
+		purple_debug_info(DBGID, "removing timer\n");
 		purple_timeout_remove(ta->timeline_timer);
 	}
 
 	// new SSL-base connection hash
 	
 	if(ta->ssl_conn_hash) {
-		purple_debug_info("twitter", "closing all active connection\n");
+		purple_debug_info(DBGID, "closing all active connection\n");
 		g_hash_table_foreach(ta->ssl_conn_hash, mb_close_connection, (gpointer)TRUE);
-		purple_debug_info("twitter", "destroying connection hash\n");
+		purple_debug_info(DBGID, "destroying connection hash\n");
 		g_hash_table_destroy(ta->ssl_conn_hash);
 		ta->ssl_conn_hash = NULL;
 	}
 	
 	if(ta->conn_hash) {
-		purple_debug_info("twitter", "closing all non-ssl active connection\n");
+		purple_debug_info(DBGID, "closing all non-ssl active connection\n");
 		g_hash_table_foreach(ta->conn_hash, mb_close_connection, (gpointer)FALSE);
-		purple_debug_info("twitter", "destroying non-SSL connection hash\n");
+		purple_debug_info(DBGID, "destroying non-SSL connection hash\n");
 		g_hash_table_destroy(ta->conn_hash);
 		ta->conn_hash = NULL;
 	}
 	
 	if(ta->sent_id_hash) {
-		purple_debug_info("twitter", "destroying sent_id hash\n");
+		purple_debug_info(DBGID, "destroying sent_id hash\n");
 		g_hash_table_destroy(ta->sent_id_hash);
 		ta->sent_id_hash = NULL;
 	}
@@ -573,7 +540,7 @@ void mb_account_free(MbAccount * ta)
 	ta->account = NULL;
 	ta->gc = NULL;
 	
-	purple_debug_info("twitter", "free up memory used for microblog account structure\n");
+	purple_debug_info(DBGID, "free up memory used for microblog account structure\n");
 	g_free(ta);
 }
 
@@ -585,14 +552,14 @@ void twitter_login(PurpleAccount *acct)
 	gchar * path = NULL, *user_name;
 	gboolean use_https = TRUE;
 	
-	purple_debug_info("twitter", "twitter_login\n");
+	purple_debug_info(DBGID, "twitter_login\n");
 	
 	// Create account data
 	ta = mb_account_new(acct);
 
 	twitter_get_user_host(ta, &user_name, &twitter_host);
 
-	purple_debug_info("twitter", "user_name = %s\n", user_name);
+	purple_debug_info(DBGID, "user_name = %s\n", user_name);
 	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_VERIFY_PATH), tc_def(TC_VERIFY_PATH)));
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_int(TC_USE_HTTPS));
 	if(use_https) {
@@ -600,7 +567,7 @@ void twitter_login(PurpleAccount *acct)
 	} else {
 		twitter_port = TW_HTTP_PORT;
 	}
-	purple_debug_info("twitter", "path = %s\n", path);
+	purple_debug_info(DBGID, "path = %s\n", path);
 	
 	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_verify_authen, use_https);
 	mb_conn_data_set_error(conn_data, "Authentication error", MB_ERROR_RAISE_ERROR);
@@ -626,7 +593,7 @@ void twitter_close(PurpleConnection *gc)
 {
 	MbAccount *ta = gc->proto_data;
 
-	purple_debug_info("twitter", "twitter_close\n");
+	purple_debug_info(DBGID, "twitter_close\n");
 	mb_account_free(ta);
 	gc->proto_data = NULL;
 }
@@ -638,11 +605,11 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
 	
-	purple_debug_info("twitter", "send_im_handler\n");
+	purple_debug_info(DBGID, "send_im_handler\n");
 	
 	if(response->status != 200) {
-		purple_debug_info("twitter", "http error\n");
-		purple_debug_info("twitter", "http data = #%s#\n", response->content->str);
+		purple_debug_info(DBGID, "http error\n");
+		purple_debug_info(DBGID, "http data = #%s#\n", response->content->str);
 		return -1;
 	}
 	
@@ -652,19 +619,19 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	
 	// Check for returned ID
 	if(response->content->len == 0) {
-		purple_debug_info("twitter", "can not find http data\n");
+		purple_debug_info(DBGID, "can not find http data\n");
 		return -1;
 	}
 
-	purple_debug_info("twitter", "http_data = #%s#\n", response->content->str);
+	purple_debug_info(DBGID, "http_data = #%s#\n", response->content->str);
 	
 	// parse response XML
 	top = xmlnode_from_str(response->content->str, -1);
 	if(top == NULL) {
-		purple_debug_info("twitter", "failed to parse XML data\n");
+		purple_debug_info(DBGID, "failed to parse XML data\n");
 		return -1;
 	}
-	purple_debug_info("twitter", "successfully parse XML\n");
+	purple_debug_info(DBGID, "successfully parse XML\n");
 
 	// ID
 	id_node = xmlnode_get_child(top, "id");
@@ -690,7 +657,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	gchar * twitter_host, * path;
 	gboolean use_https;
 	
-	purple_debug_info("twitter", "send_im\n");
+	purple_debug_info(DBGID, "send_im\n");
 
 	// prepare message to send
 	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
@@ -702,7 +669,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 		return -E2BIG;
 	}
 	*/
-	purple_debug_info("twitter", "sending message %s\n", tmp_msg_txt);
+	purple_debug_info(DBGID, "sending message %s\n", tmp_msg_txt);
 	
 	// connection
 	twitter_get_user_host(ta, &user_name, &twitter_host);
@@ -753,7 +720,7 @@ gchar * twitter_status_text(PurpleBuddy *buddy)
 // There's no concept of status in TwitterIM for now
 void twitter_set_status(PurpleAccount *acct, PurpleStatus *status) {
   const char *msg = purple_status_get_attr_string(status, "message");
-  purple_debug_info("twitter", "setting %s's status to %s: %s\n",
+  purple_debug_info(DBGID, "setting %s's status to %s: %s\n",
                     acct->username, purple_status_get_name(status), msg);
 
 }
