@@ -51,6 +51,7 @@
 
 #include "mb_net.h"
 #include "mb_util.h"
+#include "tw_cmd.h"
 
 #ifdef _WIN32
 #	include <win32dep.h>
@@ -63,6 +64,8 @@
 #include "twitter.h"
 
 TwitterConfig * _tw_conf = NULL;
+
+static TwCmd * tw_cmd = NULL;
 
 static void plugin_init(PurplePlugin *plugin)
 {
@@ -137,11 +140,20 @@ gboolean plugin_load(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("Public timeline path"), tc_name(TC_PUBLIC_TIMELINE), tc_def(TC_PUBLIC_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
+	_tw_conf[TC_REPLIES_TIMELINE].conf = g_strdup("twitter_replies_timeline");
+	_tw_conf[TC_REPLIES_TIMELINE].def_str = g_strdup("/statuses/replies.xml");
+	option = purple_account_option_string_new(_("Replies timeline path"), tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
 	// and now for non-option global
 	_tw_conf[TC_FRIENDS_USER].def_str = g_strdup("twitter.com");
+	_tw_conf[TC_REPLIES_USER].def_str = g_strdup("twitter.com");
 	_tw_conf[TC_PUBLIC_USER].def_str = g_strdup("twpublic");
 	_tw_conf[TC_USER_USER].def_str = g_strdup("twuser");
 	_tw_conf[TC_USER_GROUP].def_str = g_strdup("Twitter");
+
+	// command support
+	tw_cmd = tw_cmd_init(info->id);
 
 	return TRUE;
 }
@@ -152,6 +164,8 @@ gboolean plugin_unload(PurplePlugin *plugin)
 
 	purple_debug_info("twitterim", "plugin_unload\n");
 
+	tw_cmd_finalize(tw_cmd);
+	tw_cmd = NULL;
 	g_free(_tw_conf[TC_HOST].def_str);
 	g_free(_tw_conf[TC_STATUS_UPDATE].def_str);
 	g_free(_tw_conf[TC_VERIFY_PATH].def_str);
