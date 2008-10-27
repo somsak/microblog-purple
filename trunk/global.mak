@@ -8,16 +8,6 @@
 # It MUST realitve to each subdirectory (microblog, twitgin)
 PIDGIN_TREE_TOP := ../../pidgin-2.5.0
 
-IS_PIDGIN = $(shell pkg-config --atleast-version=2.0 pidgin && echo 1 || echo 0)
-IS_CARRIER = $(shell pkg-config --atleast-version=2.0 carrier && echo 1 || echo 0)
-
-ifeq ($(strip $(IS_PIDGIN)), 1)
-	PIDGIN_NAME := pidgin
-else 
-ifeq ($(strip $(IS_CARRIER)), 1)
-        PIDGIN_NAME := carrier
-endif
-endif
 
 # For Linux
 DESTDIR := 
@@ -65,6 +55,21 @@ EXE_SUFFIX := .exe
 #include $(PIDGIN_COMMON_RULES)
 
 else
+
+IS_PIDGIN = $(shell pkg-config --atleast-version=2.0 pidgin && echo 1 || echo 0)
+IS_CARRIER = $(shell pkg-config --atleast-version=2.0 carrier && echo 1 || echo 0)
+
+ifeq ($(strip $(IS_PIDGIN)), 1)
+	PIDGIN_NAME := pidgin
+else 
+ifeq ($(strip $(IS_CARRIER)), 1)
+        PIDGIN_NAME := carrier
+endif
+endif
+
+PREFIX := $(shell pkg-config --prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
+LIBDIR := $(PREFIX)/lib
+
 # LINUX and others, use pkg-config
 PURPLE_LIBS = $(shell pkg-config --libs purple)
 PURPLE_CFLAGS = $(CFLAGS) -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
