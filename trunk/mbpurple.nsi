@@ -69,8 +69,8 @@ Section "MainSection" SEC01
 		SetOutPath "$PidginDir\plugins"
 		File "microblog\libtwitter.dll"
 		File "twitgin\twitgin.dll"
-		SetOutPath "$PidginDir"
-		File "microblog\mbchprpl.exe"
+		;SetOutPath "$PidginDir"
+		;File "microblog\mbchprpl.exe"
 		writeUninstaller "$PidginDir\pidgin-microblog-uninst.exe"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}  - Twitter support for Pidgin"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
@@ -82,7 +82,7 @@ Section "MainSection" SEC01
 	cancel:
 		Abort "Installation of pidgin-microblog aborted"
 	after_copy:
-		Call FixAccount
+		;Call FixAccount
 		
 SectionEnd
 

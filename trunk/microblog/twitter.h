@@ -66,9 +66,10 @@ typedef struct _TwitterTimeLineReq {
 	gint timeline_id;
 	guint count;
 	gboolean use_since_id;
+	gchar * sys_msg;
 } TwitterTimeLineReq;
 
-extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, unsigned int id);
+extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, unsigned int id, const char * sys_msg);
 extern void twitter_free_tlr(TwitterTimeLineReq * tlr);
 
 typedef struct _TwitterAccount {
