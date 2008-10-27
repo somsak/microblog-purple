@@ -20,13 +20,16 @@ typedef struct {
 
 static PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
 static PurpleCmdRet tw_cmd_refresh(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
+static PurpleCmdRet tw_cmd_refresh_rate(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
 static PurpleCmdRet tw_cmd_caller(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, void * data);
 
 static TwCmdEnum tw_cmd_enum[] = {
 	{"replies", "", PURPLE_CMD_P_PRPL, 0, tw_cmd_replies, NULL,
-		"get replies timeline. /replies 10 to get latest 10 replies"},
-	{"refresh", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_refresh, NULL,
-		"refresh now. /refresh 120 temporarily change refresh rate to 120 seconds"},
+		"get replies timeline."},
+	{"refresh", "", PURPLE_CMD_P_PRPL, 0, tw_cmd_refresh, NULL,
+		"refresh tweets now."},
+	{"refresh_rate", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_refresh_rate, NULL,
+		"set refresh rate. /refreshrate 120 temporariy change refresh rate to 120 seconds"},
 };
 
 PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
@@ -37,8 +40,9 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 	time_t now;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+
 	path = purple_account_get_string(data->ma->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
-	count = purple_account_get_int(data->ma->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
+	count = 0; //< replies timeline has no count
 	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end reply messages"));
 	tlr->use_since_id = FALSE;
 	time(&now);
@@ -48,10 +52,32 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 	return PURPLE_CMD_RET_OK;
 }
 
+PurpleCmdRet tw_cmd_refresh_rate(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
+{
+	char * end_ptr = NULL;
+	int new_rate = -1, i;
+
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	new_rate = (int)strtol(args[0], &end_ptr, 10);
+	if( (*end_ptr) == '\0' ) {
+		if(new_rate > 10) {
+			purple_account_set_int(data->ma->account, tc_name(TC_MSG_REFRESH_RATE), new_rate);
+			return PURPLE_CMD_RET_OK;
+		} else {
+			serv_got_im(data->ma->gc, tc_def(TC_FRIENDS_USER), _("new rate is too low, must be > 10 seconds"), PURPLE_MESSAGE_SYSTEM, time(NULL));
+			return PURPLE_CMD_RET_FAILED;
+		}
+	}
+	return PURPLE_CMD_RET_FAILED;
+}
+
 PurpleCmdRet tw_cmd_refresh(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
 {
+	twitter_fetch_all_new_messages(data->ma);
 	return PURPLE_CMD_RET_OK;
 }
+
+
 
 /*
  * Convenient proxy for calling real function
