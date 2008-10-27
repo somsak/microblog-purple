@@ -96,6 +96,7 @@ TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int i
 	tlr->name = g_strdup(name);
 	tlr->count = count;
 	tlr->timeline_id = id;
+	tlr->use_since_id = TRUE;
 	return tlr;
 }
 
@@ -375,9 +376,11 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
 	mb_http_data_set_header(request, "Host", twitter_host);
 	mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
-	purple_debug_info(DBGID, "tlr->count = %d\n", tlr->count);
-	mb_http_data_add_param_int(request, "count", tlr->count);
-	if(ta->last_msg_id > 0) {
+	if(tlr->count > 0) {
+		purple_debug_info(DBGID, "tlr->count = %d\n", tlr->count);
+		mb_http_data_add_param_int(request, "count", tlr->count);
+	}
+	if(tlr->use_since_id && (ta->last_msg_id > 0) ) {
 		mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
 	}
 	conn_data->handler_data = tlr;

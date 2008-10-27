@@ -38,6 +38,7 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 	path = purple_account_get_string(data->ma->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
 	count = purple_account_get_int(data->ma->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
 	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count);
+	tlr->use_since_id = FALSE;
 	twitter_fetch_new_messages(data->ma, tlr);
 
 	return PURPLE_CMD_RET_OK;
