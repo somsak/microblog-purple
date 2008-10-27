@@ -2,6 +2,7 @@
  * Command support for twitter
  */
 
+#include <time.h>
 #include <debug.h>
 #include "tw_cmd.h"
 
@@ -33,17 +34,19 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 	const gchar * path;
 	TwitterTimeLineReq * tlr;
 	int count;
+	time_t now;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	path = purple_account_get_string(data->ma->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
 	count = purple_account_get_int(data->ma->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
-	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count);
+	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end reply messages"));
 	tlr->use_since_id = FALSE;
+	time(&now);
+	serv_got_im(data->ma->gc, tlr->name, _("getting reply messages"), PURPLE_MESSAGE_SYSTEM, now);
 	twitter_fetch_new_messages(data->ma, tlr);
 
 	return PURPLE_CMD_RET_OK;
 }
-
 
 PurpleCmdRet tw_cmd_refresh(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
 {

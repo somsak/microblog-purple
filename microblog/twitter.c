@@ -89,7 +89,7 @@ static TwitterBuddy * twitter_new_buddy()
 	return buddy;
 }
 
-TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, unsigned int count)
+TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, unsigned int count, const char * sys_msg)
 {
 	TwitterTimeLineReq * tlr = g_new(TwitterTimeLineReq, 1);
 	tlr->path = g_strdup(path);
@@ -97,6 +97,11 @@ TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int i
 	tlr->count = count;
 	tlr->timeline_id = id;
 	tlr->use_since_id = TRUE;
+	if(sys_msg) {
+		tlr->sys_msg = g_strdup(sys_msg);
+	} else {
+		tlr->sys_msg = NULL;
+	}
 	return tlr;
 }
 
@@ -104,6 +109,7 @@ void twitter_free_tlr(TwitterTimeLineReq * tlr)
 {
 	if(tlr->path != NULL) g_free(tlr->path);
 	if(tlr->name != NULL) g_free(tlr->name);
+	if(tlr->sys_msg != NULL) g_free(tlr->sys_msg);
 	g_free(tlr);
 }
 
@@ -148,7 +154,7 @@ void twitter_fetch_first_new_messages(TwitterAccount * ta)
 	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
 	count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
 	purple_debug_info(DBGID, "count = %d\n", count);
-	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, count);
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, count, NULL);
 	twitter_fetch_new_messages(ta, tlr);
 }
 
@@ -167,7 +173,7 @@ gboolean twitter_fetch_all_new_messages(gpointer data)
 			continue;
 		}
 		tl_path = purple_account_get_string(ta->account, tc_name(i), tc_def(i));
-		tlr = twitter_new_tlr(tl_path, tc_def(i + 1), i, TW_STATUS_COUNT_MAX);
+		tlr = twitter_new_tlr(tl_path, tc_def(i + 1), i, TW_STATUS_COUNT_MAX, NULL);
 		purple_debug_info(DBGID, "fetching updates from %s to %s\n", tlr->path, tlr->name);
 		twitter_fetch_new_messages(ta, tlr);
 	}
@@ -189,15 +195,14 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	TwitterTimeLineReq * tlr = data;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
 	gint count = 0;
-	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL;
+	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL, * fmt_txt = NULL;
 	time_t msg_time_t, last_msg_time_t = 0;
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
 	gboolean hide_myself, skip = FALSE, reply_link;
 	
-	purple_debug_info(DBGID, "fetch_new_messages_handler\n");
-	
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
 	
 	username = (const gchar *)purple_account_get_username(ta->account);
@@ -315,17 +320,18 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	msg_list = g_list_reverse(msg_list);
 	reply_link = purple_account_get_bool(ta->account, tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK));
 	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
+
 		cur_msg = it->data;
-		if(cur_msg->id > ta->last_msg_id) { //< should we still double check this? It's already being covered by since_id
-			gchar * fmt_txt = NULL;
-			
+//		if(cur_msg->id > ta->last_msg_id) { //< should we still double check this? It's already being covered by since_id
+		if(cur_msg->id > ta->last_msg_id) {
 			ta->last_msg_id = cur_msg->id;
-			if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
-				fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
-				serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
-				g_free(fmt_txt);
-			}
 		}
+		if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
+			fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
+			serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			g_free(fmt_txt);
+		}
+//		}
 		g_free(cur_msg->msg_txt);
 		g_free(cur_msg->from);
 		g_free(cur_msg->avatar_url);
@@ -337,6 +343,9 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	}
 	g_list_free(msg_list);
 	xmlnode_free(top);
+	if(tlr->sys_msg) {
+		serv_got_im(ta->gc, tlr->name, tlr->sys_msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
+	}
 	twitter_free_tlr(tlr);
 	return 0;
 }
