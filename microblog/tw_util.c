@@ -120,32 +120,34 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 	// color of name
 	twitter_get_user_host(ta, &username, NULL);
 	output = g_string_new("");
-	if( strcmp(msg->from, username) == 0) {
-		from_eq_username = TRUE;
-		purple_debug_info("twitter", "self generated message, %s, %s\n", msg->from, username);
-	}
-	if(from_eq_username) {
-		name_color = g_strdup("darkred");
-	} else {
-		name_color = g_strdup("darkblue");
-	}
-	g_string_append_printf(output, "<font color=\"%s\"><b>", name_color);
-//	self-filter is not possible now
-//	if(strcmp(msg->from, username) != 0) {
-	if(reply_link) {
-		if(from_eq_username) {
-			g_string_append_printf(output, "<i>");
+	if(msg->from) {
+		if( strcmp(msg->from, username) == 0) {
+			from_eq_username = TRUE;
+			purple_debug_info("twitter", "self generated message, %s, %s\n", msg->from, username);
 		}
-		g_string_append_printf(output, "<a href=\"%s:reply?to=%s&account=%s\">%s</a>:", get_uri_txt(ta->account), msg->from, username, msg->from);
 		if(from_eq_username) {
-			g_string_append_printf(output, "</i>");
+			name_color = g_strdup("darkred");
+		} else {
+			name_color = g_strdup("darkblue");
 		}
-	} else {
-		g_string_append_printf(output, "%s:", msg->from);
+		g_string_append_printf(output, "<font color=\"%s\"><b>", name_color);
+		//	self-filter is not possible now
+		//	if(strcmp(msg->from, username) != 0) {
+		if(reply_link) {
+			if(from_eq_username) {
+				g_string_append_printf(output, "<i>");
+			}
+			g_string_append_printf(output, "<a href=\"%s:reply?to=%s&account=%s\">%s</a>:", get_uri_txt(ta->account), msg->from, username, msg->from);
+			if(from_eq_username) {
+				g_string_append_printf(output, "</i>");
+			}
+		} else {
+			g_string_append_printf(output, "%s:", msg->from);
+		}
+		//	}
+		g_string_append_printf(output, "</b></font>");
+		g_free(name_color);
 	}
-//	}
-	g_string_append_printf(output, "</b></font>");
-	g_free(name_color);
 
 	purple_debug_info("twitter", "display msg = %s\n", output->str);
 
