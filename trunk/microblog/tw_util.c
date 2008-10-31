@@ -38,6 +38,8 @@
 
 #include "twitter.h"
 
+#define DBGID "tw_util"
+
 static const char * get_uri_txt(PurpleAccount * pa)
 {
 	if (strcmp(pa->protocol_id, "prpl-mbpurple-twitter") == 0) {
@@ -55,9 +57,9 @@ static void twitter_update_link(MbAccount * ta, GString * msg, char sym, const c
 	gboolean user_name_eq_name = FALSE;
 
 	twitter_get_user_host(ta, &user_name, NULL);
-	purple_debug_info("twitter", "symbol = %c, name = %s, user_name = %s\n", sym, name, user_name);
+	purple_debug_info(DBGID, "symbol = %c, name = %s, user_name = %s\n", sym, name, user_name);
 	if(strcmp(name, user_name) == 0) {
-		purple_debug_info("twitter", "name and username is equal\n");
+		purple_debug_info(DBGID, "name and username is equal\n");
 		user_name_eq_name = TRUE;
 	}
 	if(user_name_eq_name) g_string_append_printf(msg, "<i><b>");
@@ -85,19 +87,19 @@ void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host)
 {
 	char * at_sign = NULL;
 
-	purple_debug_info("twitter", "twitter_get_user_host\n");
+	purple_debug_info(DBGID, "twitter_get_user_host\n");
 	(*user_name) = g_strdup(purple_account_get_username(ta->account));
-	purple_debug_info("twitter", "username = %s\n", (*user_name));
+	purple_debug_info(DBGID, "username = %s\n", (*user_name));
 	if( (at_sign = strchr(*user_name, '@')) == NULL) {
 		if(host != NULL) {
 			(*host) = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
-			purple_debug_info("twitter", "host (config) = %s\n", (*host));
+			purple_debug_info(DBGID, "host (config) = %s\n", (*host));
 		}
 	} else {
 		(*at_sign) = '\0';
 		if(host != NULL) {
 			(*host) = g_strdup( at_sign + 1 );
-			purple_debug_info("twitter", "host = %s\n", (*host));
+			purple_debug_info(DBGID, "host = %s\n", (*host));
 		}
 	}
 }
@@ -111,19 +113,35 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 {
 	gchar * username;
 	GString * output;
-	gchar * src = msg->msg_txt;
+	gchar * src = NULL;
 	gchar * name, *name_color;
 	gchar sym, old_char, previous_char;
 	int i = 0, j = 0;
 	gboolean from_eq_username = FALSE;
 
-	// color of name
+	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
+
 	twitter_get_user_host(ta, &username, NULL);
 	output = g_string_new("");
+
+	// tag for the first thing
+	if( (msg->flag & TW_MSGFLAG_DOTAG) && ta->tag ) {
+		purple_debug_info(DBGID, "do the tagging of message, for the tag %s\n", ta->tag);
+		if(ta->tag_pos == MB_TAG_PREFIX) {
+			src = g_strdup_printf("%s %s", ta->tag, msg->msg_txt);
+		} else {
+			src = g_strdup_printf("%s %s", msg->msg_txt, ta->tag);
+		}
+	} else {
+		purple_debug_info(DBGID, "not doing the tagging of message\n");
+		src = g_strdup(msg->msg_txt);
+	}
+
+	// color of name
 	if(msg->from) {
 		if( strcmp(msg->from, username) == 0) {
 			from_eq_username = TRUE;
-			purple_debug_info("twitter", "self generated message, %s, %s\n", msg->from, username);
+			purple_debug_info(DBGID, "self generated message, %s, %s\n", msg->from, username);
 		}
 		if(from_eq_username) {
 			name_color = g_strdup("darkred");
@@ -149,16 +167,17 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 		g_free(name_color);
 	}
 
-	purple_debug_info("twitter", "display msg = %s\n", output->str);
+	purple_debug_info(DBGID, "display msg = %s\n", output->str);
+	purple_debug_info(DBGID, "source msg = %s\n", src);
 
 	// now search message text and look for things to highlight
 	previous_char = src[i];
 	while(src[i] != '\0') {
-		//purple_debug_info("twitter", "previous_char = %c, src[i] == %c\n", previous_char, src[i]);
+		purple_debug_info(DBGID, "previous_char = %c, src[i] == %c\n", previous_char, src[i]);
 		if( (i == 0 || isspace(previous_char)) && 
 			((src[i] == '@') || (src[i] == '#')) )
 		{
-			//purple_debug_info("twitter", "reformat_msg: sym = %c\n", src[i]);
+			purple_debug_info(DBGID, "reformat_msg: sym = %c\n", src[i]);
 			sym = src[i];
 			// if it's a proper name, extract it
 			i++;
@@ -192,6 +211,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 		}
 	}
 	g_free(username);
+	g_free(src);
 	return g_string_free(output, FALSE);
 }
 

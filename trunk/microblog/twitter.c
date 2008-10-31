@@ -692,13 +692,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 		tmp_msg_txt = new_msg_txt;
 	}
 	msg_len = strlen(tmp_msg_txt);
-	/*
-	 * We'll rely on message truncat services
-	if(msg_len > TW_STATUS_TXT_MAX) {
-		g_free(tmp_msg_txt);
-		return -E2BIG;
-	}
-	*/
+
 	purple_debug_info(DBGID, "sending message %s\n", tmp_msg_txt);
 	
 	// connection
