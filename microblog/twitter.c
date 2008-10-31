@@ -518,7 +518,8 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 
 void mb_account_free(MbAccount * ta)
 {	
-	purple_debug_info(DBGID, "mb_account_free\n");
+	//purple_debug_info(DBGID, "mb_account_free\n");
+	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 	
 	if(ta->tag) {
 		g_free(ta->tag);
@@ -533,7 +534,8 @@ void mb_account_free(MbAccount * ta)
 	}
 
 	// new SSL-base connection hash
-	
+	// Do I need to iterate over conn_hash now? since we use timer to free MbAccount
+	// so basically this should never be called	
 	if(ta->ssl_conn_hash) {
 		purple_debug_info(DBGID, "closing all active connection\n");
 		g_hash_table_foreach(ta->ssl_conn_hash, mb_close_connection, (gpointer)TRUE);
@@ -561,6 +563,19 @@ void mb_account_free(MbAccount * ta)
 	
 	purple_debug_info(DBGID, "free up memory used for microblog account structure\n");
 	g_free(ta);
+}
+
+
+gboolean twitter_close_timer(gpointer data)
+{
+	MbAccount * ma = data;
+
+	if( (g_hash_table_size(ma->ssl_conn_hash) > 0) || (g_hash_table_size(ma->conn_hash) > 0) ) {
+		return TRUE;
+	} else {
+		mb_account_free(ma);
+		return FALSE;
+	}
 }
 
 void twitter_login(PurpleAccount *acct)
@@ -610,10 +625,17 @@ void twitter_login(PurpleAccount *acct)
 
 void twitter_close(PurpleConnection *gc)
 {
-	MbAccount *ta = gc->proto_data;
+	MbAccount *ma = gc->proto_data;
 
 	purple_debug_info(DBGID, "twitter_close\n");
-	mb_account_free(ta);
+
+	if(ma->timeline_timer != -1) {
+		purple_debug_info(DBGID, "removing timer\n");
+		purple_timeout_remove(ma->timeline_timer);
+		ma->timeline_timer = -1;
+	}
+	purple_timeout_add(300, (GSourceFunc)twitter_close_timer, ma);
+	//mb_account_free(ma);
 	gc->proto_data = NULL;
 }
 

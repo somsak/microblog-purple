@@ -173,11 +173,11 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 	// now search message text and look for things to highlight
 	previous_char = src[i];
 	while(src[i] != '\0') {
-		purple_debug_info(DBGID, "previous_char = %c, src[i] == %c\n", previous_char, src[i]);
+		//purple_debug_info(DBGID, "previous_char = %c, src[i] == %c\n", previous_char, src[i]);
 		if( (i == 0 || isspace(previous_char)) && 
 			((src[i] == '@') || (src[i] == '#')) )
 		{
-			purple_debug_info(DBGID, "reformat_msg: sym = %c\n", src[i]);
+			//purple_debug_info(DBGID, "reformat_msg: sym = %c\n", src[i]);
 			sym = src[i];
 			// if it's a proper name, extract it
 			i++;
