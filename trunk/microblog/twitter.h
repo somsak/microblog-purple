@@ -77,15 +77,23 @@ typedef struct _TwitterAccount {
 	PurpleConnection *gc;
 	gchar *login_challenge;
 	PurpleConnectionState state;
-    //GHashTable * conn_hash;
 	GHashTable * conn_hash;
 	GHashTable * ssl_conn_hash;
 	guint timeline_timer;
 	unsigned long long last_msg_id;
 	time_t last_msg_time;
 	GHashTable * sent_id_hash;
+	gchar * tag;
+	gint tag_pos;
 } TwitterAccount;
+
 typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
+
+enum tag_position {
+	MB_TAG_NONE = 0,
+	MB_TAG_PREFIX = 1,
+	MB_TAG_POSTFIX = 2,
+};
 
 struct _TwitterProxyData;
 
