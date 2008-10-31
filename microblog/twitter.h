@@ -127,6 +127,7 @@ typedef struct _TwitterBuddy {
 } TwitterBuddy;
 
 #define TW_MSGFLAG_SKIP 0x1
+#define TW_MSGFLAG_DOTAG 0x2
 
 typedef struct _TwitterMsg {
 	unsigned long long id;

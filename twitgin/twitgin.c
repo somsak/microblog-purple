@@ -197,13 +197,12 @@ static void * twitgin_notify_uri(const char *uri) {
 gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char ** msg, PurpleConversation * conv, PurpleMessageFlags flags)
 {
 	MbAccount * ma = account->gc->proto_data;
-	char * retval, * user_name;
+	char * retval;
 	TwitterMsg twitter_msg;
 
 	purple_debug_info("twitgin", "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
 	if(is_twitter_conversation_ma(ma) && (flags & PURPLE_MESSAGE_SEND) ) {
 		purple_debug_info("twitgin", "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
-		twitter_get_user_host(ma, &user_name, NULL);
 		purple_debug_info("twitgin", "data not from myself\n");
 		twitter_msg.id = 0;
 		twitter_msg.avatar_url = NULL;
@@ -211,23 +210,12 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 		twitter_msg.msg_txt = (*msg);
 		twitter_msg.msg_time = 0;
 		twitter_msg.flag = 0;
+		twitter_msg.flag |= TW_MSGFLAG_DOTAG;
 		purple_debug_info("twitgin", "going to modify message\n");
 		retval = twitter_reformat_msg(ma, &twitter_msg, FALSE); //< do not to reply to myself
-		if(ma->tag) {
-			gchar * new_retval;
-
-			if(ma->tag_pos == MB_TAG_PREFIX) {
-				new_retval = g_strdup_printf("%s %s", ma->tag, retval);
-			} else {
-				new_retval = g_strdup_printf("%s %s", retval, ma->tag);
-			}
-			g_free(retval);
-			retval = new_retval;
-		}
 		purple_debug_info("twitgin", "new data = %s\n", retval);
 		g_free(*msg);
 		(*msg) = retval;
-		g_free(user_name);
 	}
 	return FALSE;
 }
