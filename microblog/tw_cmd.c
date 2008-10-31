@@ -22,6 +22,10 @@ static PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd,
 static PurpleCmdRet tw_cmd_refresh(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
 static PurpleCmdRet tw_cmd_refresh_rate(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
 static PurpleCmdRet tw_cmd_caller(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, void * data);
+static PurpleCmdRet tw_cmd_tag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
+static PurpleCmdRet tw_cmd_btag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
+static PurpleCmdRet tw_cmd_untag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
+static PurpleCmdRet tw_cmd_set_tag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data, gint position);
 
 static TwCmdEnum tw_cmd_enum[] = {
 	{"replies", "", PURPLE_CMD_P_PRPL, 0, tw_cmd_replies, NULL,
@@ -30,7 +34,49 @@ static TwCmdEnum tw_cmd_enum[] = {
 		"refresh tweets now."},
 	{"refresh_rate", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_refresh_rate, NULL,
 		"set refresh rate. /refreshrate 120 temporariy change refresh rate to 120 seconds"},
+	{"tag", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_tag, NULL,
+		"prefix everything with specified tag, unset with /untag"},
+	{"btag", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_btag, NULL,
+		"postfix everything with specified tag, unset with /untag"},
+	{"untag", "", PURPLE_CMD_P_PRPL, 0, tw_cmd_untag, NULL,
+		"unset already set tag"},
 };
+
+PurpleCmdRet tw_cmd_tag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
+{
+	return tw_cmd_set_tag(conv, cmd, args, error, data, MB_TAG_PREFIX);
+}
+
+PurpleCmdRet tw_cmd_btag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
+{
+	return tw_cmd_set_tag(conv, cmd, args, error, data, MB_TAG_POSTFIX);
+}
+
+PurpleCmdRet tw_cmd_set_tag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data, gint position)
+{
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+
+	if(data->ma->tag) {
+		g_free(data->ma->tag);
+	}
+	data->ma->tag = g_strdup(args[0]);
+	data->ma->tag_pos = position;
+
+	return PURPLE_CMD_RET_OK;
+}
+
+PurpleCmdRet tw_cmd_untag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
+{
+	if(data->ma->tag) {
+		g_free(data->ma->tag);
+		data->ma->tag = NULL;
+		data->ma->tag_pos = MB_TAG_NONE;
+	} else {
+		serv_got_im(data->ma->gc, tc_def(TC_FRIENDS_USER), _("no tag is being set"), PURPLE_MESSAGE_SYSTEM, time(NULL));
+	}
+
+	return PURPLE_CMD_RET_OK;
+}
 
 PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
 {
@@ -55,7 +101,7 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 PurpleCmdRet tw_cmd_refresh_rate(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
 {
 	char * end_ptr = NULL;
-	int new_rate = -1, i;
+	int new_rate = -1;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	new_rate = (int)strtol(args[0], &end_ptr, 10);

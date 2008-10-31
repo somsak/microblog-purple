@@ -213,6 +213,17 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 		twitter_msg.flag = 0;
 		purple_debug_info("twitgin", "going to modify message\n");
 		retval = twitter_reformat_msg(ma, &twitter_msg, FALSE); //< do not to reply to myself
+		if(ma->tag) {
+			gchar * new_retval;
+
+			if(ma->tag_pos == MB_TAG_PREFIX) {
+				new_retval = g_strdup_printf("%s %s", ma->tag, retval);
+			} else {
+				new_retval = g_strdup_printf("%s %s", retval, ma->tag);
+			}
+			g_free(retval);
+			retval = new_retval;
+		}
 		purple_debug_info("twitgin", "new data = %s\n", retval);
 		g_free(*msg);
 		(*msg) = retval;

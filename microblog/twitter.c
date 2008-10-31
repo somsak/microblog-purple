@@ -478,6 +478,8 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 	ta->conn_hash = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
 	ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
 	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	ta->tag = NULL;
+	ta->tag_pos = MB_TAG_NONE;
 	acct->gc->proto_data = ta;
 	return ta;
 }
@@ -518,6 +520,11 @@ void mb_account_free(MbAccount * ta)
 {	
 	purple_debug_info(DBGID, "mb_account_free\n");
 	
+	if(ta->tag) {
+		g_free(ta->tag);
+		ta->tag = NULL;
+	}
+	ta->tag_pos = MB_TAG_NONE;
 	ta->state = PURPLE_DISCONNECTED;
 	
 	if(ta->timeline_timer != -1) {
@@ -673,6 +680,17 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 
 	// prepare message to send
 	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
+	if(ta->tag) {
+		gchar * new_msg_txt;
+
+		if(ta->tag_pos == MB_TAG_PREFIX) {
+			new_msg_txt  = g_strdup_printf("%s %s", ta->tag, tmp_msg_txt);
+		} else {
+			new_msg_txt  = g_strdup_printf("%s %s", tmp_msg_txt, ta->tag);
+		}
+		g_free(tmp_msg_txt);
+		tmp_msg_txt = new_msg_txt;
+	}
 	msg_len = strlen(tmp_msg_txt);
 	/*
 	 * We'll rely on message truncat services
