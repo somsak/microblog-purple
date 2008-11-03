@@ -34,6 +34,7 @@ time_t mb_mktime(char * time_str)
 	char * cur, * next, *tmp_cur, *tmp_next, oldval;
 	int counter = 0,  tmp_counter = 0, i;
 	int cur_timezone = 0, sign = 1;
+	time_t retval;
 	
 	cur = time_str;
 	next = strchr(cur, ' ');
@@ -118,7 +119,8 @@ time_t mb_mktime(char * time_str)
 	// Always return GMT time
 	printf("asctime = %s\n", asctime(&msg_time));
 #endif
-	return mktime(&msg_time) + cur_timezone;
+	retval = mktime(&msg_time) + cur_timezone;
+	return retval;
 }
 #ifdef UTEST
 int main(int argc, char * argv[])
