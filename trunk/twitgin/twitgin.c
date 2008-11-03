@@ -119,15 +119,6 @@ static gboolean is_twitter_conversation(PurpleConversation *conv) {
 	}
 }
 
-static gboolean is_twitter_conversation_ma(MbAccount *ma) {
-	if(ma->account && ma->account->protocol_id) {
-		purple_debug_info(DBGID, "%s %s\n", __FUNCTION__, ma->account->protocol_id);
-		return (strncmp(ma->account->protocol_id, "prpl-mbpurple", 13) == 0);
-	} else {
-		return FALSE;
-	}
-}
-
 static void on_conversation_display(PidginConversation *gtkconv)
 {
 	GtkWidget *size_label = NULL;
@@ -212,7 +203,7 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 	char * retval;
 	TwitterMsg twitter_msg;
 
-	if(is_twitter_conversation_ma(ma) && (flags & PURPLE_MESSAGE_SEND) ) {
+	if(is_twitter_conversation(conv) && (flags & PURPLE_MESSAGE_SEND) ) {
 		purple_debug_info(DBGID, "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
 		purple_debug_info(DBGID, "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
 		purple_debug_info(DBGID, "data not from myself\n");
