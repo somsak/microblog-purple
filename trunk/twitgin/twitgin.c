@@ -52,6 +52,8 @@
 
 #include "twitter.h"
 
+#define DBGID "twitgin"
+
 // Dummy tw_conf to resolve external symbol link
 TwitterConfig * _tw_conf = NULL;
 
@@ -109,11 +111,21 @@ static void remove_twitter_label(PidginConversation *gtkconv) {
 }
 
 static gboolean is_twitter_conversation(PurpleConversation *conv) {
-	return strncmp(conv->account->protocol_id, "prpl-mbpurple", 13)==0;
+	purple_debug_info(DBGID, "%s %s\n", __FUNCTION__, conv->account->protocol_id);
+	if(conv->account && conv->account->protocol_id) {
+		return (strncmp(conv->account->protocol_id, "prpl-mbpurple", 13) == 0);
+	} else {
+		return FALSE;
+	}
 }
 
 static gboolean is_twitter_conversation_ma(MbAccount *ma) {
-	return strncmp(ma->account->protocol_id, "prpl-mbpurple", 13)==0;
+	purple_debug_info(DBGID, "%s %s\n", __FUNCTION__, ma->account->protocol_id);
+	if(ma->account && ma->account->protocol_id) {
+		return (strncmp(ma->account->protocol_id, "prpl-mbpurple", 13) == 0);
+	} else {
+		return FALSE;
+	}
 }
 
 static void on_conversation_display(PidginConversation *gtkconv)
@@ -141,7 +153,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	PidginConversation * gtkconv;
 	int proto_id = 0;
 
-	purple_debug_info("twitgin", "twittgin_uri_handler\n");	
+	purple_debug_info(DBGID, "twittgin_uri_handler\n");	
 	// do not need to test, because the conversation window must be open before one can click
 	if (g_ascii_strcasecmp(proto, "tw") == 0) {
 		proto_id = TWITTER_PROTO;
@@ -151,7 +163,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 		acct = purple_accounts_find(acct_id, "prpl-mbpurple-identica"); 
 	}
 	if ( proto_id > 0 ) {
-		purple_debug_info("twitgin", "found account with libtwitter, proto_id = %d\n", proto_id);
+		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
 		/* tw:rep?to=sender */
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
 			switch(proto_id) {
@@ -162,7 +174,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "identi.ca", acct);		
 					break;
 			}
-			purple_debug_info("twitgin", "conv = %p\n", conv);
+			purple_debug_info(DBGID, "conv = %p\n", conv);
 			gtkconv = PIDGIN_CONVERSATION(conv);
 			gchar *sender = g_hash_table_lookup(params, "to");		
 			gchar *name_to_reply = g_strdup_printf("@%s ", sender);
@@ -182,7 +194,7 @@ static void * twitgin_notify_uri(const char *uri) {
 	void * retval = NULL;
 
 	if( (strncmp(uri,"tw:",3)==0) || (strncmp(uri, "idc:", 4) == 0) ) {
-		purple_debug_info("twitgin", "notify hooked: uri=%s\n", uri);	
+		purple_debug_info(DBGID, "notify hooked: uri=%s\n", uri);	
 		purple_got_protocol_handler_uri(uri);		
 	} else {
 		retval = saved_notify_uri(uri);
@@ -201,9 +213,9 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 	TwitterMsg twitter_msg;
 
 	if(is_twitter_conversation_ma(ma) && (flags & PURPLE_MESSAGE_SEND) ) {
-		purple_debug_info("twitgin", "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
-		purple_debug_info("twitgin", "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
-		purple_debug_info("twitgin", "data not from myself\n");
+		purple_debug_info(DBGID, "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
+		purple_debug_info(DBGID, "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
+		purple_debug_info(DBGID, "data not from myself\n");
 		twitter_msg.id = 0;
 		twitter_msg.avatar_url = NULL;
 		twitter_msg.from = NULL; //< force the plug-in not displaying own name
@@ -211,9 +223,9 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 		twitter_msg.msg_time = 0;
 		twitter_msg.flag = 0;
 		twitter_msg.flag |= TW_MSGFLAG_DOTAG;
-		purple_debug_info("twitgin", "going to modify message\n");
+		purple_debug_info(DBGID, "going to modify message\n");
 		retval = twitter_reformat_msg(ma, &twitter_msg, FALSE); //< do not to reply to myself
-		purple_debug_info("twitgin", "new data = %s\n", retval);
+		purple_debug_info(DBGID, "new data = %s\n", retval);
 		g_free(*msg);
 		(*msg) = retval;
 	}
@@ -226,7 +238,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	GList *convs = purple_get_conversations();
 	void *gtk_conv_handle = pidgin_conversations_get_handle();
 	
-	purple_debug_info("twitgin", "plugin loaded\n");	
+	purple_debug_info(DBGID, "plugin loaded\n");	
 	purple_signal_connect(gtk_conv_handle, "conversation-displayed", plugin, PURPLE_CALLBACK(on_conversation_display), NULL);
 	/*
 	purple_signal_connect(gtk_conv_handle, "conversation-hiding", plugin,
@@ -257,10 +269,10 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 {
 	GList *convs = purple_get_conversations();
 	
-	purple_debug_info("twitgin", "plugin unloading\n");
+	purple_debug_info(DBGID, "plugin unloading\n");
 	
 	if(twitgin_notify_uri != purple_notify_get_ui_ops()->notify_uri) {
-		purple_debug_info("twitgin", "ui ops changed, cannot unloading\n");
+		purple_debug_info(DBGID, "ui ops changed, cannot unloading\n");
 		return FALSE;
 	}	
 	
@@ -280,7 +292,7 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 
 	purple_signal_disconnect(purple_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying));
 
-	purple_debug_info("twitgin", "plugin unloaded\n");	
+	purple_debug_info(DBGID, "plugin unloaded\n");	
 	return TRUE;
 }
 
