@@ -200,8 +200,8 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 	char * retval;
 	TwitterMsg twitter_msg;
 
-	purple_debug_info("twitgin", "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
 	if(is_twitter_conversation_ma(ma) && (flags & PURPLE_MESSAGE_SEND) ) {
+		purple_debug_info("twitgin", "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
 		purple_debug_info("twitgin", "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
 		purple_debug_info("twitgin", "data not from myself\n");
 		twitter_msg.id = 0;
