@@ -764,7 +764,8 @@ gchar * twitter_status_text(PurpleBuddy *buddy)
 }
 
 // There's no concept of status in TwitterIM for now
-void twitter_set_status(PurpleAccount *acct, PurpleStatus *status) {
+void twitter_set_status(PurpleAccount *acct, PurpleStatus *status)
+{
   const char *msg = purple_status_get_attr_string(status, "message");
   purple_debug_info(DBGID, "setting %s's status to %s: %s\n",
                     acct->username, purple_status_get_name(status), msg);

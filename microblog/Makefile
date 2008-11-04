@@ -6,7 +6,7 @@ all: build
 
 include ../global.mak
 
-TARGETS = libtwitter$(PLUGIN_SUFFIX) libidentica$(PLUGIN_SUFFIX) liblaconica$(PLUGIN_SUFFIX) mbchprpl$(EXE_SUFFIX)
+TARGETS = liboldtwitter$(PLUGIN_SUFFIX) libtwitter$(PLUGIN_SUFFIX) libidentica$(PLUGIN_SUFFIX) liblaconica$(PLUGIN_SUFFIX)
 PRPLS = twitter identica laconica
 
 #PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
@@ -14,6 +14,9 @@ PRPLS = twitter identica laconica
 
 CFLAGS := $(PURPLE_CFLAGS)
 LD = $(CC)
+
+OLDTWITTER_C_SRC = dummy_twitterim.c
+OLDTWITTER_OBJ = $(OLDTWITTER_C_SRC:%.c=%.o)
 
 
 TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c twitterim.c tw_util.c tw_cmd.c
@@ -36,7 +39,7 @@ LACONICA_OBJ = $(LACONICA_C_SRC:%.c=%.o) laconica.o
 
 DISTFILES = $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) $(IDENTICA_C_SRC) $(LACONICA_C_SRC) Makefile
 
-OBJECTS = $(TWITTER_OBJ) $(IDENTICA_OBJ) $(LACONICA_OBJ)
+OBJECTS = $(OLDTWITTER_OBJ) $(TWITTER_OBJ) $(IDENTICA_OBJ) $(LACONICA_OBJ)
 
 .PHONY: all clean install 
 
@@ -47,6 +50,7 @@ install: $(TARGETS)
 		rm -f $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX); \
 	done
 	install -m 0755 -d $(PURPLE_PLUGIN_DIR)
+	cp liboldtwitter$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/liboldtwitter$(PLUGIN_SUFFIX)
 	for prpl in $(PRPLS); do \
 		( cp lib$$prpl$(PLUGIN_SUFFIX) $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX) && \
 		for dir in 16 22 48; do \
@@ -66,6 +70,9 @@ uninstall:
 
 clean:
 	rm -f $(TARGETS) $(OBJECTS)
+
+liboldtwitter$(PLUGIN_SUFFIX): $(OLDTWITTER_OBJ)
+	$(LD) $(LDFLAGS) -shared $(OLDTWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
 
 libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 	$(LD) $(LDFLAGS) -shared $(TWITTER_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
