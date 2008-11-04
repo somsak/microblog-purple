@@ -85,7 +85,7 @@ gboolean plugin_load(PurplePlugin *plugin)
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
-	_tw_conf[TC_REPLY_LINK].conf = g_strdup("twitter_hide_myself");
+	_tw_conf[TC_REPLY_LINK].conf = g_strdup("twitter_reply_link");
 	_tw_conf[TC_REPLY_LINK].def_bool = TRUE;
 	option = purple_account_option_bool_new(_("Enable reply link"), tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
