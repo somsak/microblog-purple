@@ -1,0 +1,30 @@
+mbpurple (0.2.0-1~ppa3) intrepid; urgency=low
+
+  * Fixed incorrect changelog
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Fri, 07 Nov 2008 23:15:54 +0700
+
+mbpurple (0.2.0-1~ppa2) intrepid; urgency=low
+
+  * Added missing dependency to pidgin-dev
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Fri, 07 Nov 2008 22:59:04 +0700
+
+mbpurple (0.2.0-1~ppa1) intrepid; urgency=low
+
+  * New upstream version
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Fri, 07 Nov 2008 22:44:56 +0700
+
+mbpurple (0.1.2-1~getdeb1) hardy; urgency=low
+
+  * New upstream version
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Tue, 02 Sep 2008 23:15:21 +0700
+
+microblog-purple (0.1-1~getdeb1) hardy; urgency=low
+
+  * Initial release
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Wed, 30 Jul 2008 00:42:25 +0700
+
