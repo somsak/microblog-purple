@@ -1,7 +1,7 @@
 Source: mbpurple
 Priority: extra
 Maintainer: Sugree Phatanapherom <sugree@gmail.com>
-Build-Depends: debhelper (>= 5), pkg-config, libpurple-dev
+Build-Depends: debhelper (>= 5), pkg-config, libpurple-dev, pidgin-dev
 Standards-Version: 3.7.2
 Section: universe/net
 
