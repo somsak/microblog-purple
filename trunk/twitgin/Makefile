@@ -42,7 +42,8 @@ endif
 TWITGIN_C_SRC = twitgin.c ../microblog/tw_util.c
 TWITGIN_H_SRC = $(TWITGIN_C_SRC:%.c=%.h)
 TWITGIN_OBJ = $(TWITGIN_C_SRC:%.c=%.o)
-DISTFILES = $(TWITGIN_C_SRC) Makefile
+
+DISTFILES = twitgin.c Makefile
 
 OBJECTS = $(TWITGIN_OBJ)
 
