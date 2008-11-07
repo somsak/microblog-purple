@@ -45,7 +45,7 @@ Makefile
 
 OBJECTS = $(OLDTWITTER_OBJ) $(TWITTER_OBJ) $(IDENTICA_OBJ) $(LACONICA_OBJ)
 
-.PHONY: all clean install 
+.PHONY: all clean install uninstall
 
 build: $(TARGETS)
 
@@ -67,8 +67,9 @@ uninstall:
 	for prpl in $(PRPLS); do \
 		rm -f $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX); \
 	done
+	rm -f $(PURPLE_PLUGIN_DIR)/liboldtwitter$(PLUGIN_SUFFIX)
 	for dir in 16 22 48; do \
-		(rm -f $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/twitter.png ) \
+		rm -f $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/{twitter,identica,laconica}.png ; \
 	done
 
 
