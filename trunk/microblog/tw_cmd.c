@@ -35,9 +35,9 @@ static TwCmdEnum tw_cmd_enum[] = {
 	{"refresh_rate", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_refresh_rate, NULL,
 		"set refresh rate. /refreshrate 120 temporariy change refresh rate to 120 seconds"},
 	{"tag", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_tag, NULL,
-		"prefix everything with specified tag, unset with /untag"},
+		"prepend everything with a specified tag, unset with /untag"},
 	{"btag", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_btag, NULL,
-		"postfix everything with specified tag, unset with /untag"},
+		"append everything with a specified tag, unset with /untag"},
 	{"untag", "", PURPLE_CMD_P_PRPL, 0, tw_cmd_untag, NULL,
 		"unset already set tag"},
 };
