@@ -283,7 +283,11 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
 	purple_debug_info(MB_NET, "ssl_error\n");
-	purple_connection_error(ta->gc, _("Connection Error"));
+	if(ta->gc != NULL) {
+		purple_connection_error(ta->gc, _("Connection Error"));
+	} else {
+		purple_debug_info(MB_NET, "gc is null for some reason\n");
+	}
 	if(conn_data->ssl_conn_data) {
 		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
 		conn_data->ssl_conn_data = NULL;
