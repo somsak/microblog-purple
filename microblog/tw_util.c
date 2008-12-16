@@ -163,7 +163,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 			g_string_append_printf(output, "%s:", msg->from);
 		}
 		//	}
-		g_string_append_printf(output, "</b></font>");
+		g_string_append_printf(output, "</b></font> ");
 		g_free(name_color);
 	}
 
