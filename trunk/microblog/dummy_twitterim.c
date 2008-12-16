@@ -87,7 +87,7 @@ static void dummy_login(PurpleAccount *acct)
 			"\n"
 			"To upgrade, please REMOVE \"OldTwitterIM\", then RE-ADD \"TwitterIM\" back\n"
 			"\n"
-			"Sorry for any inconvenience, and enjjoy your twitter-er experience"
+			"Sorry for any inconvenience, and enjoy your twitter-er experience"
 	);
 }
 
