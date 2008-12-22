@@ -74,6 +74,7 @@ LIBDIR := $(PREFIX)/lib
 PURPLE_LIBS = $(shell pkg-config --libs purple)
 PURPLE_CFLAGS = $(CFLAGS) -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
 PURPLE_CFLAGS += $(shell pkg-config --cflags purple)
+PURPLE_CFLAGS += $(shell pkg-config --cflags pidgin)
 PURPLE_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 PLUGIN_SUFFIX := .so
 EXE_SUFFIX := 

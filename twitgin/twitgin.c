@@ -23,6 +23,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include <glib.h>
 #include <glib/gi18n.h>
 
@@ -51,8 +52,20 @@
 #define TW_MAX_MESSAGE_SIZE_TEXT "140"
 
 #include "twitter.h"
+#include "mb_http.h"
+#include "mb_net.h"
 
 #define DBGID "twitgin"
+#define PURPLE_MESSAGE_TWITGIN 0x1000
+
+//static gint twitter_port = 443;
+static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
+"Accept: */*\r\n" \
+"X-Twitter-Client: " TW_AGENT_SOURCE "\r\n" \
+"X-Twitter-Client-Version: 0.1\r\n" \
+"X-Twitter-Client-Url: " TW_AGENT_DESC_URL "\r\n" \
+"Connection: Close\r\n" \
+"Pragma: no-cache\r\n";
 
 // Dummy tw_conf to resolve external symbol link
 TwitterConfig * _tw_conf = NULL;
@@ -136,6 +149,72 @@ enum {
 	IDENTICA_PROTO = 2,
 };
 
+MbAccount * mb_account_new(PurpleAccount * acct)
+{
+        MbAccount * ta = NULL;
+
+        purple_debug_info(DBGID, "mb_account_new\n");
+        ta = g_new(MbAccount, 1);
+        ta->account = acct;
+        ta->gc = acct->gc;
+        ta->state = PURPLE_CONNECTING;
+        ta->timeline_timer = -1;
+        ta->last_msg_id = 0;
+        ta->last_msg_time = 0;
+        ta->conn_hash = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
+        ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
+        ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+        ta->tag = NULL;
+        ta->tag_pos = MB_TAG_NONE;
+        acct->gc->proto_data = ta;
+        return ta;
+}
+
+/*
+*  Favourite Handler
+*/
+void twitter_favorite_message(MbAccount * ta, gchar * msg_id){
+
+	// create new connection and call API POST
+        MbConnData * conn_data;
+        MbHttpData * request;
+        gchar * twitter_host, * user_name, * path;
+        gboolean use_https;
+        gint twitter_port;
+
+	user_name = g_strdup_printf("%s", purple_account_get_username(ta->account));
+	twitter_host = g_strdup_printf("%s", "twitter.com");
+	path = g_strdup_printf("/favorites/create/%s.xml", msg_id);
+
+        use_https = TRUE; 
+        if(use_https) {
+                twitter_port = TW_HTTPS_PORT;
+        } else {
+                twitter_port = TW_HTTP_PORT;
+        }
+
+        conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, NULL, use_https);
+        mb_conn_data_set_error(conn_data, "Favourite message error", MB_ERROR_NOACTION);
+        mb_conn_data_set_retry(conn_data, 0);
+
+        request = conn_data->request;
+        request->type = HTTP_POST;
+        request->port = twitter_port;
+
+	mb_http_data_set_host(request, twitter_host);
+        mb_http_data_set_path(request, path);
+        mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
+        mb_http_data_set_header(request, "Host", twitter_host);
+        mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
+
+        //conn_data->handler_data = tlr;
+
+        mb_conn_process_request(conn_data);
+        g_free(twitter_host);
+        g_free(user_name);
+	g_free(path);
+}
+
 static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTable *params) 
 {
 	char *acct_id = g_hash_table_lookup(params, "account");	
@@ -174,6 +253,42 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 			g_free(name_to_reply);
 			return TRUE;
 		}
+		// retweet hack !
+		if (!g_ascii_strcasecmp(cmd, "rt")) {
+			switch(proto_id) {
+				case TWITTER_PROTO :
+					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "twitter.com", acct);
+					break;
+				case IDENTICA_PROTO :
+					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "identi.ca", acct);		
+					break;
+			}
+			purple_debug_info(DBGID, "conv = %p\n", conv);
+			gtkconv = PIDGIN_CONVERSATION(conv);
+	                gchar *message = g_hash_table_lookup(params, "msg");
+	                gchar *from = g_hash_table_lookup(params, "from");
+        	        gchar *retweet_message = g_strdup_printf("rt @%s: %s", from, g_uri_unescape_string (message,NULL));
+			gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, retweet_message, -1);
+                	gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
+                	g_free(retweet_message);
+                	return TRUE;
+		}
+		// favorite hack !
+		if (!g_ascii_strcasecmp(cmd, "fav")) {
+			switch(proto_id) {
+				case TWITTER_PROTO :
+					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "twitter.com", acct);
+					break;
+				case IDENTICA_PROTO :
+					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "identi.ca", acct);		
+					break;
+			}
+	                gchar *msg_id = g_hash_table_lookup(params, "id");
+			MbAccount *ta = mb_account_new(acct);
+			twitter_favorite_message(ta, msg_id);
+
+			return TRUE;
+		}
 	} 
 	return FALSE;
 }
@@ -203,6 +318,14 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 	char * retval;
 	TwitterMsg twitter_msg;
 
+	// Do not edit msg from these
+	if ((!is_twitter_conversation(conv)) || (flags & PURPLE_MESSAGE_SYSTEM) || (flags & PURPLE_MESSAGE_SEND))
+		return FALSE;
+
+	if (!(flags & PURPLE_MESSAGE_TWITGIN))		// Twitter msg not from twitgin -> Do not show
+		return TRUE;
+
+	// keep the original
 	if(is_twitter_conversation(conv) && (flags & PURPLE_MESSAGE_SEND) ) {
 		purple_debug_info(DBGID, "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
 		purple_debug_info(DBGID, "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
@@ -221,7 +344,26 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 		(*msg) = retval;
 	}
 	return FALSE;
+
 }
+
+/*
+* Hack the message display, redirect from normal process (on displaying event) and push them back
+*/
+void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_msg, gboolean reply_link) {
+
+	gchar * fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);	
+	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
+
+	fmt_txt = g_strdup_printf("%s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
+		fmt_txt, 
+		account, cur_msg->id,		
+		account, cur_msg->from, g_uri_escape_string(cur_msg->msg_txt, NULL, TRUE));
+
+	serv_got_im(ta->gc, name, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN, cur_msg->msg_time);	// mark the flag for print fundtion
+	g_free(fmt_txt);
+}
+
 
 static gboolean plugin_load(PurplePlugin *plugin) 
 {
@@ -253,6 +395,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 
 	purple_signal_connect(pidgin_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying), NULL);
 
+	purple_signal_connect(pidgin_conversations_get_handle(), "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
+
 	return TRUE;
 }
 
@@ -282,6 +426,7 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 	purple_signal_disconnect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler));
 
 	purple_signal_disconnect(purple_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying));
+	purple_signal_disconnect(pidgin_conversations_get_handle(), "twitgin-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message));
 
 	purple_debug_info(DBGID, "plugin unloaded\n");	
 	return TRUE;
