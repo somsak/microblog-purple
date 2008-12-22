@@ -49,6 +49,8 @@
 #include <accountopt.h>
 #include <xmlnode.h>
 #include <version.h>
+#include <signals.h>
+#include <gtkconv.h>
 
 #include "mb_net.h"
 #include "mb_util.h"
@@ -279,7 +281,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		if(text) {
 			msg_txt = xmlnode_get_data(text);
 		}
-		
+
 		// user name
 		user = xmlnode_get_child(status, "user");
 		if(user) {
@@ -329,6 +331,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
 			fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
 			serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			purple_signal_emit(pidgin_conversations_get_handle(), "twitter-message", ta, tlr->name, cur_msg, reply_link);
 			g_free(fmt_txt);
 		}
 //		}

@@ -29,6 +29,7 @@
 #include <glib/gi18n.h>
 #include <sys/types.h>
 #include <time.h>
+#include <gtkconv.h>
 
 #ifndef G_GNUC_NULL_TERMINATED
 #  if __GNUC__ >= 4
@@ -69,6 +70,14 @@ static TwCmd * tw_cmd = NULL;
 
 static void plugin_init(PurplePlugin *plugin)
 {
+	void *handle = pidgin_conversations_get_handle();
+	purple_signal_register(handle, "twitter-message",
+                                                 purple_marshal_VOID__POINTER_POINTER_POINTER_POINTER,
+                                                 NULL, 4,
+                                                 purple_value_new(PURPLE_TYPE_POINTER), // MbAccount ta
+                                                 purple_value_new(PURPLE_TYPE_STRING), // gchar * name
+                                                 purple_value_new(PURPLE_TYPE_POINTER), // TwitterMsg cur_msg
+                                                 purple_value_new(PURPLE_TYPE_BOOLEAN)); // gboolean reply_link
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
