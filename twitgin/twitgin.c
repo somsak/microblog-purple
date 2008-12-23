@@ -213,6 +213,7 @@ void twitter_favorite_message(MbAccount * ta, gchar * msg_id){
         g_free(twitter_host);
         g_free(user_name);
 	g_free(path);
+
 }
 
 static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTable *params) 
@@ -286,6 +287,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	                gchar *msg_id = g_hash_table_lookup(params, "id");
 			MbAccount *ta = mb_account_new(acct);
 			twitter_favorite_message(ta, msg_id);
+        		purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, g_strdup_printf("message %s is favorited", msg_id), PURPLE_MESSAGE_SYSTEM, time(NULL));
 
 			return TRUE;
 		}
@@ -319,11 +321,13 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 	TwitterMsg twitter_msg;
 
 	// Do not edit msg from these
-	if ((!is_twitter_conversation(conv)) || (flags & PURPLE_MESSAGE_SYSTEM) || (flags & PURPLE_MESSAGE_SEND))
+	if ((!is_twitter_conversation(conv)) || (flags & PURPLE_MESSAGE_SYSTEM) || (flags & PURPLE_MESSAGE_SEND)) {
 		return FALSE;
+	}
 
-	if (!(flags & PURPLE_MESSAGE_TWITGIN))		// Twitter msg not from twitgin -> Do not show
+	if (!(flags & PURPLE_MESSAGE_TWITGIN)) {		// Twitter msg not from twitgin -> Do not show
 		return TRUE;
+	}
 
 	// keep the original
 	if(is_twitter_conversation(conv) && (flags & PURPLE_MESSAGE_SEND) ) {
@@ -348,21 +352,65 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 }
 
 /*
+* Copied from pidgin original code to make the same time format
+*/
+gchar * format_datetime(PurpleConversation * conv, time_t mtime) {
+
+	char * mdate = NULL;
+	gboolean show_date;
+	PidginConversation * gtkconv;
+
+	gtkconv = PIDGIN_CONVERSATION(conv);
+
+	if (gtkconv->newday == 0) {
+		struct tm *tm = localtime(&mtime);
+
+	        tm->tm_hour = tm->tm_min = tm->tm_sec = 0;
+        	tm->tm_mday++;
+
+	        gtkconv->newday = mktime(tm);
+	}
+
+	show_date = (mtime >= gtkconv->newday) || (time(NULL) > mtime + 20*60);
+
+	mdate = purple_signal_emit_return_1(pidgin_conversations_get_handle(),
+                                          "conversation-timestamp",
+                                          conv, mtime, show_date);
+	if (mdate == NULL)
+        {
+                struct tm *tm = localtime(&mtime);
+                const char *tmp;
+                if (show_date)
+                        tmp = purple_date_format_long(tm);
+                else
+                        tmp = purple_time_format(tm);
+                mdate = g_strdup_printf("(%s)", tmp);
+        }
+
+	return mdate;
+	
+}
+
+/*
 * Hack the message display, redirect from normal process (on displaying event) and push them back
 */
 void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_msg, gboolean reply_link) {
 
+	PurpleConversation * conv;
 	gchar * fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);	
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 
-	fmt_txt = g_strdup_printf("%s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
-		fmt_txt, 
-		//cur_msg->msg_txt,
+        conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, name, ta->account);
+        if (conv == NULL)
+                conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, ta->account, name);
+
+	fmt_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
+		format_datetime(conv, cur_msg->msg_time), purple_markup_linkify(fmt_txt), 
 		account, cur_msg->id,		
 		account, cur_msg->from, g_uri_escape_string(cur_msg->msg_txt, NULL, TRUE));
-		//account, cur_msg->from, cur_msg->msg_txt);
 
-	serv_got_im(ta->gc, name, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN, cur_msg->msg_time);	// mark the flag for print fundtion
+        purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
+
 	g_free(fmt_txt);
 }
 
