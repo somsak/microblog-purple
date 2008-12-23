@@ -504,7 +504,7 @@ static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
 				}
 				(*delim) = '\0';
 				//printf("cur_pos = %s\n", cur_pos);
-				if(strncmp(cur_pos, "HTTP/1.1", 8) == 0) {
+				if(strncmp(cur_pos, "HTTP/1.0", 7) == 0) {
 					// first line
 					data->status = (gint)strtoul(&cur_pos[9], NULL, 10);
 					//printf("data->status = %d\n", data->status);
