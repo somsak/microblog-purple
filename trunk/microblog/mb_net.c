@@ -79,9 +79,10 @@ void mb_conn_data_free(MbConnData * conn_data)
 		//g_hash_table_remove(conn_data->ta->conn_hash, conn_data->conn_data);
 		purple_debug_info(MB_NET, "removing event handle, event_handle = %u\n", conn_data->conn_event_handle);
 		purple_input_remove(conn_data->conn_event_handle);	
+		// should we cancel it here? There's chance in connect_cb that conn_event_handle is not non-zero yet
+		purple_proxy_connect_cancel_with_handle(conn_data);
 	}
 	purple_debug_info(MB_NET, "removing conn_data\n");
-	purple_proxy_connect_cancel_with_handle(conn_data);
 	if(conn_data->ssl_conn_data != NULL) {
 		purple_debug_info(MB_NET, "ssl_conn_data = %p\n", conn_data->ssl_conn_data);
 		//purple_debug_info(MB_NET, "removing connection %p from ssl_conn_hash\n", conn_data->ssl_conn_data);
@@ -153,8 +154,10 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 	gint res, cur_error;
 	
 	purple_debug_info(MB_NET, "mb_conn_post_request, source = %d, conn_data = %p\n", source, conn_data);
-	purple_input_remove(conn_data->conn_event_handle);
-	conn_data->conn_event_handle = 0;
+	if(conn_data->conn_event_handle > 0) {
+		purple_input_remove(conn_data->conn_event_handle);
+		conn_data->conn_event_handle = 0;
+	}
 	
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
@@ -210,9 +213,11 @@ void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 	}
 
 	//conn_data->conn_data = NULL;
-	if( error_message) {
+	if( (source < 0) ||  error_message) {
+		// if connection error, source == -1 and error_message is not null!
 		purple_debug_info(MB_NET, "error_messsage = %s\n", error_message);
 		purple_connection_error(ta->gc, _(error_message));
+		return;
 	} else {
 		gint * tmp;
 		
@@ -220,17 +225,9 @@ void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 		(*tmp) = source;
 		purple_debug_info(MB_NET, "adding connection %p to conn_hash with key = %d (%p) \n", conn_data, (*tmp), tmp);
 		g_hash_table_insert(ta->conn_hash, tmp, conn_data);
+		purple_debug_info(MB_NET, "adding fd = %d to write event loop\n", source);
+		conn_data->conn_event_handle = purple_input_add(source, PURPLE_INPUT_WRITE, mb_conn_post_request, conn_data);
 	}
-	purple_debug_info(MB_NET, "adding fd = %d to write event loop\n", source);
-
-	/*
-	adder = g_new(TimerAdder, 1);
-	adder->fd = source;
-	adder->cond = PURPLE_INPUT_WRITE;
-	adder->conn_data = conn_data;
-	purple_timeout_add_seconds(10, mb_conn_add_post_request, adder);
-	*/
-	conn_data->conn_event_handle = purple_input_add(source, PURPLE_INPUT_WRITE, mb_conn_post_request, conn_data);
 }
 
 void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond)
@@ -292,6 +289,7 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 		//purple_ssl_close(tpd->conn_data); //< Pidgin will free this for us after this
 		conn_data->ssl_conn_data = NULL;
 	}
+	//XXX: Should we free it here?
 	mb_conn_data_free(conn_data);
 }
 
