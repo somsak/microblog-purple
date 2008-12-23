@@ -137,6 +137,8 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 		src = g_strdup(msg->msg_txt);
 	}
 
+	src = g_markup_printf_escaped("%s", src);
+
 	// color of name
 	if(msg->from) {
 		if( strcmp(msg->from, username) == 0) {

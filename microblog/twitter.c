@@ -279,7 +279,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		// message
 		text = xmlnode_get_child(status, "text");
 		if(text) {
-			msg_txt = xmlnode_get_data(text);
+			msg_txt = xmlnode_get_data_unescaped(text);
 		}
 
 		// user name
@@ -287,7 +287,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		if(user) {
 			user_name = xmlnode_get_child(user, "screen_name");
 			if(user_name) {
-				from = xmlnode_get_data_unescaped(user_name);
+				from = xmlnode_get_data(user_name);
 			}
 			image_url = xmlnode_get_child(user, "profile_image_url");
 			if(user_name) {

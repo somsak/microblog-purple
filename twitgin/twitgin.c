@@ -357,8 +357,10 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 
 	fmt_txt = g_strdup_printf("%s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
 		fmt_txt, 
+		//cur_msg->msg_txt,
 		account, cur_msg->id,		
 		account, cur_msg->from, g_uri_escape_string(cur_msg->msg_txt, NULL, TRUE));
+		//account, cur_msg->from, cur_msg->msg_txt);
 
 	serv_got_im(ta->gc, name, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN, cur_msg->msg_time);	// mark the flag for print fundtion
 	g_free(fmt_txt);
