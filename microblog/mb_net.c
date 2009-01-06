@@ -465,7 +465,7 @@ void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInpu
 	purple_debug_info(MB_NET, "call_handler = %d\n", call_handler);
 	if(call_handler) {
 		// reassemble data
-		purple_debug_info(MB_NET, "got whole response = %s\n", response->content->str);
+		//purple_debug_info(MB_NET, "got whole response = %s\n", response->content->str);
 		if(conn_data->handler) {
 			gint retval;
 			
