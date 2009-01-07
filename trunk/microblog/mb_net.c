@@ -281,6 +281,7 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	//purple_connection_ssl_error(fba->gc, errortype);
 	purple_debug_info(MB_NET, "ssl_error\n");
 	if(ta->gc != NULL) {
+		//XXX: what happened this line? SIGSEGV here a lot!
 		purple_connection_error(ta->gc, _("Connection Error"));
 	} else {
 		purple_debug_info(MB_NET, "gc is null for some reason\n");
