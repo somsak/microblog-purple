@@ -653,7 +653,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	
 	if(response->status != 200) {
 		purple_debug_info(DBGID, "http error\n");
-		purple_debug_info(DBGID, "http data = #%s#\n", response->content->str);
+		//purple_debug_info(DBGID, "http data = #%s#\n", response->content->str);
 		return -1;
 	}
 	
