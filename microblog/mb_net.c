@@ -159,6 +159,7 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 		conn_data->conn_event_handle = 0;
 	}
 	
+	/* XXX Hmm... should we have to check for disconnect here?
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
@@ -166,6 +167,7 @@ void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)
 		purple_proxy_connect_cancel_with_handle(conn_data);
 		return;
 	}
+	*/
 	
 	/*
 	purple_debug_info(MB_NET, "test reading something\n");
@@ -238,6 +240,7 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 	
 	purple_debug_info(MB_NET, "mb_conn_post_ssl_request, conn_data = %p\n", conn_data);
 	
+	//XXX: disconnect here seems to be the right thing
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
@@ -279,6 +282,7 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
+	/*
 	purple_debug_info(MB_NET, "ssl_error\n");
 	if(ta->gc != NULL) {
 		//XXX: what happened this line? SIGSEGV here a lot!
@@ -292,6 +296,8 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	}
 	//XXX: Should we free it here?
 	mb_conn_data_free(conn_data);
+	*/
+	purple_connection_error(ta->gc, _("SSL Connection Error"));
 }
 
 void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
