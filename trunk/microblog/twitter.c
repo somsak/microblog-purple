@@ -568,7 +568,7 @@ void mb_account_free(MbAccount * ta)
 	g_free(ta);
 }
 
-
+/*
 gboolean twitter_close_timer(gpointer data)
 {
 	MbAccount * ma = data;
@@ -580,6 +580,7 @@ gboolean twitter_close_timer(gpointer data)
 		return FALSE;
 	}
 }
+*/
 
 void twitter_login(PurpleAccount *acct)
 {
@@ -637,8 +638,8 @@ void twitter_close(PurpleConnection *gc)
 		purple_timeout_remove(ma->timeline_timer);
 		ma->timeline_timer = -1;
 	}
-	purple_timeout_add(300, (GSourceFunc)twitter_close_timer, ma);
-	//mb_account_free(ma);
+	//purple_timeout_add(300, (GSourceFunc)twitter_close_timer, ma);
+	mb_account_free(ma);
 	gc->proto_data = NULL;
 }
 

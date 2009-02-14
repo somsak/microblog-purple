@@ -67,7 +67,7 @@ ifeq ($(strip $(IS_CARRIER)), 1)
 endif
 endif
 
-PREFIX := $(shell pkg-config --prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
+PREFIX := $(shell pkg-config --variable=prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
 LIBDIR := $(PREFIX)/lib
 
 # LINUX and others, use pkg-config
