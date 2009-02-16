@@ -66,6 +66,7 @@
 #include "twitter.h"
 
 #define DBGID "twitter"
+#define TW_ACCT_LAST_MSG_ID "twitter_last_msg_id"
 
 //static const char twitter_host[] = "twitter.com";
 static gint twitter_port = 443;
@@ -261,7 +262,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 				skip = TRUE;
 			}
 		}
-		cur_id = strtoul(xml_str, NULL, 10);
+		cur_id = strtoull(xml_str, NULL, 10);
 		g_free(xml_str);
 
 		// time
@@ -327,6 +328,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 //		if(cur_msg->id > ta->last_msg_id) { //< should we still double check this? It's already being covered by since_id
 		if(cur_msg->id > ta->last_msg_id) {
 			ta->last_msg_id = cur_msg->id;
+			purple_account_set_int(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
 		}
 		if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
 			fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
@@ -476,7 +478,7 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 	ta->gc = acct->gc;
 	ta->state = PURPLE_CONNECTING;
 	ta->timeline_timer = -1;
-	ta->last_msg_id = 0;
+	ta->last_msg_id = purple_account_get_int(acct, TW_ACCT_LAST_MSG_ID, 0);
 	ta->last_msg_time = 0;
 	ta->conn_hash = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
 	ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -649,6 +651,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	MbHttpData * response = conn_data->response;
 	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
+	unsigned long long id;
 	
 	purple_debug_info(DBGID, "send_im_handler\n");
 	
@@ -682,6 +685,11 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	id_node = xmlnode_get_child(top, "id");
 	if(id_node) {
 		id_str = xmlnode_get_data_unescaped(id_node);
+	}
+	id = strtoull(id_str, NULL, 10);
+	if (id > ta->last_msg_id) {
+		ta->last_msg_id = id;
+		purple_account_set_int(ta->account, TW_ACCT_LAST_MSG_ID, id);
 	}
 	
 	// save it to account
