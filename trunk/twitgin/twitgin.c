@@ -321,31 +321,31 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 	TwitterMsg twitter_msg;
 
 	// Do not edit msg from these
-	if ((!is_twitter_conversation(conv)) || (flags & PURPLE_MESSAGE_SYSTEM) || (flags & PURPLE_MESSAGE_SEND)) {
+	if ((!is_twitter_conversation(conv)) || (flags & PURPLE_MESSAGE_SYSTEM) ) {
 		return FALSE;
 	}
 
 	if (!(flags & PURPLE_MESSAGE_TWITGIN)) {		// Twitter msg not from twitgin -> Do not show
-		return TRUE;
-	}
-
-	// keep the original
-	if(is_twitter_conversation(conv) && (flags & PURPLE_MESSAGE_SEND) ) {
-		purple_debug_info(DBGID, "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
-		purple_debug_info(DBGID, "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
-		purple_debug_info(DBGID, "data not from myself\n");
-		twitter_msg.id = 0;
-		twitter_msg.avatar_url = NULL;
-		twitter_msg.from = NULL; //< force the plug-in not displaying own name
-		twitter_msg.msg_txt = (*msg);
-		twitter_msg.msg_time = 0;
-		twitter_msg.flag = 0;
-		twitter_msg.flag |= TW_MSGFLAG_DOTAG;
-		purple_debug_info(DBGID, "going to modify message\n");
-		retval = twitter_reformat_msg(ma, &twitter_msg, FALSE); //< do not to reply to myself
-		purple_debug_info(DBGID, "new data = %s\n", retval);
-		g_free(*msg);
-		(*msg) = retval;
+		if (flags & PURPLE_MESSAGE_SEND) {
+			purple_debug_info(DBGID, "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
+			purple_debug_info(DBGID, "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
+			purple_debug_info(DBGID, "data not from myself\n");
+			twitter_msg.id = 0;
+			twitter_msg.avatar_url = NULL;
+			twitter_msg.from = NULL; //< force the plug-in not displaying own name
+			twitter_msg.msg_txt = (*msg);
+			twitter_msg.msg_time = 0;
+			twitter_msg.flag = 0;
+			twitter_msg.flag |= TW_MSGFLAG_DOTAG;
+			purple_debug_info(DBGID, "going to modify message\n");
+			retval = twitter_reformat_msg(ma, &twitter_msg, FALSE); //< do not to reply to myself
+			purple_debug_info(DBGID, "new data = %s\n", retval);
+			g_free(*msg);
+			(*msg) = retval;
+			return FALSE;
+		} else {
+			return TRUE;
+		}
 	}
 	return FALSE;
 
@@ -401,12 +401,12 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 
         conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, name, ta->account);
-        if (conv == NULL)
+        if (conv == NULL) {
                 conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, ta->account, name);
+	}
 
 	fmt_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
-		format_datetime(conv, cur_msg->msg_time), purple_markup_linkify(fmt_txt), 
-		account, cur_msg->id,		
+		format_datetime(conv, cur_msg->msg_time), purple_markup_linkify(fmt_txt), account, cur_msg->id,		
 		account, cur_msg->from, g_uri_escape_string(cur_msg->msg_txt, NULL, TRUE));
 
         purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
