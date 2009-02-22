@@ -330,8 +330,10 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			purple_account_set_int(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
 		}
 		if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
+//			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
 			serv_got_im(ta->gc, tlr->name, cur_msg->msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
 			purple_signal_emit(pidgin_conversations_get_handle(), "twitter-message", ta, tlr->name, cur_msg);
+//			g_free(msg_txt);
 		}
 		g_free(cur_msg->msg_txt);
 		g_free(cur_msg->from);
@@ -585,7 +587,7 @@ void twitter_login(PurpleAccount *acct)
 	MbAccount *ta = NULL;
 	MbConnData * conn_data = NULL;
 	gchar * twitter_host = NULL;
-	gchar * path = NULL, *user_name;
+	gchar * path = NULL, * user_name = NULL;
 	gboolean use_https = TRUE;
 	
 	purple_debug_info(DBGID, "twitter_login\n");

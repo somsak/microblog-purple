@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <glib/gi18n.h>
 #include <sys/types.h>
-#include <gtkconv.h>
+//#include <gtkconv.h>
 #include <time.h>
 
 #ifndef G_GNUC_NULL_TERMINATED
@@ -86,6 +86,7 @@ TwitterConfig * _tw_conf = NULL;
 
 static void plugin_init(PurplePlugin *plugin)
 {
+	/*
 	void *handle = pidgin_conversations_get_handle();
 
 	purple_signal_register(handle, "twitter-message",
@@ -95,6 +96,7 @@ static void plugin_init(PurplePlugin *plugin)
                                                  purple_value_new(PURPLE_TYPE_STRING), // gchar * name
                                                  purple_value_new(PURPLE_TYPE_POINTER) // TwitterMsg cur_msg
                                                  );
+	 */
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
