@@ -54,6 +54,7 @@
 #include "twitter.h"
 #include "mb_http.h"
 #include "mb_net.h"
+#include "twitpref.h"
 
 #define DBGID "twitgin"
 #define PURPLE_MESSAGE_TWITGIN 0x1000
@@ -394,9 +395,10 @@ gchar * format_datetime(PurpleConversation * conv, time_t mtime) {
 /*
 * Hack the message display, redirect from normal process (on displaying event) and push them back
 */
-void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_msg, gboolean reply_link) {
+void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 
 	PurpleConversation * conv;
+	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
 	gchar * fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);	
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 
@@ -413,7 +415,6 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 
 	g_free(fmt_txt);
 }
-
 
 static gboolean plugin_load(PurplePlugin *plugin) 
 {
@@ -482,6 +483,87 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 	return TRUE;
 }
 
+static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
+	PurplePluginPrefFrame *frame;
+	PurplePluginPref *ppref;
+
+	frame = purple_plugin_pref_frame_new();
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_REPLY_LINK, _("Enable reply link"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	/*
+	ppref = purple_plugin_pref_new_with_label("integer");
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+									"/plugins/core/pluginpref_example/int",
+									"integer pref");
+	purple_plugin_pref_set_bounds(ppref, 0, 255);
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+									"/plugins/core/pluginpref_example/int_choice",
+									"integer choice");
+	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
+	purple_plugin_pref_add_choice(ppref, "One", GINT_TO_POINTER(1));
+	purple_plugin_pref_add_choice(ppref, "Two", GINT_TO_POINTER(2));
+	purple_plugin_pref_add_choice(ppref, "Four", GINT_TO_POINTER(4));
+	purple_plugin_pref_add_choice(ppref, "Eight", GINT_TO_POINTER(8));
+	purple_plugin_pref_add_choice(ppref, "Sixteen", GINT_TO_POINTER(16));
+	purple_plugin_pref_add_choice(ppref, "Thirty Two", GINT_TO_POINTER(32));
+	purple_plugin_pref_add_choice(ppref, "Sixty Four", GINT_TO_POINTER(64));
+	purple_plugin_pref_add_choice(ppref, "One Hundred Twenty Eight", GINT_TO_POINTER(128));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_label("string");
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+								"/plugins/core/pluginpref_example/string",
+								"string pref");
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+								"/plugins/core/pluginpref_example/masked_string",
+								"masked string");
+	purple_plugin_pref_set_masked(ppref, TRUE);
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+							"/plugins/core/pluginpref_example/max_string",
+							"string pref\n(max length of 16)");
+	purple_plugin_pref_set_max_length(ppref, 16);
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(
+							"/plugins/core/pluginpref_example/string_choice",
+							"string choice");
+	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
+	purple_plugin_pref_add_choice(ppref, "red", "red");
+	purple_plugin_pref_add_choice(ppref, "orange", "orange");
+	purple_plugin_pref_add_choice(ppref, "yellow", "yellow");
+	purple_plugin_pref_add_choice(ppref, "green", "green");
+	purple_plugin_pref_add_choice(ppref, "blue", "blue");
+	purple_plugin_pref_add_choice(ppref, "purple", "purple");
+	purple_plugin_pref_frame_add(frame, ppref);
+	*/
+
+	return frame;
+}
+
+
+static PurplePluginUiInfo prefs_info = {
+	get_plugin_pref_frame,
+	0,   /* page_num (Reserved) */
+	NULL, /* frame (Reserved) */
+	/* Padding */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+
 static PurplePluginInfo info =
 {
 	PURPLE_PLUGIN_MAGIC,
@@ -506,7 +588,7 @@ static PurplePluginInfo info =
 	NULL,                                           /**< destroy */
 	NULL,                                           /**< ui_info */
 	NULL,                                           /**< extra_info */
-	NULL,                                           /**< prefs_info */
+	&prefs_info,                                     /**< prefs_info */
 	NULL,                                           /**< actions */
 
 	/* padding */
@@ -516,8 +598,9 @@ static PurplePluginInfo info =
 	NULL
 };
 
-static void 
-init_plugin(PurplePlugin *plugin) {	
+static void init_plugin(PurplePlugin *plugin) {	
+	purple_prefs_add_none(TW_PREF_PREFIX);
+	purple_prefs_add_bool(TW_PREF_REPLY_LINK, TRUE);
 }
 
 PURPLE_INIT_PLUGIN(twitgin, init_plugin, info)
