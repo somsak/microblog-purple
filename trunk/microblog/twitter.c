@@ -199,7 +199,6 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
 	gint count = 0;
 	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL;
-	//ghcar * fmt_txt = NULL;
 	time_t msg_time_t, last_msg_time_t = 0;
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
@@ -330,10 +329,10 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			purple_account_set_int(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
 		}
 		if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
-//			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
+			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
 			serv_got_im(ta->gc, tlr->name, cur_msg->msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
 			purple_signal_emit(pidgin_conversations_get_handle(), "twitter-message", ta, tlr->name, cur_msg);
-//			g_free(msg_txt);
+			g_free(msg_txt);
 		}
 		g_free(cur_msg->msg_txt);
 		g_free(cur_msg->from);

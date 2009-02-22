@@ -96,7 +96,7 @@ static void plugin_init(PurplePlugin *plugin)
                                                  purple_value_new(PURPLE_TYPE_STRING), // gchar * name
                                                  purple_value_new(PURPLE_TYPE_POINTER) // TwitterMsg cur_msg
                                                  );
-	 */
+	*/
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
