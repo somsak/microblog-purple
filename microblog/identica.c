@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <glib/gi18n.h>
 #include <sys/types.h>
+#include <gtkconv.h>
 #include <time.h>
 
 #ifndef G_GNUC_NULL_TERMINATED
@@ -85,6 +86,15 @@ TwitterConfig * _tw_conf = NULL;
 
 static void plugin_init(PurplePlugin *plugin)
 {
+	void *handle = pidgin_conversations_get_handle();
+
+	purple_signal_register(handle, "twitter-message",
+                                                 purple_marshal_VOID__POINTER_POINTER_POINTER_POINTER,
+                                                 NULL, 4,
+                                                 purple_value_new(PURPLE_TYPE_POINTER), // MbAccount ta
+                                                 purple_value_new(PURPLE_TYPE_STRING), // gchar * name
+                                                 purple_value_new(PURPLE_TYPE_POINTER) // TwitterMsg cur_msg
+                                                 );
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
@@ -102,11 +112,6 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_tw_conf[TC_HIDE_SELF].conf = g_strdup("hide_myself");
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
-	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
-	
-	_tw_conf[TC_REPLY_LINK].conf = g_strdup("hide_myself");
-	_tw_conf[TC_REPLY_LINK].def_bool = TRUE;
-	option = purple_account_option_bool_new(_("Enable reply link"), tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_MSG_REFRESH_RATE].conf = g_strdup("msg_refresh_rate");

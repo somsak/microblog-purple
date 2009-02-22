@@ -198,12 +198,13 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	TwitterTimeLineReq * tlr = data;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
 	gint count = 0;
-	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL, * fmt_txt = NULL;
+	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL;
+	//ghcar * fmt_txt = NULL;
 	time_t msg_time_t, last_msg_time_t = 0;
 	unsigned long long cur_id;
 	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
-	gboolean hide_myself, skip = FALSE, reply_link;
+	gboolean hide_myself, skip = FALSE;
 	
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
@@ -321,22 +322,17 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	// reverse the list and append it
 	// only if id > last_msg_id
 	msg_list = g_list_reverse(msg_list);
-	reply_link = purple_account_get_bool(ta->account, tc_name(TC_REPLY_LINK), tc_def_bool(TC_REPLY_LINK));
 	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
 
 		cur_msg = it->data;
-//		if(cur_msg->id > ta->last_msg_id) { //< should we still double check this? It's already being covered by since_id
 		if(cur_msg->id > ta->last_msg_id) {
 			ta->last_msg_id = cur_msg->id;
 			purple_account_set_int(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
 		}
 		if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
-			fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
-			serv_got_im(ta->gc, tlr->name, fmt_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
-			purple_signal_emit(pidgin_conversations_get_handle(), "twitter-message", ta, tlr->name, cur_msg, reply_link);
-			g_free(fmt_txt);
+			serv_got_im(ta->gc, tlr->name, cur_msg->msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			purple_signal_emit(pidgin_conversations_get_handle(), "twitter-message", ta, tlr->name, cur_msg);
 		}
-//		}
 		g_free(cur_msg->msg_txt);
 		g_free(cur_msg->from);
 		g_free(cur_msg->avatar_url);
