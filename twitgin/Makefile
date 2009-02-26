@@ -16,7 +16,6 @@ TWITGIN_INC_PATHS += -I$(GTK_TOP)/include/gtk-2.0 \
 			-I$(GTK_TOP)/include/atk-1.0 \
 			-I$(GTK_TOP)/include/cairo \
 			-I$(GTK_TOP)/lib/gtk-2.0/include \
-			-I$(PIDGIN_TOP) \
 			-I$(PIDGIN_TOP)/win32  \
 			-I../microblog/
 

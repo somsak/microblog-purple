@@ -29,7 +29,7 @@
 #include <glib/gi18n.h>
 #include <sys/types.h>
 #include <time.h>
-#include <gtkconv.h>
+
 
 #ifndef G_GNUC_NULL_TERMINATED
 #  if __GNUC__ >= 4
@@ -49,6 +49,7 @@
 #include <accountopt.h>
 #include <xmlnode.h>
 #include <version.h>
+#include <gtkconv.h>
 
 #include "mb_net.h"
 #include "mb_util.h"
