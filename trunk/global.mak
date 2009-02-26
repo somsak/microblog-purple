@@ -24,6 +24,9 @@ ifeq ($(strip $(IS_WIN32)), 1)
 # WIN32
 # Use makefile and headers supplied by Pidgin 
 
+PLUGIN_SUFFIX := .dll
+EXE_SUFFIX := .exe
+
 #include global makefile for WIN32 build
 include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
@@ -36,21 +39,28 @@ INCLUDE_PATHS +=	-I. \
 			-I$(GTK_TOP)/lib/glib-2.0/include \
 			-I$(PURPLE_TOP) \
 			-I$(PURPLE_TOP)/win32 \
-			-I$(PIDGIN_TREE_TOP)
+			-I$(PIDGIN_TREE_TOP) \
+			-I$(PIDGIN_TOP) \
+			-I$(GTK_TOP)/include/gtk-2.0 \
+			-I$(GTK_TOP)/include/pango-1.0 \
+			-I$(GTK_TOP)/include/atk-1.0 \
+			-I$(GTK_TOP)/include/cairo \
+			-I$(GTK_TOP)/lib/gtk-2.0/include \
+			-I$(PIDGIN_TOP)/win32  \
 
 
 LIBS += -lglib-2.0 \
 			-lintl \
 			-lws2_32 \
-			-lpurple
+			-lpurple \
+			$(PIDGIN_TOP)/pidgin$(PLUGIN_SUFFIX)
 			
 PURPLE_LIBS = -L$(GTK_TOP)/lib -L$(PURPLE_TOP) $(LIBS)
 PURPLE_CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSION)\" $(INCLUDE_PATHS)
 
 PURPLE_PROTOCOL_PIXMAP_DIR = $(PURPLE_INSTALL_DIR)/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR = $(PURPLE_INSTALL_PLUGINS_DIR)
-PLUGIN_SUFFIX := .dll
-EXE_SUFFIX := .exe
+
 
 #include $(PIDGIN_COMMON_RULES)
 
