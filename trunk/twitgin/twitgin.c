@@ -241,7 +241,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
 			gchar * sender;
 			gchar * name_to_reply;
-			
+
 			switch(proto_id) {
 				case TWITTER_PROTO :
 					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "twitter.com", acct);		
@@ -259,6 +259,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 			g_free(name_to_reply);
 			return TRUE;
 		}
+
 		// retweet hack !
 		if (!g_ascii_strcasecmp(cmd, "rt")) {
 			gchar * message, * from, * retweet_message;
@@ -272,15 +273,15 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 			}
 			purple_debug_info(DBGID, "conv = %p\n", conv);
 			gtkconv = PIDGIN_CONVERSATION(conv);
-	        message = g_hash_table_lookup(params, "msg");
-	        from = g_hash_table_lookup(params, "from");
-        	tmp = purple_unescape_html(message);
+			message = g_hash_table_lookup(params, "msg");
+			from = g_hash_table_lookup(params, "from");
+			tmp = purple_unescape_html(message);
 			retweet_message = g_strdup_printf("rt @%s: %s", from, tmp);
 			g_free(tmp);
 			gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, retweet_message, -1);
-            gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
-            g_free(retweet_message);
-            return TRUE;
+			gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
+			g_free(retweet_message);
+			return TRUE;
 		}
 		// favorite hack !
 		if (!g_ascii_strcasecmp(cmd, "fav")) {
@@ -294,10 +295,10 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "identi.ca", acct);		
 					break;
 			}
-	        msg_id = g_hash_table_lookup(params, "id");
+			msg_id = g_hash_table_lookup(params, "id");
 			ta = mb_account_new(acct);
 			twitter_favorite_message(ta, msg_id);
-        	purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, g_strdup_printf("message %s is favorited", msg_id), PURPLE_MESSAGE_SYSTEM, time(NULL));
+			purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, g_strdup_printf("message %s is favorited", msg_id), PURPLE_MESSAGE_SYSTEM, time(NULL));
 
 			return TRUE;
 		}
@@ -354,6 +355,7 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 			(*msg) = retval;
 			return FALSE;
 		} else {
+			// Pidgin will free all the message in receiving ends
 			return TRUE;
 		}
 	}
@@ -402,28 +404,36 @@ gchar * format_datetime(PurpleConversation * conv, time_t mtime) {
 }
 
 /*
-* Hack the message display, redirect from normal process (on displaying event) and push them back
-*/
+ * Hack the message display, redirect from normal process (on displaying event) and push them back
+ */
 void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 
 	PurpleConversation * conv;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
-	gchar * fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);	
-	gchar * tmp = NULL;
+	gchar * fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
+	gchar * displaying_txt = NULL;
+	gchar * linkify_txt = NULL;
+	gchar * embed_rt_txt = NULL;
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 
-    conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, name, ta->account);
-    if (conv == NULL) {
-        conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, ta->account, name);
+	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, name, ta->account);
+	if (conv == NULL) {
+		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, ta->account, name);
 	}
-	tmp = g_markup_escape_text(cur_msg->msg_txt, strlen(cur_msg->msg_txt));
-	fmt_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
-		format_datetime(conv, cur_msg->msg_time), purple_markup_linkify(fmt_txt), account, cur_msg->id,		
-		account, cur_msg->from, tmp);
-	g_free(tmp);
+	purple_debug_info(DBGID, "raw text msg = ##%s##\n", cur_msg->msg_txt);
+	purple_debug_info(DBGID, "fmted text msg = ##%s##\n", fmt_txt);
+	embed_rt_txt = g_markup_escape_text(cur_msg->msg_txt, strlen(cur_msg->msg_txt));
+	purple_debug_info(DBGID, "escaped text = ##%s##\n", embed_rt_txt);
+	// need to manually linkify text since we are going to send RAW message
+	linkify_txt = purple_markup_linkify(fmt_txt);
+	displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
+			format_datetime(conv, cur_msg->msg_time), linkify_txt, account, cur_msg->id,		
+			account, cur_msg->from, embed_rt_txt);
+	g_free(embed_rt_txt);
+	purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, displaying_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
 
-	purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
-
+	g_free(displaying_txt);
+	g_free(linkify_txt);
 	g_free(fmt_txt);
 }
 
