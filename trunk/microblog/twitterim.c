@@ -69,20 +69,25 @@ TwitterConfig * _tw_conf = NULL;
 
 static TwCmd * tw_cmd = NULL;
 
-static void plugin_init(PurplePlugin *plugin)
+void plugin_init(PurplePlugin *plugin)
 {
-	//void *handle = pidgin_conversations_get_handle();
 	void * handle = plugin;
 
 	purple_debug_info("twitterim", "plugin_init\n");
 	purple_debug_info("twitterim", "plugin = %p\n", plugin);
-	purple_signal_register(handle, "twitter-message",
-                                                 purple_marshal_VOID__POINTER_POINTER_POINTER_POINTER,
-                                                 NULL, 4,
+	purple_signal_register(plugin, "twitter-message",
+                                                 purple_marshal_VOID__POINTER_POINTER_POINTER,
+                                                 NULL, 3,
                                                  purple_value_new(PURPLE_TYPE_POINTER), // MbAccount ta
                                                  purple_value_new(PURPLE_TYPE_STRING), // gchar * name
                                                  purple_value_new(PURPLE_TYPE_POINTER) // TwitterMsg cur_msg
                                                  );
+}
+
+void plugin_destroy(PurplePlugin * plugin)
+{
+	purple_debug_info("twitterim", "plugin_destroy\n");
+	purple_signal_unregister(plugin, "twitter-message");
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
@@ -96,7 +101,8 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_tw_conf = (TwitterConfig *)g_malloc0(TC_MAX * sizeof(TwitterConfig));
 
 	// This is just the place to pass pointer to plug-in itself
-	_tw_conf[TC_PLUGIN].conf = (gchar *)plugin;
+	_tw_conf[TC_PLUGIN].conf = NULL;
+	_tw_conf[TC_PLUGIN].def_str = (gchar *)plugin;
 
 	_tw_conf[TC_HIDE_SELF].conf = g_strdup("twitter_hide_myself");
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
@@ -188,13 +194,15 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	g_free(_tw_conf[TC_FRIENDS_USER].def_str);
 	g_free(_tw_conf[TC_PUBLIC_USER].def_str);
 	g_free(_tw_conf[TC_USER_USER].def_str);
+	g_free(_tw_conf[TC_USER_GROUP].def_str);
 	for(i = 0; i < TC_MAX; i++) {
-		if(_tw_conf[i].conf) g_free(_tw_conf[i].conf);
+		if(_tw_conf[i].conf) {
+			g_free(_tw_conf[i].conf);
+		}
 	}
 
 	g_free(_tw_conf);
 
-	//purple_signal_unregister(plugin, "twitter-message");
 	return TRUE;
 }
 
@@ -323,7 +331,7 @@ static PurplePluginInfo info = {
 	"http://microblog-purple.googlecode.com/", /* homepage */
 	plugin_load, /* load */
 	plugin_unload, /* unload */
-	NULL, /* destroy */
+	plugin_destroy, /* destroy */
 	NULL, /* ui_info */
 	&twitter_prpl_info, /* extra_info */
 	NULL, /* prefs_info */

@@ -332,7 +332,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
 			serv_got_im(ta->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
 			//purple_signal_emit(pidgin_conversations_get_handle(), "twitter-message", ta, tlr->name, cur_msg);
-			purple_signal_emit(tc_name(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
+			purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
 			g_free(msg_txt);
 		}
 		g_free(cur_msg->msg_txt);
