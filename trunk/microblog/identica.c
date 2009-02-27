@@ -111,6 +111,9 @@ gboolean plugin_load(PurplePlugin *plugin)
 	purple_debug_info(LOG_ID, "plugin_load\n");
 	_tw_conf = (TwitterConfig *)g_malloc0(TC_MAX * sizeof(TwitterConfig));
 
+	// This is just the place to pass pointer to plug-in itself
+	_tw_conf[TC_PLUGIN].conf = (gchar *)plugin;
+
 	_tw_conf[TC_HIDE_SELF].conf = g_strdup("hide_myself");
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));

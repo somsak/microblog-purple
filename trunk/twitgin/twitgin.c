@@ -422,7 +422,7 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 		account, cur_msg->from, tmp);
 	g_free(tmp);
 
-    purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
+	purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, fmt_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
 
 	g_free(fmt_txt);
 }
@@ -432,6 +432,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 		
 	GList *convs = purple_get_conversations();
 	void *gtk_conv_handle = pidgin_conversations_get_handle();
+	PurplePlugin * prpl_plugin;
 	
 	purple_debug_info(DBGID, "plugin loaded\n");	
 	purple_signal_connect(gtk_conv_handle, "conversation-displayed", plugin, PURPLE_CALLBACK(on_conversation_display), NULL);
@@ -457,7 +458,14 @@ static gboolean plugin_load(PurplePlugin *plugin)
 
 	purple_signal_connect(pidgin_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying), NULL);
 
-	purple_signal_connect(pidgin_conversations_get_handle(), "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
+	prpl_plugin = purple_plugins_find_with_id("prpl-mbpurple-twitter");
+	if(prpl_plugin) {
+		purple_debug_info(DBGID, "found prpl-mbpurple-twitter\n");
+		purple_signal_connect(prpl_plugin, "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
+	} else {
+		purple_debug_info(DBGID, "prpl-mbpurple-twitter not found!\n");
+	}
+	//purple_signal_connect(pidgin_conversations_get_handle(), "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
 
 	return TRUE;
 }
