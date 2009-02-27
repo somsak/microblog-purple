@@ -90,8 +90,8 @@ static void plugin_init(PurplePlugin *plugin)
 	void *handle = pidgin_conversations_get_handle();
 
 	purple_signal_register(handle, "twitter-message",
-                                                 purple_marshal_VOID__POINTER_POINTER_POINTER_POINTER,
-                                                 NULL, 4,
+                                                 purple_marshal_VOID__POINTER_POINTER_POINTER,
+                                                 NULL, 3,
                                                  purple_value_new(PURPLE_TYPE_POINTER), // MbAccount ta
                                                  purple_value_new(PURPLE_TYPE_STRING), // gchar * name
                                                  purple_value_new(PURPLE_TYPE_POINTER) // TwitterMsg cur_msg
@@ -112,7 +112,8 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_tw_conf = (TwitterConfig *)g_malloc0(TC_MAX * sizeof(TwitterConfig));
 
 	// This is just the place to pass pointer to plug-in itself
-	_tw_conf[TC_PLUGIN].conf = (gchar *)plugin;
+	_tw_conf[TC_PLUGIN].conf = NULL;
+	_tw_conf[TC_PLUGIN].def_str = (gchar *)plugin;
 
 	_tw_conf[TC_HIDE_SELF].conf = g_strdup("hide_myself");
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
