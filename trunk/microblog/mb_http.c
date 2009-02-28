@@ -331,6 +331,14 @@ void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value
 	mb_http_data_add_param(data, key, tmp);
 }
 
+void mb_http_data_add_param_ull(MbHttpData * data, const gchar * key, unsigned long long value)
+{
+	char tmp[200];
+	
+	snprintf(tmp, sizeof(tmp), "%llu", value);
+	mb_http_data_add_param(data, key, tmp);
+}
+
 const gchar * mb_http_data_find_param(MbHttpData * data, const gchar * key)
 {
 	GList * retval;

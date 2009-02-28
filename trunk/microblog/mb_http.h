@@ -243,6 +243,17 @@ extern void mb_http_data_add_param(MbHttpData * data, const gchar * key, const g
 extern void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value);
 
 /*
+	Add new www-urlencoded parameter to data
+	
+	@param data MbHttpData
+	@param key key of param
+	@param value value of current param
+*/
+extern void mb_http_data_add_param_ull(MbHttpData * data, const gchar * key, unsigned long long value);
+
+
+
+/*
 	Look for value of specified parameter
 	
 	@param data MbHttpdata
