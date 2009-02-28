@@ -187,6 +187,12 @@ extern TwitterConfig * _tw_conf;
 #define tc_def_bool(name) _tw_conf[name].def_bool
 
 /*
+ * Utility functions
+ */
+extern void mbpurple_account_set_ull(PurpleAccount * account, const char * name, unsigned long long value);
+extern unsigned long long mbpurple_account_get_ull(PurpleAccount * account, const char * name, unsigned long long default_value);
+
+/*
  * Protocol functions
  */
 extern void twitter_set_status(PurpleAccount *acct, PurpleStatus *status);

@@ -217,4 +217,23 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 	return g_string_free(output, FALSE);
 }
 
+void mbpurple_account_set_ull(PurpleAccount * account, const char * name, unsigned long long value)
+{
+	gchar * tmp_str;
 
+	tmp_str = g_strdup_printf("%llu", value);
+	purple_account_set_string(account, name, tmp_str);
+	g_free(tmp_str);
+}
+
+unsigned long long mbpurple_account_get_ull(PurpleAccount * account, const char * name, unsigned long long default_value)
+{
+	const char * tmp_str;
+
+	tmp_str = purple_account_get_string(account, name, NULL);
+	if(tmp_str) {
+		return strtoull(tmp_str, NULL, 10);
+	} else {
+		return default_value;
+	}
+}
