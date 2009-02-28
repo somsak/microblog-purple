@@ -78,6 +78,8 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 "Connection: Close\r\n" \
 "Pragma: no-cache\r\n";
 
+PurplePlugin * twitgin_plugin = NULL;
+
 static TwitterBuddy * twitter_new_buddy()
 {
 	TwitterBuddy * buddy = g_new(TwitterBuddy, 1);
@@ -484,6 +486,7 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	ta->tag = NULL;
 	ta->tag_pos = MB_TAG_NONE;
+	ta->reply_to_status_id = 0;
 	acct->gc->proto_data = ta;
 	return ta;
 }
@@ -624,6 +627,16 @@ void twitter_login(PurpleAccount *acct)
 	g_free(twitter_host);
 	g_free(user_name);
 	g_free(path);
+
+	// connect to twitgin here
+	purple_debug_info(DBGID, "looking for twitgin\n");
+	if(!twitgin_plugin) {
+		twitgin_plugin = purple_plugins_find_with_id("gtktwitgin");
+	}
+	if(twitgin_plugin) {
+		purple_debug_info(DBGID, "registering twitgin-replying-message signal\n");
+		purple_signal_connect(twitgin_plugin, "twitgin-replying-message", acct, PURPLE_CALLBACK(twitter_on_replying_message), ta);
+	}
 	
 }
 
@@ -631,6 +644,10 @@ void twitter_login(PurpleAccount *acct)
 void twitter_close(PurpleConnection *gc)
 {
 	MbAccount *ma = gc->proto_data;
+
+	if(twitgin_plugin) {
+		purple_signal_disconnect(twitgin_plugin, "twitgin-replying-message", ma->account, PURPLE_CALLBACK(twitter_on_replying_message));
+	}
 
 	purple_debug_info(DBGID, "twitter_close\n");
 
@@ -748,6 +765,12 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
 	mb_http_data_set_basicauth(conn_data->request, 	user_name,purple_account_get_password(ta->account));
+
+	if(ta->reply_to_status_id > 0) {
+		purple_debug_info(DBGID, "setting in_reply_to_status_id = %llu\n", ta->reply_to_status_id);
+		mb_http_data_add_param_ull(conn_data->request, "in_reply_to_status_id", ta->reply_to_status_id);
+		ta->reply_to_status_id = 0;
+	}
 	
 	post_data = g_malloc(TW_MAXBUFF);
 	len = snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
@@ -781,4 +804,12 @@ void twitter_set_status(PurpleAccount *acct, PurpleStatus *status)
   purple_debug_info(DBGID, "setting %s's status to %s: %s\n",
                     acct->username, purple_status_get_name(status), msg);
 
+}
+
+void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbAccount * ma)
+{
+	purple_debug_info(DBGID, "%s called!\n", __FUNCTION__);
+	purple_debug_info(DBGID, "setting reply_to_id (was %llu) to %llu\n", ma->reply_to_status_id, msg_id);
+	ma->reply_to_status_id = msg_id;
+	return NULL;
 }

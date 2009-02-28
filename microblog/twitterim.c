@@ -69,10 +69,10 @@ TwitterConfig * _tw_conf = NULL;
 
 static TwCmd * tw_cmd = NULL;
 
+PurplePlugin * prpl_plugin = NULL;
+
 void plugin_init(PurplePlugin *plugin)
 {
-	void * handle = plugin;
-
 	purple_debug_info("twitterim", "plugin_init\n");
 	purple_debug_info("twitterim", "plugin = %p\n", plugin);
 	purple_signal_register(plugin, "twitter-message",

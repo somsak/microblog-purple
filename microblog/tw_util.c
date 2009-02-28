@@ -157,7 +157,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 			if(from_eq_username) {
 				g_string_append_printf(output, "<i>");
 			}
-			g_string_append_printf(output, "<a href=\"%s:reply?to=%s&account=%s\">%s</a>:", get_uri_txt(ta->account), msg->from, username, msg->from);
+			g_string_append_printf(output, "<a href=\"%s:reply?to=%s&account=%s&id=%llu\">%s</a>:", get_uri_txt(ta->account), msg->from, username, msg->id, msg->from);
 			if(from_eq_username) {
 				g_string_append_printf(output, "</i>");
 			}

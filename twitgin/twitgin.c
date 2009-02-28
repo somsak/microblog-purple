@@ -71,6 +71,8 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 // Dummy tw_conf to resolve external symbol link
 TwitterConfig * _tw_conf = NULL;
 
+static PurplePlugin * twitgin_plugin = NULL;
+
 // static void url_clicked_cb(GtkWidget *w, const char *uri);
 
 static void twitgin_entry_buffer_on_changed(PidginConversation *gtkconv) {
@@ -239,8 +241,9 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
 		/* tw:rep?to=sender */
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
-			gchar * sender;
+			gchar * sender, *tmp;
 			gchar * name_to_reply;
+			unsigned long long msg_id;
 
 			switch(proto_id) {
 				case TWITTER_PROTO :
@@ -253,10 +256,13 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 			purple_debug_info(DBGID, "conv = %p\n", conv);
 			gtkconv = PIDGIN_CONVERSATION(conv);
 			sender = g_hash_table_lookup(params, "to");		
+			tmp = g_hash_table_lookup(params, "id");
+			msg_id = strtoull(tmp, NULL, 10);
 			name_to_reply = g_strdup_printf("@%s ", sender);
 			gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, name_to_reply, -1);
 			gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
 			g_free(name_to_reply);
+			purple_signal_emit(twitgin_plugin, "twitgin-replying-message", proto, msg_id);
 			return TRUE;
 		}
 
@@ -581,6 +587,11 @@ static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
 	return frame;
 }
 
+void plugin_destroy(PurplePlugin * plugin)
+{
+	purple_debug_info("twitgin", "plugin_destroy\n");
+	purple_signal_unregister(plugin, "twitgin-replying-message");
+}
 
 static PurplePluginUiInfo prefs_info = {
 	get_plugin_pref_frame,
@@ -614,7 +625,7 @@ static PurplePluginInfo info =
 	"http://microblog-purple.googlecode.com",                                 /**< homepage */
 	plugin_load,                                    /**< load */
 	plugin_unload,                                  /**< unload */
-	NULL,                                           /**< destroy */
+	plugin_destroy,                                           /**< destroy */
 	NULL,                                           /**< ui_info */
 	NULL,                                           /**< extra_info */
 	&prefs_info,                                     /**< prefs_info */
@@ -627,9 +638,17 @@ static PurplePluginInfo info =
 	NULL
 };
 
-static void init_plugin(PurplePlugin *plugin) {	
+static void plugin_init(PurplePlugin *plugin) {	
 	purple_prefs_add_none(TW_PREF_PREFIX);
 	purple_prefs_add_bool(TW_PREF_REPLY_LINK, TRUE);
+
+	purple_signal_register(plugin, "twitgin-replying-message",
+			purple_marshal_POINTER__POINTER_INT64,
+			purple_value_new(PURPLE_TYPE_POINTER), 2, 
+			purple_value_new(PURPLE_TYPE_POINTER), // protocol name (tw or idc)
+			purple_value_new(PURPLE_TYPE_INT64) // status ID
+	);
+	twitgin_plugin = plugin;
 }
 
-PURPLE_INIT_PLUGIN(twitgin, init_plugin, info)
+PURPLE_INIT_PLUGIN(twitgin, plugin_init, info)

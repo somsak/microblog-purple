@@ -85,6 +85,7 @@ typedef struct _TwitterAccount {
 	GHashTable * sent_id_hash;
 	gchar * tag;
 	gint tag_pos;
+	unsigned long long reply_to_status_id;
 } TwitterAccount;
 
 typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
@@ -206,6 +207,7 @@ extern char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gbool
 extern void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host);
 extern void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 extern gboolean twitter_fetch_all_new_messages(gpointer data);
+extern void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbAccount * ma);
 
 #ifdef __cplusplus
 }
