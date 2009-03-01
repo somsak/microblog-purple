@@ -279,6 +279,7 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 {
 	MbConnData * conn_data = data;
 	MbAccount *ta = conn_data->ta;
+	gchar * error;
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
@@ -297,7 +298,12 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	//XXX: Should we free it here?
 	mb_conn_data_free(conn_data);
 	*/
-	purple_connection_error(ta->gc, _("SSL Connection Error"));
+	error = purple_ssl_strerror(errortype);
+	if(error) {
+		purple_connection_error(ta->gc, purple_ssl_strerror(errortype));
+	} else {
+		purple_connection_error(ta->gc, _("SSL Connection error"));
+	}
 }
 
 void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
