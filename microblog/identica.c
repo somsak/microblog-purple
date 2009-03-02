@@ -86,17 +86,22 @@ TwitterConfig * _tw_conf = NULL;
 
 static void plugin_init(PurplePlugin *plugin)
 {
-	/*
-	void *handle = pidgin_conversations_get_handle();
+	purple_debug_info("twitterim", "plugin_init\n");
+	purple_debug_info("twitterim", "plugin = %p\n", plugin);
 
-	purple_signal_register(handle, "twitter-message",
+	purple_signal_register(plugin, "twitter-message",
                                                  purple_marshal_VOID__POINTER_POINTER_POINTER,
                                                  NULL, 3,
                                                  purple_value_new(PURPLE_TYPE_POINTER), // MbAccount ta
                                                  purple_value_new(PURPLE_TYPE_STRING), // gchar * name
                                                  purple_value_new(PURPLE_TYPE_POINTER) // TwitterMsg cur_msg
                                                  );
-	*/
+}
+
+static void plugin_destroy(PurplePlugin * plugin)
+{
+	purple_debug_info("twitterim", "plugin_destroy\n");
+	purple_signal_unregister(plugin, "twitter-message");
 }
 
 gboolean plugin_load(PurplePlugin *plugin)
@@ -348,7 +353,7 @@ static PurplePluginInfo info = {
 	"http://microblog-purple.googlecode.com/", /* homepage */
 	plugin_load, /* load */
 	plugin_unload, /* unload */
-	NULL, /* destroy */
+	plugin_destroy, /* destroy */
 	NULL, /* ui_info */
 	&prpl_info, /* extra_info */
 	NULL, /* prefs_info */

@@ -71,7 +71,7 @@ static TwCmd * tw_cmd = NULL;
 
 PurplePlugin * prpl_plugin = NULL;
 
-void plugin_init(PurplePlugin *plugin)
+static void plugin_init(PurplePlugin *plugin)
 {
 	purple_debug_info("twitterim", "plugin_init\n");
 	purple_debug_info("twitterim", "plugin = %p\n", plugin);
@@ -84,7 +84,7 @@ void plugin_init(PurplePlugin *plugin)
                                                  );
 }
 
-void plugin_destroy(PurplePlugin * plugin)
+static void plugin_destroy(PurplePlugin * plugin)
 {
 	purple_debug_info("twitterim", "plugin_destroy\n");
 	purple_signal_unregister(plugin, "twitter-message");
