@@ -449,6 +449,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	GList *convs = purple_get_conversations();
 	void *gtk_conv_handle = pidgin_conversations_get_handle();
 	PurplePlugin * prpl_plugin;
+	GList * plugins;
 	
 	purple_debug_info(DBGID, "plugin loaded\n");	
 	purple_signal_connect(gtk_conv_handle, "conversation-displayed", plugin, PURPLE_CALLBACK(on_conversation_display), NULL);
@@ -474,6 +475,8 @@ static gboolean plugin_load(PurplePlugin *plugin)
 
 	purple_signal_connect(pidgin_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying), NULL);
 
+	// twitter
+	/*
 	prpl_plugin = purple_plugins_find_with_id("prpl-mbpurple-twitter");
 	if(prpl_plugin) {
 		purple_debug_info(DBGID, "found prpl-mbpurple-twitter\n");
@@ -481,7 +484,25 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	} else {
 		purple_debug_info(DBGID, "prpl-mbpurple-twitter not found!\n");
 	}
-	//purple_signal_connect(pidgin_conversations_get_handle(), "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
+	
+	// identica-laconica
+	prpl_plugin = purple_plugins_find_with_id("prpl-mbpurple-identica");
+	if(prpl_plugin) {
+		purple_debug_info(DBGID, "found prpl-mbpurple-identica\n");
+		purple_signal_connect(prpl_plugin, "identica-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
+	} else {
+		purple_debug_info(DBGID, "prpl-mbpurple-identica not found!\n");
+	}
+	*/
+	// handle all mbpurple plug-in
+	plugins = purple_plugins_get_all();
+	for(; plugins != NULL; plugins = plugins->next) {
+		prpl_plugin = plugins->data;
+		if( (prpl_plugin->info->id != NULL) && (strncmp(prpl_plugin->info->id, "prpl-mbpurple", 13) == 0)) {
+			purple_debug_info(DBGID, "found plug-in %s\n", prpl_plugin->info->id);
+			purple_signal_connect(prpl_plugin, "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
+		}
+	}
 
 	return TRUE;
 }
