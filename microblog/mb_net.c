@@ -279,7 +279,7 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 {
 	MbConnData * conn_data = data;
 	MbAccount *ta = conn_data->ta;
-	gchar * error;
+	const gchar * error;
 
 	//ssl error is after 2.3.0
 	//purple_connection_ssl_error(fba->gc, errortype);
