@@ -60,6 +60,12 @@ Section "MainSection" SEC01
 	File "/oname=protocols\16\twitter.png" "microblog\twitter16.png"
 	File "/oname=protocols\22\twitter.png" "microblog\twitter22.png"
 	File "/oname=protocols\48\twitter.png" "microblog\twitter48.png"
+	File "/oname=protocols\16\identica.png" "microblog\identica16.png"
+	File "/oname=protocols\22\identica.png" "microblog\identica22.png"
+	File "/oname=protocols\48\identica.png" "microblog\identica48.png"
+	File "/oname=protocols\16\laconica.png" "microblog\laconica16.png"
+	File "/oname=protocols\22\laconica.png" "microblog\laconica22.png"
+	File "/oname=protocols\48\laconica.png" "microblog\laconica48.png"
 
     SetOverwrite try
 	copy:
@@ -68,6 +74,8 @@ Section "MainSection" SEC01
 		IfErrors dllbusy
 		SetOutPath "$PidginDir\plugins"
 		File "microblog\libtwitter.dll"
+		File "microblog\libidentica.dll"
+		File "microblog\liblaconica.dll"
 		File "twitgin\twitgin.dll"
 		;SetOutPath "$PidginDir"
 		;File "microblog\mbchprpl.exe"
