@@ -42,7 +42,7 @@ TWITGIN_C_SRC = twitgin.c ../microblog/tw_util.c ../microblog/mb_net.c ../microb
 TWITGIN_H_SRC = $(TWITGIN_C_SRC:%.c=%.h)
 TWITGIN_OBJ = $(TWITGIN_C_SRC:%.c=%.o)
 
-DISTFILES = twitgin.c Makefile
+DISTFILES = twitgin.c twitpref.h Makefile
 
 OBJECTS = $(TWITGIN_OBJ)
 
