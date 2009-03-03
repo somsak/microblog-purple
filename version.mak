@@ -1,2 +1,2 @@
 PACKAGE := mbpurple
-VERSION := 0.2.1b1
+VERSION := 0.2.1
