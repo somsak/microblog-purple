@@ -813,3 +813,50 @@ void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbA
 	ma->reply_to_status_id = msg_id;
 	return NULL;
 }
+
+/*
+*  Favourite Handler
+*/
+void twitter_favorite_message(MbAccount * ta, gchar * msg_id)
+{
+
+	// create new connection and call API POST
+        MbConnData * conn_data;
+        MbHttpData * request;
+        gchar * twitter_host, * user_name, * path;
+        gboolean use_https;
+        gint twitter_port;
+
+	user_name = g_strdup_printf("%s", purple_account_get_username(ta->account));
+	twitter_host = g_strdup_printf("%s", "twitter.com");
+	path = g_strdup_printf("/favorites/create/%s.xml", msg_id);
+
+        use_https = TRUE; 
+        if(use_https) {
+                twitter_port = TW_HTTPS_PORT;
+        } else {
+                twitter_port = TW_HTTP_PORT;
+        }
+
+        conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, NULL, use_https);
+        mb_conn_data_set_error(conn_data, "Favourite message error", MB_ERROR_NOACTION);
+        mb_conn_data_set_retry(conn_data, 0);
+
+        request = conn_data->request;
+        request->type = HTTP_POST;
+        request->port = twitter_port;
+
+	mb_http_data_set_host(request, twitter_host);
+        mb_http_data_set_path(request, path);
+        mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
+        mb_http_data_set_header(request, "Host", twitter_host);
+        mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
+
+        //conn_data->handler_data = tlr;
+
+        mb_conn_process_request(conn_data);
+        g_free(twitter_host);
+        g_free(user_name);
+	g_free(path);
+
+}
