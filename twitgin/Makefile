@@ -38,7 +38,7 @@ LIB_PATHS =
 LIBS = $(PIDGIN_LIBS)
 endif
 
-TWITGIN_C_SRC = twitgin.c ../microblog/tw_util.c ../microblog/mb_net.c ../microblog/mb_http.c
+TWITGIN_C_SRC = twitgin.c ../microblog/twitter.c ../microblog/tw_util.c ../microblog/mb_net.c ../microblog/mb_http.c ../microblog/mb_util.c
 TWITGIN_H_SRC = $(TWITGIN_C_SRC:%.c=%.h)
 TWITGIN_OBJ = $(TWITGIN_C_SRC:%.c=%.o)
 

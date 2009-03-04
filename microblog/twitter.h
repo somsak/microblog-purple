@@ -187,6 +187,11 @@ extern TwitterConfig * _tw_conf;
 #define tc_def_int(name) _tw_conf[name].def_int
 #define tc_def_bool(name) _tw_conf[name].def_bool
 
+/* Microblog function */
+
+extern MbAccount * mb_account_new(PurpleAccount * acct);
+extern void mb_account_free(MbAccount * ta);
+
 /*
  * Utility functions
  */
@@ -208,6 +213,7 @@ extern void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** hos
 extern void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 extern gboolean twitter_fetch_all_new_messages(gpointer data);
 extern void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbAccount * ma);
+extern void twitter_favorite_message(MbAccount * ta, gchar * msg_id);
 
 #ifdef __cplusplus
 }
