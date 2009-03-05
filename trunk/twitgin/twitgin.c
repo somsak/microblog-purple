@@ -349,10 +349,10 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 
 	PurpleConversation * conv;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
-	gchar * fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
+	gchar * fmt_txt = NULL, * tmp = NULL;
 	gchar * displaying_txt = NULL;
 	gchar * linkify_txt = NULL;
-	gchar * embed_rt_txt = NULL;
+	const char * embed_rt_txt = NULL;
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 
 	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, name, ta->account);
@@ -360,15 +360,26 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, ta->account, name);
 	}
 	purple_debug_info(DBGID, "raw text msg = ##%s##\n", cur_msg->msg_txt);
+
+	// relink message text g_markup_escape_text will not translate " " to &nbsp;
+	tmp = g_markup_escape_text(cur_msg->msg_txt, strlen(cur_msg->msg_txt));
+	g_free(cur_msg->msg_txt);
+	cur_msg->msg_txt = tmp;
+
+	fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
 	purple_debug_info(DBGID, "fmted text msg = ##%s##\n", fmt_txt);
-	embed_rt_txt = g_markup_escape_text(cur_msg->msg_txt, strlen(cur_msg->msg_txt));
-	purple_debug_info(DBGID, "escaped text = ##%s##\n", embed_rt_txt);
+
+	// text for retweet url
+	embed_rt_txt = purple_url_encode(cur_msg->msg_txt);
+	purple_debug_info(DBGID, "url embed text = ##%s##\n", embed_rt_txt);
+
 	// need to manually linkify text since we are going to send RAW message
 	linkify_txt = purple_markup_linkify(fmt_txt);
+
 	displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
 			format_datetime(conv, cur_msg->msg_time), linkify_txt, account, cur_msg->id,		
 			account, cur_msg->from, embed_rt_txt);
-	g_free(embed_rt_txt);
+	purple_debug_info(DBGID, "displaying text = ##%s##\n", displaying_txt);
 	purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, displaying_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
 
 	g_free(displaying_txt);
