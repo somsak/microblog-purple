@@ -113,7 +113,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 {
 	gchar * username;
 	GString * output;
-	gchar * src = NULL;
+	gchar * src = NULL, * tmp = NULL;
 	gchar * name, *name_color;
 	gchar sym, old_char, previous_char;
 	int i = 0, j = 0;
@@ -136,8 +136,6 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 		purple_debug_info(DBGID, "not doing the tagging of message\n");
 		src = g_strdup(msg->msg_txt);
 	}
-
-	//src = g_markup_escape_text(src, strlen(src));
 
 	// color of name
 	if(msg->from) {
