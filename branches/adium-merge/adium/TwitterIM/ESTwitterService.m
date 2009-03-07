@@ -69,7 +69,7 @@
  */
 - (NSString *)UIDPlaceholder
 {
-	return AILocalizedString(@"username@twitter.com","Sample name for new Twitter accounts");
+	return AILocalizedString(@"username","Sample name for new Twitter accounts");
 }
 
 /*!
@@ -99,14 +99,16 @@
 	return baseImage;
 }
 
-
 - (void)registerStatuses{
 	
+	AILog(@"ESTwitterService:Setting status");
 	[[adium statusController] registerStatus:STATUS_NAME_AVAILABLE
 							 withDescription:[[adium statusController] localizedDescriptionForCoreStatusName:STATUS_NAME_AVAILABLE]
 									  ofType:AIAvailableStatusType
 								  forService:self];
-}
+	 }
+
+
 @end
 
 
