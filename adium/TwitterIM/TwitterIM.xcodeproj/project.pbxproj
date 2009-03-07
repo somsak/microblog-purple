@@ -14,14 +14,14 @@
 		921CB1980F57559A00BEFF77 /* libgthread.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB1970F57559A00BEFF77 /* libgthread.framework */; };
 		921CB19C0F5755B300BEFF77 /* libmeanwhile.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB19B0F5755B300BEFF77 /* libmeanwhile.framework */; };
 		921CB4430F586ABC00BEFF77 /* FriBidi.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB19F0F5755CD00BEFF77 /* FriBidi.framework */; };
-		9275F50E0F5895660090B8EF /* twitterim.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F5020F5895660090B8EF /* twitterim.c */; };
-		9275F50F0F5895660090B8EF /* twitter.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F5030F5895660090B8EF /* twitter.c */; };
-		9275F5100F5895660090B8EF /* tw_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F5040F5895660090B8EF /* tw_util.c */; };
-		9275F5110F5895660090B8EF /* tw_cmd.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F5060F5895660090B8EF /* tw_cmd.c */; };
-		9275F5120F5895660090B8EF /* mbchprpl.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F5070F5895660090B8EF /* mbchprpl.c */; };
-		9275F5130F5895660090B8EF /* mb_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F5090F5895660090B8EF /* mb_util.c */; };
-		9275F5140F5895660090B8EF /* mb_net.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F50B0F5895660090B8EF /* mb_net.c */; };
-		9275F5150F5895660090B8EF /* mb_http.c in Sources */ = {isa = PBXBuildFile; fileRef = 9275F50D0F5895660090B8EF /* mb_http.c */; };
+		923E3A280F6327AD008A6C74 /* mb_http.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1AC0F5F59F700AD9F9E /* mb_http.c */; };
+		923E3A290F6327B0008A6C74 /* mb_net.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1AE0F5F59F700AD9F9E /* mb_net.c */; };
+		923E3A2A0F6327B3008A6C74 /* mb_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B00F5F59F700AD9F9E /* mb_util.c */; };
+		923E3A2B0F6327B4008A6C74 /* mbchprpl.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B20F5F59F700AD9F9E /* mbchprpl.c */; };
+		923E3A2C0F6327B5008A6C74 /* tw_cmd.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B40F5F59F700AD9F9E /* tw_cmd.c */; };
+		923E3A2D0F6327B8008A6C74 /* tw_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B60F5F59F700AD9F9E /* tw_util.c */; };
+		923E3A2E0F6327BA008A6C74 /* twitter.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B70F5F59F700AD9F9E /* twitter.c */; };
+		923E3A2F0F6327BE008A6C74 /* twitterim.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1BC0F5F59F700AD9F9E /* twitterim.c */; };
 		92F887B80F53AE4F0039CBA9 /* ESTwitterAccount.m in Sources */ = {isa = PBXBuildFile; fileRef = 92F887B30F53AE4F0039CBA9 /* ESTwitterAccount.m */; };
 		92F887B90F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 92F887B50F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m */; };
 		92F887BA0F53AE4F0039CBA9 /* ESTwitterService.m in Sources */ = {isa = PBXBuildFile; fileRef = 92F887B70F53AE4F0039CBA9 /* ESTwitterService.m */; };
@@ -46,6 +46,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		924CE3D10F60132800AD9F9E /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -61,19 +70,33 @@
 		921CB1970F57559A00BEFF77 /* libgthread.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libgthread.framework; path = "../../../adium-1.3.3/Frameworks/libgthread.framework"; sourceTree = SOURCE_ROOT; };
 		921CB19B0F5755B300BEFF77 /* libmeanwhile.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libmeanwhile.framework; path = "../../../adium-1.3.3/Frameworks/libmeanwhile.framework"; sourceTree = SOURCE_ROOT; };
 		921CB19F0F5755CD00BEFF77 /* FriBidi.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FriBidi.framework; path = "../../../adium-1.3.3/build/Development/FriBidi.framework"; sourceTree = SOURCE_ROOT; };
-		9275F5010F5895660090B8EF /* twitter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = twitter.h; path = ../../microblog/twitter.h; sourceTree = "<group>"; };
-		9275F5020F5895660090B8EF /* twitterim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = twitterim.c; path = ../../microblog/twitterim.c; sourceTree = "<group>"; };
-		9275F5030F5895660090B8EF /* twitter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = twitter.c; path = ../../microblog/twitter.c; sourceTree = "<group>"; };
-		9275F5040F5895660090B8EF /* tw_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tw_util.c; path = ../../microblog/tw_util.c; sourceTree = "<group>"; };
-		9275F5050F5895660090B8EF /* tw_cmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tw_cmd.h; path = ../../microblog/tw_cmd.h; sourceTree = "<group>"; };
-		9275F5060F5895660090B8EF /* tw_cmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tw_cmd.c; path = ../../microblog/tw_cmd.c; sourceTree = "<group>"; };
-		9275F5070F5895660090B8EF /* mbchprpl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mbchprpl.c; path = ../../microblog/mbchprpl.c; sourceTree = "<group>"; };
-		9275F5080F5895660090B8EF /* mb_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_util.h; sourceTree = "<group>"; };
-		9275F5090F5895660090B8EF /* mb_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_util.c; sourceTree = "<group>"; };
-		9275F50A0F5895660090B8EF /* mb_net.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_net.h; sourceTree = "<group>"; };
-		9275F50B0F5895660090B8EF /* mb_net.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_net.c; sourceTree = "<group>"; };
-		9275F50C0F5895660090B8EF /* mb_http.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_http.h; sourceTree = "<group>"; };
-		9275F50D0F5895660090B8EF /* mb_http.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_http.c; sourceTree = "<group>"; };
+		924CE1A20F5F59F700AD9F9E /* COPYING */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
+		924CE1A30F5F59F700AD9F9E /* dummy_twitterim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dummy_twitterim.c; sourceTree = "<group>"; };
+		924CE1A40F5F59F700AD9F9E /* identica.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = identica.c; sourceTree = "<group>"; };
+		924CE1A50F5F59F700AD9F9E /* identica16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = identica16.png; sourceTree = "<group>"; };
+		924CE1A60F5F59F700AD9F9E /* identica22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = identica22.png; sourceTree = "<group>"; };
+		924CE1A70F5F59F700AD9F9E /* identica48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = identica48.png; sourceTree = "<group>"; };
+		924CE1A80F5F59F700AD9F9E /* laconica16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = laconica16.png; sourceTree = "<group>"; };
+		924CE1A90F5F59F700AD9F9E /* laconica22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = laconica22.png; sourceTree = "<group>"; };
+		924CE1AA0F5F59F700AD9F9E /* laconica48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = laconica48.png; sourceTree = "<group>"; };
+		924CE1AB0F5F59F700AD9F9E /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		924CE1AC0F5F59F700AD9F9E /* mb_http.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_http.c; sourceTree = "<group>"; };
+		924CE1AD0F5F59F700AD9F9E /* mb_http.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_http.h; sourceTree = "<group>"; };
+		924CE1AE0F5F59F700AD9F9E /* mb_net.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_net.c; sourceTree = "<group>"; };
+		924CE1AF0F5F59F700AD9F9E /* mb_net.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_net.h; sourceTree = "<group>"; };
+		924CE1B00F5F59F700AD9F9E /* mb_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_util.c; sourceTree = "<group>"; };
+		924CE1B10F5F59F700AD9F9E /* mb_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_util.h; sourceTree = "<group>"; };
+		924CE1B20F5F59F700AD9F9E /* mbchprpl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mbchprpl.c; sourceTree = "<group>"; };
+		924CE1B30F5F59F700AD9F9E /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
+		924CE1B40F5F59F700AD9F9E /* tw_cmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tw_cmd.c; sourceTree = "<group>"; };
+		924CE1B50F5F59F700AD9F9E /* tw_cmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tw_cmd.h; sourceTree = "<group>"; };
+		924CE1B60F5F59F700AD9F9E /* tw_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tw_util.c; sourceTree = "<group>"; };
+		924CE1B70F5F59F700AD9F9E /* twitter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = twitter.c; sourceTree = "<group>"; };
+		924CE1B80F5F59F700AD9F9E /* twitter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = twitter.h; sourceTree = "<group>"; };
+		924CE1B90F5F59F700AD9F9E /* twitter16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter16.png; sourceTree = "<group>"; };
+		924CE1BA0F5F59F700AD9F9E /* twitter22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter22.png; sourceTree = "<group>"; };
+		924CE1BB0F5F59F700AD9F9E /* twitter48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter48.png; sourceTree = "<group>"; };
+		924CE1BC0F5F59F700AD9F9E /* twitterim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = twitterim.c; sourceTree = "<group>"; };
 		92F887B20F53AE4F0039CBA9 /* ESTwitterAccount.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ESTwitterAccount.h; sourceTree = "<group>"; };
 		92F887B30F53AE4F0039CBA9 /* ESTwitterAccount.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ESTwitterAccount.m; sourceTree = "<group>"; };
 		92F887B40F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ESTwitterLibPurpleServicePlugin.h; sourceTree = "<group>"; };
@@ -157,19 +180,7 @@
 		08FB77AFFE84173DC02AAC07 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
-				9275F5010F5895660090B8EF /* twitter.h */,
-				9275F5020F5895660090B8EF /* twitterim.c */,
-				9275F5030F5895660090B8EF /* twitter.c */,
-				9275F5040F5895660090B8EF /* tw_util.c */,
-				9275F5050F5895660090B8EF /* tw_cmd.h */,
-				9275F5060F5895660090B8EF /* tw_cmd.c */,
-				9275F5070F5895660090B8EF /* mbchprpl.c */,
-				9275F5080F5895660090B8EF /* mb_util.h */,
-				9275F5090F5895660090B8EF /* mb_util.c */,
-				9275F50A0F5895660090B8EF /* mb_net.h */,
-				9275F50B0F5895660090B8EF /* mb_net.c */,
-				9275F50C0F5895660090B8EF /* mb_http.h */,
-				9275F50D0F5895660090B8EF /* mb_http.c */,
+				924CE1A10F5F59F700AD9F9E /* microblog */,
 			);
 			name = Classes;
 			sourceTree = "<group>";
@@ -219,6 +230,41 @@
 			name = "Other Sources";
 			sourceTree = "<group>";
 		};
+		924CE1A10F5F59F700AD9F9E /* microblog */ = {
+			isa = PBXGroup;
+			children = (
+				924CE1A20F5F59F700AD9F9E /* COPYING */,
+				924CE1A30F5F59F700AD9F9E /* dummy_twitterim.c */,
+				924CE1A40F5F59F700AD9F9E /* identica.c */,
+				924CE1A50F5F59F700AD9F9E /* identica16.png */,
+				924CE1A60F5F59F700AD9F9E /* identica22.png */,
+				924CE1A70F5F59F700AD9F9E /* identica48.png */,
+				924CE1A80F5F59F700AD9F9E /* laconica16.png */,
+				924CE1A90F5F59F700AD9F9E /* laconica22.png */,
+				924CE1AA0F5F59F700AD9F9E /* laconica48.png */,
+				924CE1AB0F5F59F700AD9F9E /* Makefile */,
+				924CE1AC0F5F59F700AD9F9E /* mb_http.c */,
+				924CE1AD0F5F59F700AD9F9E /* mb_http.h */,
+				924CE1AE0F5F59F700AD9F9E /* mb_net.c */,
+				924CE1AF0F5F59F700AD9F9E /* mb_net.h */,
+				924CE1B00F5F59F700AD9F9E /* mb_util.c */,
+				924CE1B10F5F59F700AD9F9E /* mb_util.h */,
+				924CE1B20F5F59F700AD9F9E /* mbchprpl.c */,
+				924CE1B30F5F59F700AD9F9E /* README.txt */,
+				924CE1B40F5F59F700AD9F9E /* tw_cmd.c */,
+				924CE1B50F5F59F700AD9F9E /* tw_cmd.h */,
+				924CE1B60F5F59F700AD9F9E /* tw_util.c */,
+				924CE1B70F5F59F700AD9F9E /* twitter.c */,
+				924CE1B80F5F59F700AD9F9E /* twitter.h */,
+				924CE1B90F5F59F700AD9F9E /* twitter16.png */,
+				924CE1BA0F5F59F700AD9F9E /* twitter22.png */,
+				924CE1BB0F5F59F700AD9F9E /* twitter48.png */,
+				924CE1BC0F5F59F700AD9F9E /* twitterim.c */,
+			);
+			name = microblog;
+			path = ../../microblog;
+			sourceTree = SOURCE_ROOT;
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -230,6 +276,7 @@
 				8D5B49B1048680CD000E48DA /* Sources */,
 				8D5B49B3048680CD000E48DA /* Frameworks */,
 				921CAEF10F56FD5200BEFF77 /* CopyFiles */,
+				924CE3D10F60132800AD9F9E /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -251,7 +298,7 @@
 			hasScannedForEncodings = 1;
 			mainGroup = 089C166AFE841209C02AAC07 /* TwitterIM */;
 			projectDirPath = "";
-			projectRoot = "";
+			projectRoot = ../..;
 			targets = (
 				8D5B49AC048680CD000E48DA /* TwitterIM */,
 			);
@@ -280,14 +327,14 @@
 				92F887B80F53AE4F0039CBA9 /* ESTwitterAccount.m in Sources */,
 				92F887B90F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m in Sources */,
 				92F887BA0F53AE4F0039CBA9 /* ESTwitterService.m in Sources */,
-				9275F50E0F5895660090B8EF /* twitterim.c in Sources */,
-				9275F50F0F5895660090B8EF /* twitter.c in Sources */,
-				9275F5100F5895660090B8EF /* tw_util.c in Sources */,
-				9275F5110F5895660090B8EF /* tw_cmd.c in Sources */,
-				9275F5120F5895660090B8EF /* mbchprpl.c in Sources */,
-				9275F5130F5895660090B8EF /* mb_util.c in Sources */,
-				9275F5140F5895660090B8EF /* mb_net.c in Sources */,
-				9275F5150F5895660090B8EF /* mb_http.c in Sources */,
+				923E3A280F6327AD008A6C74 /* mb_http.c in Sources */,
+				923E3A290F6327B0008A6C74 /* mb_net.c in Sources */,
+				923E3A2A0F6327B3008A6C74 /* mb_util.c in Sources */,
+				923E3A2B0F6327B4008A6C74 /* mbchprpl.c in Sources */,
+				923E3A2C0F6327B5008A6C74 /* tw_cmd.c in Sources */,
+				923E3A2D0F6327B8008A6C74 /* tw_util.c in Sources */,
+				923E3A2E0F6327BA008A6C74 /* twitter.c in Sources */,
+				923E3A2F0F6327BE008A6C74 /* twitterim.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -385,6 +432,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				SDKROOT = macosx10.5;
+				VALID_ARCHS = i386;
 			};
 			name = Debug;
 		};
@@ -395,8 +443,10 @@
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				SDKROOT = macosx10.5;
+				VALID_ARCHS = i386;
 			};
 			name = Release;
 		};
