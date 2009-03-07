@@ -50,7 +50,6 @@
 #include <xmlnode.h>
 #include <version.h>
 #include <signals.h>
-#include <gtkconv.h>
 
 #include "mb_net.h"
 #include "mb_util.h"
