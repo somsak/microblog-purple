@@ -17,12 +17,17 @@
 
 - (const char *)protocolPlugin
 {
-	return "prpl-twitter";
+	return "prpl-mbpurple-twitter";
 }
 
 - (void)configurePurpleAccount
 {
 	[super configurePurpleAccount];
+}
+
+- (NSString *)host
+{
+	return @"twitter.com";
 }
 
 @end
