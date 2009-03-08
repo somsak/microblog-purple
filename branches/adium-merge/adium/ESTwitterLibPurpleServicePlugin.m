@@ -10,8 +10,6 @@
 
 #import "ESTwitterLibPurpleServicePlugin.h"
 #import "ESTwitterService.h"
-//#import "twitterim.c"
-	
 
 @implementation ESTwitterLibPurpleServicePlugin
 
@@ -33,7 +31,6 @@ extern BOOL purple_init_plugin(void);
 - (void) installLibpurplePlugin
 {
 	AILog(@"Loading Twitter LibPurple Plugin");
-	//purple_init_twitterim_plugin();
 }
 
 @end
