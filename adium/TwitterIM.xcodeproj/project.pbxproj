@@ -92,7 +92,7 @@
 		924CE1B50F5F59F700AD9F9E /* tw_cmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tw_cmd.h; sourceTree = "<group>"; };
 		924CE1B60F5F59F700AD9F9E /* tw_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tw_util.c; sourceTree = "<group>"; };
 		924CE1B70F5F59F700AD9F9E /* twitter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = twitter.c; sourceTree = "<group>"; };
-		924CE1B80F5F59F700AD9F9E /* twitter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = twitter.h; sourceTree = "<group>"; };
+		924CE1B80F5F59F700AD9F9E /* twitter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 2; path = twitter.h; sourceTree = "<group>"; };
 		924CE1B90F5F59F700AD9F9E /* twitter16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter16.png; sourceTree = "<group>"; };
 		924CE1BA0F5F59F700AD9F9E /* twitter22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter22.png; sourceTree = "<group>"; };
 		924CE1BB0F5F59F700AD9F9E /* twitter48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter48.png; sourceTree = "<group>"; };
