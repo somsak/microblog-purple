@@ -11,7 +11,6 @@
 #import <Adium/AISharedAdium.h> 
 
 #import "ESTwitterAccount.h"
-//#import "twitter.h"
 
 @implementation ESTwitterAccount
 
