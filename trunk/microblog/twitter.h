@@ -172,11 +172,9 @@ enum _TweetConfig {
 
 typedef struct _TwitterConfig {
 	gchar * conf; //< configuration name
-	union {
-		gchar * def_str; //< default value to be used
-		gint def_int; 
-		gboolean def_bool;
-	};
+	gchar * def_str; //< default value to be used
+	gint def_int; 
+	gboolean def_bool;
 } TwitterConfig;
 
 extern TwitterConfig * _tw_conf;

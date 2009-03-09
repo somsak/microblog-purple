@@ -113,7 +113,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 {
 	gchar * username;
 	GString * output;
-	gchar * src = NULL, * tmp = NULL;
+	gchar * src = NULL;
 	gchar * name, *name_color;
 	gchar sym, old_char, previous_char;
 	int i = 0, j = 0;
