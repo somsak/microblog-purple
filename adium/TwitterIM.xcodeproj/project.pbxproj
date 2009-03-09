@@ -298,7 +298,7 @@
 			hasScannedForEncodings = 1;
 			mainGroup = 089C166AFE841209C02AAC07 /* TwitterIM */;
 			projectDirPath = "";
-			projectRoot = ../..;
+			projectRoot = ..;
 			targets = (
 				8D5B49AC048680CD000E48DA /* TwitterIM */,
 			);
@@ -378,7 +378,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Application Support/Adium 2.0/PlugIns/";
 				OTHER_CFLAGS = (
-					"-DMBPURPLE_VERSION=\\\"0.2.0\\\"",
+					"-DMBPURPLE_VERSION=\\\"0.2.1\\\"",
 					"-DPURPLE_STATIC_PRPL",
 				);
 				PRODUCT_NAME = TwitterIM;
@@ -411,7 +411,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Application Support/Adium 2.0/PlugIns/";
 				OTHER_CFLAGS = (
-					"-DMBPURPLE_VERSION=\\\"0.2.0\\\"",
+					"-DMBPURPLE_VERSION=\\\"0.2.1\\\"",
 					"-DPURPLE_STATIC_PRPL",
 				);
 				PRODUCT_NAME = TwitterIM;
