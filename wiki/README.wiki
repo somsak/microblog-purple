@@ -3,7 +3,7 @@
 
 = Introduction =
 
-This is a plug-in for Pidgin or any other LibPurple base client like Adium or Finch. At least for now it works for Pidgin and Finch. I am not sure about Adium but hopefully someone will test it. Currently the plug-in works with Twitter only.
+This is a plug-in for Pidgin to allow for seamless updating and receiving of Twitter messages.  While originally built for Pidgin it works for other LibPurple base clients like Adium and Finch.  Currently the plug-in works with Twitter only.
 
 So what's the different between this and Twitter IM? The answer is this would be kind of my personal replacement for Twitter IM, since I spent sometimes waiting for the service to come back and don't want to wait anymore. Besides, having it as plug-in give me some liberty to customize it in many ways. Like modifying the message to link to hashtags or twitter user (thanks @chanwit), or the ability to add special command to itself (/refresh, /replies, /etc....). I plan to have this in "Chat mode" instead of normal conversation windows for people who easily annoy with constant incoming messages.
 
@@ -25,6 +25,9 @@ Simply install `pidgin-microblog`.
 sudo apt-get install pidgin-microblog
 }}}
 
+== Mac ==
+Assuming Adium is already installed, download the TwitterIM.AdiumLibpurplePlugin.zip and unpack.  Using Finder, click on the Twitter.AdiumLibpurplePlugin icon - MacOS will take it from there.
+
 = Building the code =
 == Windows build ==
  # Follow [http://developer.pidgin.im/wiki/BuildingWinPidgin Building on Windows HOWTO]
@@ -40,3 +43,11 @@ sudo apt-get install pidgin-microblog
  # Download microblog-purple source code and untar it somewhere
  # `cd microblob-purple-x.x && make && make install`
  # The executable will be installed in your pidgin plug-in installation dir, detected from pkg-config command. You can also modify variable and path in global.mak
+
+== Mac ==
+ # Make sure you have XCode installed
+ # Download and build the adium source.  This will create several of the Frameworks that are required for the plugin
+ # Download the microblog source, placing it in the same parent directory as the adium source (not necessary, but then all the relative links should work automatically).
+ # Go to Project -> Active Target "TwitterIM" and ensure that all build paths are set appropriately for your computer.
+ # Build plugin
+ # to install, just click on "Products" and then TwitterIM.AdiumLibpurplePlugin.
