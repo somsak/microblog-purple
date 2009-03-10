@@ -26,7 +26,7 @@ sudo apt-get install pidgin-microblog
 }}}
 
 == Mac ==
-Assuming Adium is already installed, download the TwitterIM.AdiumLibpurplePlugin.zip and unpack.  Using Finder, click on the Twitter.AdiumLibpurplePlugin icon - MacOS will take it from there.
+Assuming Adium is already installed, download the "TwitterIM.AdiumLibpurplePlugin.zip" and unpack.  Using Finder, click on the "Twitter.AdiumLibpurplePlugin" icon - MacOS will take it from there.
 
 = Building the code =
 == Windows build ==
