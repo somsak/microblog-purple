@@ -380,7 +380,7 @@ void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
 	// Call handler here
 	if(call_handler) {
 		// reassemble data
-		purple_debug_info(MB_NET, "got whole response = %s\n", response->content->str);
+		if ( response->content ) purple_debug_info(MB_NET, "got whole response = %s\n", response->content->str);
 		if(conn_data->handler) {
 			gint retval;
 			
