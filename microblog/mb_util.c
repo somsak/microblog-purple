@@ -3,6 +3,34 @@
 #include <string.h>
 #include <time.h>
 
+#ifndef G_GNUC_NULL_TERMINATED
+#  if __GNUC__ >= 4
+#    define G_GNUC_NULL_TERMINATED __attribute__((__sentinel__))
+#  else
+#    define G_GNUC_NULL_TERMINATED
+#  endif /* __GNUC__ >= 4 */
+#endif /* G_GNUC_NULL_TERMINATED */
+
+#include <proxy.h>
+#include <sslconn.h>
+#include <prpl.h>
+#include <debug.h>
+#include <connection.h>
+#include <request.h>
+#include <dnsquery.h>
+#include <accountopt.h>
+#include <xmlnode.h>
+#include <version.h>
+
+#ifdef _WIN32
+#	include <win32dep.h>
+#else
+#	include <arpa/inet.h>
+#	include <sys/socket.h>
+#	include <netinet/in.h>
+#endif
+
+
 static const char * month_abb_names[] = {
 	"Jan",
 	"Feb",
@@ -122,6 +150,20 @@ time_t mb_mktime(char * time_str)
 	retval = mktime(&msg_time) + cur_timezone;
 	return retval;
 }
+
+const char * mb_get_uri_txt(PurpleAccount * pa)
+{
+	if (strcmp(pa->protocol_id, "prpl-mbpurple-twitter") == 0) {
+		return "tw";
+	} else if(strcmp(pa->protocol_id, "prpl-mbpurple-identica") == 0) {
+		return "idc";
+	}
+	// no support for laconica for now
+	return NULL;
+}
+
+
+
 #ifdef UTEST
 int main(int argc, char * argv[])
 {
