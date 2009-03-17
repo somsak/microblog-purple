@@ -36,11 +36,13 @@
 #	include <netinet/in.h>
 #endif
 
+#include "mb_util.h"
 #include "twitter.h"
 
 #define DBGID "tw_util"
 
-static const char * get_uri_txt(PurpleAccount * pa)
+/*
+const char * mb_get_uri_txt(PurpleAccount * pa)
 {
 	if (strcmp(pa->protocol_id, "prpl-mbpurple-twitter") == 0) {
 		return "tw";
@@ -50,6 +52,7 @@ static const char * get_uri_txt(PurpleAccount * pa)
 	// no support for laconica for now
 	return NULL;
 }
+*/
 
 static void twitter_update_link(MbAccount * ta, GString * msg, char sym, const char * name)
 {
@@ -155,7 +158,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 			if(from_eq_username) {
 				g_string_append_printf(output, "<i>");
 			}
-			g_string_append_printf(output, "<a href=\"%s:reply?to=%s&account=%s&id=%llu\">%s</a>:", get_uri_txt(ta->account), msg->from, username, msg->id, msg->from);
+			g_string_append_printf(output, "<a href=\"%s:reply?to=%s&account=%s&id=%llu\">%s</a>:", mb_get_uri_txt(ta->account), msg->from, username, msg->id, msg->from);
 			if(from_eq_username) {
 				g_string_append_printf(output, "</i>");
 			}

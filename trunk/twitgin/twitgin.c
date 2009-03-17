@@ -54,6 +54,7 @@
 #include "twitter.h"
 #include "mb_http.h"
 #include "mb_net.h"
+#include "mb_util.h"
 #include "twitpref.h"
 
 #define DBGID "twitgin"
@@ -353,6 +354,7 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 	gchar * linkify_txt = NULL;
 	const char * embed_rt_txt = NULL;
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
+	const char * uri_txt = mb_get_uri_txt(ta->account);
 
 	conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, name, ta->account);
 	if (conv == NULL) {
@@ -375,9 +377,14 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 	// need to manually linkify text since we are going to send RAW message
 	linkify_txt = purple_markup_linkify(fmt_txt);
 
-	displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"tw:fav?account=%s&id=%llu\">*</a> <a href=\"tw:rt?account=%s&from=%s&msg=%s\">rt<a>", 
-			format_datetime(conv, cur_msg->msg_time), linkify_txt, account, cur_msg->id,		
-			account, cur_msg->from, embed_rt_txt);
+	if(uri_txt) {
+		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"%s:fav?account=%s&id=%llu\">*</a> <a href=\"%s:rt?account=%s&from=%s&msg=%s\">rt<a>", 
+			format_datetime(conv, cur_msg->msg_time), linkify_txt, uri_txt, account, cur_msg->id,
+			uri_txt, account, cur_msg->from, embed_rt_txt);
+	} else {
+		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s ", format_datetime(conv, cur_msg->msg_time), linkify_txt);
+
+	}
 	purple_debug_info(DBGID, "displaying text = ##%s##\n", displaying_txt);
 	purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, displaying_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
 
