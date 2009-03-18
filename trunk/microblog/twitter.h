@@ -206,7 +206,7 @@ extern void twitter_login(PurpleAccount *acct);
 extern void twitter_close(PurpleConnection *gc);
 extern int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags);
 extern void twitter_buddy_free(PurpleBuddy * buddy);
-extern char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean reply_link);
+extern char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char * conv_name, gboolean reply_link);
 extern void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host);
 extern void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 extern gboolean twitter_fetch_all_new_messages(gpointer data);

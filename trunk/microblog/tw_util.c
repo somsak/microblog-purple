@@ -112,7 +112,7 @@ void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host)
  *
  * @retval newly allocated buffer of string, need to be freed after used
  */
-char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean reply_link)
+char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char * conv_name, gboolean reply_link)
 {
 	gchar * username;
 	GString * output;
@@ -154,11 +154,11 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, gboolean rep
 		g_string_append_printf(output, "<font color=\"%s\"><b>", name_color);
 		//	self-filter is not possible now
 		//	if(strcmp(msg->from, username) != 0) {
-		if(reply_link) {
+		if(reply_link && conv_name) {
 			if(from_eq_username) {
 				g_string_append_printf(output, "<i>");
 			}
-			g_string_append_printf(output, "<a href=\"%s:reply?to=%s&account=%s&id=%llu\">%s</a>:", mb_get_uri_txt(ta->account), msg->from, username, msg->id, msg->from);
+			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", mb_get_uri_txt(ta->account), conv_name, msg->from, username, msg->id, msg->from);
 			if(from_eq_username) {
 				g_string_append_printf(output, "</i>");
 			}
