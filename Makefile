@@ -13,7 +13,7 @@ default: build
 
 build install uninstall clean: 
 	for dir in $(SUBDIRS); do \
-		make -C "$$dir" $@; \
+		make -C "$$dir" $@ || exit 1; \
 	done
 	
 distdir: 

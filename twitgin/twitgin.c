@@ -60,15 +60,6 @@
 #define DBGID "twitgin"
 #define PURPLE_MESSAGE_TWITGIN 0x1000
 
-//static gint twitter_port = 443;
-static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
-"Accept: */*\r\n" \
-"X-Twitter-Client: " TW_AGENT_SOURCE "\r\n" \
-"X-Twitter-Client-Version: 0.1\r\n" \
-"X-Twitter-Client-Url: " TW_AGENT_DESC_URL "\r\n" \
-"Connection: Close\r\n" \
-"Pragma: no-cache\r\n";
-
 // Dummy tw_conf to resolve external symbol link
 TwitterConfig * _tw_conf = NULL;
 
@@ -160,6 +151,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	PurpleConversation * conv = NULL;
 	PidginConversation * gtkconv;
 	int proto_id = 0;
+	gchar * src = NULL;
 	const char * decoded_rt;
 
 	purple_debug_info(DBGID, "twittgin_uri_handler\n");	
@@ -171,22 +163,30 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 		proto_id = IDENTICA_PROTO;
 		acct = purple_accounts_find(acct_id, "prpl-mbpurple-identica"); 
 	}
+	src = g_hash_table_lookup(params, "src");
+	if(!src) {
+		purple_debug_info(DBGID, "no src specified\n");
+		switch(proto_id) {
+			case TWITTER_PROTO :
+				src = "twitter.com";
+				break;
+			case IDENTICA_PROTO :
+				src = "identi.ca";
+				break;
+		}
+	}
+	purple_debug_info(DBGID, "src = %s\n", src);
+
 	if ( proto_id > 0 ) {
 		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
+
 		/* tw:rep?to=sender */
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
 			gchar * sender, *tmp;
 			gchar * name_to_reply;
 			unsigned long long msg_id;
 
-			switch(proto_id) {
-				case TWITTER_PROTO :
-					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "twitter.com", acct);		
-					break;
-				case IDENTICA_PROTO :
-					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "identi.ca", acct);		
-					break;
-			}
+			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
 			purple_debug_info(DBGID, "conv = %p\n", conv);
 			gtkconv = PIDGIN_CONVERSATION(conv);
 			sender = g_hash_table_lookup(params, "to");		
@@ -203,14 +203,8 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 		// retweet hack !
 		if (!g_ascii_strcasecmp(cmd, "rt")) {
 			gchar * message, * from, * retweet_message;
-			switch(proto_id) {
-				case TWITTER_PROTO :
-					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "twitter.com", acct);
-					break;
-				case IDENTICA_PROTO :
-					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "identi.ca", acct);		
-					break;
-			}
+
+			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
 			purple_debug_info(DBGID, "conv = %p\n", conv);
 			gtkconv = PIDGIN_CONVERSATION(conv);
 			message = g_hash_table_lookup(params, "msg");
@@ -222,18 +216,13 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 			g_free(retweet_message);
 			return TRUE;
 		}
+
 		// favorite hack !
 		if (!g_ascii_strcasecmp(cmd, "fav")) {
 			MbAccount * ta;
 			gchar * msg_id;
-			switch(proto_id) {
-				case TWITTER_PROTO :
-					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "twitter.com", acct);
-					break;
-				case IDENTICA_PROTO :
-					conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, "identi.ca", acct);		
-					break;
-			}
+
+			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
 			msg_id = g_hash_table_lookup(params, "id");
 			ta = mb_account_new(acct);
 			twitter_favorite_message(ta, msg_id);
@@ -288,7 +277,7 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 			twitter_msg.flag = 0;
 			twitter_msg.flag |= TW_MSGFLAG_DOTAG;
 			purple_debug_info(DBGID, "going to modify message\n");
-			retval = twitter_reformat_msg(ma, &twitter_msg, FALSE); //< do not to reply to myself
+			retval = twitter_reformat_msg(ma, &twitter_msg, NULL, FALSE); //< do not reply to myself
 			purple_debug_info(DBGID, "new data = %s\n", retval);
 			g_free(*msg);
 			(*msg) = retval;
@@ -367,7 +356,7 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 	g_free(cur_msg->msg_txt);
 	cur_msg->msg_txt = tmp;
 
-	fmt_txt = twitter_reformat_msg(ta, cur_msg, reply_link);
+	fmt_txt = twitter_reformat_msg(ta, cur_msg, name, reply_link);
 	purple_debug_info(DBGID, "fmted text msg = ##%s##\n", fmt_txt);
 
 	// text for retweet url
@@ -378,9 +367,9 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 	linkify_txt = purple_markup_linkify(fmt_txt);
 
 	if(uri_txt) {
-		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"%s:fav?account=%s&id=%llu\">*</a> <a href=\"%s:rt?account=%s&from=%s&msg=%s\">rt<a>", 
-			format_datetime(conv, cur_msg->msg_time), linkify_txt, uri_txt, account, cur_msg->id,
-			uri_txt, account, cur_msg->from, embed_rt_txt);
+		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"%s:fav?src=%s&account=%s&id=%llu\">*</a> <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", 
+			format_datetime(conv, cur_msg->msg_time), linkify_txt, uri_txt, name, account, cur_msg->id,
+			uri_txt, name, account, cur_msg->from, embed_rt_txt);
 	} else {
 		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s ", format_datetime(conv, cur_msg->msg_time), linkify_txt);
 
@@ -426,24 +415,6 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	purple_signal_connect(pidgin_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying), NULL);
 
 	// twitter
-	/*
-	prpl_plugin = purple_plugins_find_with_id("prpl-mbpurple-twitter");
-	if(prpl_plugin) {
-		purple_debug_info(DBGID, "found prpl-mbpurple-twitter\n");
-		purple_signal_connect(prpl_plugin, "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
-	} else {
-		purple_debug_info(DBGID, "prpl-mbpurple-twitter not found!\n");
-	}
-	
-	// identica-laconica
-	prpl_plugin = purple_plugins_find_with_id("prpl-mbpurple-identica");
-	if(prpl_plugin) {
-		purple_debug_info(DBGID, "found prpl-mbpurple-identica\n");
-		purple_signal_connect(prpl_plugin, "identica-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
-	} else {
-		purple_debug_info(DBGID, "prpl-mbpurple-identica not found!\n");
-	}
-	*/
 	// handle all mbpurple plug-in
 	plugins = purple_plugins_get_all();
 	for(; plugins != NULL; plugins = plugins->next) {
