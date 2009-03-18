@@ -375,7 +375,9 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 
 	}
 	purple_debug_info(DBGID, "displaying text = ##%s##\n", displaying_txt);
-	purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, displaying_txt, PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW, cur_msg->msg_time);
+	purple_conv_im_write(PURPLE_CONV_IM(conv), cur_msg->from, displaying_txt, 
+		PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_RAW, 
+		cur_msg->msg_time);
 
 	g_free(displaying_txt);
 	g_free(linkify_txt);
