@@ -191,60 +191,33 @@ static void twitter_list_sent_id_hash(gpointer key, gpointer value, gpointer use
 }
 #endif
 
-gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
+GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 {
-	MbAccount * ta = conn_data->ta;
-	const gchar * username;
-	MbHttpData * response = conn_data->response;
-	TwitterTimeLineReq * tlr = data;
+	GList * retval = NULL;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
-	gint count = 0;
 	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL;
-	time_t msg_time_t, last_msg_time_t = 0;
-	unsigned long long cur_id;
-	GList * msg_list = NULL, *it = NULL;
 	TwitterMsg * cur_msg = NULL;
-	gboolean hide_myself, skip = FALSE;
-	
+	unsigned long long cur_id;
+	time_t msg_time_t;
+
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
-	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
-	
-	username = (const gchar *)purple_account_get_username(ta->account);
-	
-	if(response->status == HTTP_MOVED_TEMPORARILY) {
-		// no new messages
-		twitter_free_tlr(tlr);
-		purple_debug_info(DBGID, "no new messages\n");
-		return 0;
-	}
-	if(response->status != HTTP_OK) {
-		twitter_free_tlr(tlr);
-		purple_debug_info(DBGID, "something's wrong with the message\n");
-		return 0; //< should we return -1 instead?
-	}
-	if(response->content_len == 0) {
-		purple_debug_info(DBGID, "no data to parse\n");
-		twitter_free_tlr(tlr);
-		return 0;
-	}
-	purple_debug_info(DBGID, "http_data = #%s#\n", response->content->str);
-	top = xmlnode_from_str(response->content->str, -1);
+	top = xmlnode_from_str(data, -1);
 	if(top == NULL) {
 		purple_debug_info(DBGID, "failed to parse XML data\n");
-		twitter_free_tlr(tlr);
-		return 0;
+		return NULL;
 	}
+
 	purple_debug_info(DBGID, "successfully parse XML\n");
 	status = xmlnode_get_child(top, "status");
 	purple_debug_info(DBGID, "timezone = %ld\n", timezone);
 	
-	hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
+	//hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	
 	while(status) {
 		msg_txt = NULL;
 		from = NULL;
 		xml_str = NULL;
-		skip = FALSE;
+		//skip = FALSE;
 		
 		// ID
 		id_node = xmlnode_get_child(status, "id");
@@ -252,6 +225,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			xml_str = xmlnode_get_data_unescaped(id_node);
 		}
 		// Check for duplicate message
+		/*
 		if(hide_myself) {
 			purple_debug_info(DBGID, "checking for duplicate message\n");
 #if 0
@@ -263,6 +237,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 				skip = TRUE;
 			}
 		}
+		*/
 		cur_id = strtoull(xml_str, NULL, 10);
 		g_free(xml_str);
 
@@ -273,8 +248,8 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		}
 		purple_debug_info(DBGID, "msg time = %s\n", xml_str);
 		msg_time_t = mb_mktime(xml_str) - timezone;
-		if(last_msg_time_t < msg_time_t) {
-			last_msg_time_t = msg_time_t;
+		if( (*last_msg_time) < msg_time_t) {
+			(*last_msg_time) = msg_time_t;
 		}
 		g_free(xml_str);
 		
@@ -306,21 +281,66 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
 			cur_msg->flag = 0;
+			/*
 			if(skip) {
 				cur_msg->flag |= TW_MSGFLAG_SKIP;
 			}
+			*/
 			cur_msg->msg_txt = msg_txt;
 			
 			//purple_debug_info(DBGID, "appending message with id = %llu\n", cur_id);
-			msg_list = g_list_append(msg_list, cur_msg);
+			retval = g_list_append(retval, cur_msg);
 		}
-		count++;
 		status = xmlnode_get_next_twin(status);
 	}
-	purple_debug_info(DBGID, "we got %d messages\n", count);
+	xmlnode_free(top);
+
+	return retval;
+}
+
+gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
+{
+	MbAccount * ta = conn_data->ta;
+	const gchar * username;
+	MbHttpData * response = conn_data->response;
+	TwitterTimeLineReq * tlr = data;
+	time_t last_msg_time_t = 0;
+	GList * msg_list = NULL, *it = NULL;
+	TwitterMsg * cur_msg = NULL;
+	gboolean hide_myself;
+	gchar * id_str = NULL, * msg_txt = NULL;
+	
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
+	
+	username = (const gchar *)purple_account_get_username(ta->account);
+	
+	if(response->status == HTTP_MOVED_TEMPORARILY) {
+		// no new messages
+		twitter_free_tlr(tlr);
+		purple_debug_info(DBGID, "no new messages\n");
+		return 0;
+	}
+	if(response->status != HTTP_OK) {
+		twitter_free_tlr(tlr);
+		purple_debug_info(DBGID, "something's wrong with the message\n");
+		return 0; //< should we return -1 instead?
+	}
+	if(response->content_len == 0) {
+		purple_debug_info(DBGID, "no data to parse\n");
+		twitter_free_tlr(tlr);
+		return 0;
+	}
+	purple_debug_info(DBGID, "http_data = #%s#\n", response->content->str);
+	msg_list = twitter_decode_messages(response->content->str, &last_msg_time_t);
+	if(msg_list == NULL) {
+		twitter_free_tlr(tlr);
+		return 0;
+	}
 	
 	// reverse the list and append it
 	// only if id > last_msg_id
+	hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	msg_list = g_list_reverse(msg_list);
 	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
 
@@ -329,7 +349,8 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			ta->last_msg_id = cur_msg->id;
 			mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
 		}
-		if(! cur_msg->flag & TW_MSGFLAG_SKIP)  {
+		id_str = g_strdup_printf("%llu", cur_msg->id);
+		if(!(hide_myself && (g_hash_table_remove(ta->sent_id_hash, id_str) == TRUE))) {
 			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
 			// we still call serv_got_im here, so purple take the message to the log
 			serv_got_im(ta->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
@@ -337,6 +358,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 			purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
 			g_free(msg_txt);
 		}
+		g_free(id_str);
 		g_free(cur_msg->msg_txt);
 		g_free(cur_msg->from);
 		g_free(cur_msg->avatar_url);
@@ -347,7 +369,6 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		ta->last_msg_time = last_msg_time_t;
 	}
 	g_list_free(msg_list);
-	xmlnode_free(top);
 	if(tlr->sys_msg) {
 		serv_got_im(ta->gc, tlr->name, tlr->sys_msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
 	}
