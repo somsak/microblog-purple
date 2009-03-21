@@ -282,8 +282,16 @@ gboolean twitgin_on_displaying(PurpleAccount * account, const char * who, char *
 			g_free(*msg);
 			(*msg) = retval;
 			return FALSE;
-		} else {
+			/*
+		} else if( (flags & PURPLE_MESSAGE_SYSTEM) || (flags & PURPLE_MESSAGE_NO_LOG) ||
+				(flags & PURPLE_MESSAGE_ERROR))
+		{
+			return FALSE;
+			*/
+		} else if(flags == PURPLE_MESSAGE_RECV) {
+			// discard only receiving message
 			// Pidgin will free all the message in receiving ends
+			purple_debug_info(DBGID, "flags = %x, received %s\n", flags, (*msg));
 			return TRUE;
 		}
 	}
