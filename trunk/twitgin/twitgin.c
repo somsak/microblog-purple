@@ -598,19 +598,19 @@ static PurplePluginInfo info =
 	PURPLE_PRIORITY_DEFAULT,                        /**< priority */
 
 	"gtktwitgin",                                   /**< id */
-	"Twitgin",                                  /**< name */
-	MBPURPLE_VERSION,                                /**< version */
-	"Twitter Conversation.",                    /**< summary */
+	"Twitgin",                                      /**< name */
+	MBPURPLE_VERSION,                               /**< version */
+	"Twitter Conversation.",                        /**< summary */
 	"Support Microblog-purple "
-	   "in the conversation window.",              /**< description */
+	   "in the conversation window.",               /**< description */
 	"Chanwit Kaewkasi <chanwit@gmail.com>",         /**< author */
-	"http://microblog-purple.googlecode.com",                                 /**< homepage */
+	"http://microblog-purple.googlecode.com",       /**< homepage */
 	plugin_load,                                    /**< load */
 	plugin_unload,                                  /**< unload */
-	plugin_destroy,                                           /**< destroy */
+	plugin_destroy,                                 /**< destroy */
 	NULL,                                           /**< ui_info */
 	NULL,                                           /**< extra_info */
-	&prefs_info,                                     /**< prefs_info */
+	&prefs_info,                                    /**< prefs_info */
 	NULL,                                           /**< actions */
 
 	/* padding */
@@ -627,7 +627,7 @@ static void plugin_init(PurplePlugin *plugin) {
 	purple_prefs_add_bool(TW_PREF_REPLY_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_FAV_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_RT_LINK, TRUE);
-	purple_prefs_add_bool(TW_PREF_AVATAR_SIZE, 24);
+	purple_prefs_add_int(TW_PREF_AVATAR_SIZE, 24);
 
 	purple_signal_register(plugin, "twitgin-replying-message",
 			purple_marshal_POINTER__POINTER_INT64,
