@@ -147,7 +147,7 @@ enum {
 static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTable *params) 
 {
 	char *acct_id = g_hash_table_lookup(params, "account");	
-	PurpleAccount *acct;	
+	PurpleAccount *acct = NULL;
 	PurpleConversation * conv = NULL;
 	PidginConversation * gtkconv;
 	int proto_id = 0;
@@ -177,7 +177,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	}
 	purple_debug_info(DBGID, "src = %s\n", src);
 
-	if ( proto_id > 0 ) {
+	if ( acct && (proto_id > 0) ) {
 		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
 
 		/* tw:rep?to=sender */
@@ -342,13 +342,14 @@ gchar * format_datetime(PurpleConversation * conv, time_t mtime) {
 /*
  * Hack the message display, redirect from normal process (on displaying event) and push them back
  */
-void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
+void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 
 	PurpleConversation * conv;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
 	gchar * fmt_txt = NULL, * tmp = NULL;
 	gchar * displaying_txt = NULL;
 	gchar * linkify_txt = NULL;
+	gchar * fav_txt = NULL, * rt_txt = NULL;
 	const char * embed_rt_txt = NULL;
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 	const char * uri_txt = mb_get_uri_txt(ta->account);
@@ -367,17 +368,29 @@ void twitgin_on_display_message(MbAccount * ta, gchar * name, TwitterMsg * cur_m
 	fmt_txt = twitter_reformat_msg(ta, cur_msg, name, reply_link);
 	purple_debug_info(DBGID, "fmted text msg = ##%s##\n", fmt_txt);
 
-	// text for retweet url
-	embed_rt_txt = purple_url_encode(cur_msg->msg_txt);
-	purple_debug_info(DBGID, "url embed text = ##%s##\n", embed_rt_txt);
-
 	// need to manually linkify text since we are going to send RAW message
 	linkify_txt = purple_markup_linkify(fmt_txt);
 
 	if(uri_txt) {
-		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s <a href=\"%s:fav?src=%s&account=%s&id=%llu\">*</a> <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", 
-			format_datetime(conv, cur_msg->msg_time), linkify_txt, uri_txt, name, account, cur_msg->id,
-			uri_txt, name, account, cur_msg->from, embed_rt_txt);
+		// display favorite link, if enabled
+		if(purple_prefs_get_bool(TW_PREF_FAV_LINK)) {
+			fav_txt = g_strdup_printf(" <a href=\"%s:fav?src=%s&account=%s&id=%llu\">*</a>", uri_txt, name, account, cur_msg->id);
+		}
+
+		// display rt link, if enabled
+		if(purple_prefs_get_bool(TW_PREF_RT_LINK)) {
+			// text for retweet url
+			embed_rt_txt = purple_url_encode(cur_msg->msg_txt);
+			purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_rt_txt);
+
+			rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, name, account, cur_msg->from, embed_rt_txt);
+		}
+		
+		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s%s%s", format_datetime(conv, cur_msg->msg_time), linkify_txt, 
+			fav_txt ? fav_txt : "", rt_txt ? rt_txt : "");
+
+		if(fav_txt) g_free(fav_txt);
+		if(rt_txt) g_free(rt_txt);
 	} else {
 		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s ", format_datetime(conv, cur_msg->msg_time), linkify_txt);
 
@@ -431,7 +444,7 @@ static gboolean plugin_load(PurplePlugin *plugin)
 		prpl_plugin = plugins->data;
 		if( (prpl_plugin->info->id != NULL) && (strncmp(prpl_plugin->info->id, "prpl-mbpurple", 13) == 0)) {
 			purple_debug_info(DBGID, "found plug-in %s\n", prpl_plugin->info->id);
-			purple_signal_connect(prpl_plugin, "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message), NULL);
+			purple_signal_connect(prpl_plugin, "twitter-message", plugin, PURPLE_CALLBACK(twitgin_on_tweet), NULL);
 		}
 	}
 
@@ -464,7 +477,7 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 	purple_signal_disconnect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler));
 
 	purple_signal_disconnect(purple_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying));
-	purple_signal_disconnect(pidgin_conversations_get_handle(), "twitgin-message", plugin, PURPLE_CALLBACK(twitgin_on_display_message));
+	purple_signal_disconnect(pidgin_conversations_get_handle(), "twitgin-message", plugin, PURPLE_CALLBACK(twitgin_on_tweet));
 
 	purple_debug_info(DBGID, "plugin unloaded\n");	
 	return TRUE;
@@ -477,6 +490,23 @@ static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
 	frame = purple_plugin_pref_frame_new();
 
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_REPLY_LINK, _("Enable reply link"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_FAV_LINK, _("Enable favorite link"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_RT_LINK, _("Enable retweet link"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_AVATAR_SIZE, _("Avatar size"));
+	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
+	purple_plugin_pref_add_choice(ppref, "Disabled", GINT_TO_POINTER(0));
+	purple_plugin_pref_add_choice(ppref, "8x8", GINT_TO_POINTER(8));
+	purple_plugin_pref_add_choice(ppref, "12x12", GINT_TO_POINTER(12));
+	purple_plugin_pref_add_choice(ppref, "16x16", GINT_TO_POINTER(16));
+	purple_plugin_pref_add_choice(ppref, "24x24", GINT_TO_POINTER(24));
+	purple_plugin_pref_add_choice(ppref, "32x32", GINT_TO_POINTER(32));
+	purple_plugin_pref_add_choice(ppref, "48x48", GINT_TO_POINTER(48));
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	/*
@@ -591,8 +621,13 @@ static PurplePluginInfo info =
 };
 
 static void plugin_init(PurplePlugin *plugin) {	
+
+	// default plug-in preference
 	purple_prefs_add_none(TW_PREF_PREFIX);
 	purple_prefs_add_bool(TW_PREF_REPLY_LINK, TRUE);
+	purple_prefs_add_bool(TW_PREF_FAV_LINK, TRUE);
+	purple_prefs_add_bool(TW_PREF_RT_LINK, TRUE);
+	purple_prefs_add_bool(TW_PREF_AVATAR_SIZE, 24);
 
 	purple_signal_register(plugin, "twitgin-replying-message",
 			purple_marshal_POINTER__POINTER_INT64,
