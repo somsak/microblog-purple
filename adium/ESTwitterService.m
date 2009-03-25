@@ -17,6 +17,8 @@
 #import <AIUtilities/AIImageAdditions.h>
 #import <Adium/AISharedAdium.h> 
 
+#import "ESTwitterAccountViewController.h"
+
 @implementation ESTwitterService
 
 //Account Creation
@@ -24,21 +26,25 @@
 	return [ESTwitterAccount class];
 }
 
+- (AIAccountViewController *)accountViewController{
+    return [ESTwitterAccountViewController accountViewController];
+}
+
 //Service Description
 - (NSString *)serviceCodeUniqueID{
 	return @"libpurple-twitter";
 }
 - (NSString *)serviceID{
-	return @"Twitter";
+	return @"microblog-Twitter";
 }
 - (NSString *)serviceClass{
-	return @"Twitter";
+	return @"microblog-Twitter";
 }
 - (NSString *)shortDescription{
-	return @"Twitter";
+	return @"A microblog based Twitter connection";
 }
 - (NSString *)longDescription{
-	return @"Twitter";
+	return @"microblog-Twitter";
 }
 - (NSCharacterSet *)allowedCharacters{
 	return [NSCharacterSet characterSetWithCharactersInString:@"+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@._- "];
@@ -55,7 +61,7 @@
 - (BOOL)supportsPassword{
 	return YES;
 }
-//Passwords are supported but optional
+
 - (BOOL)requiresPassword
 {
 	return YES;
