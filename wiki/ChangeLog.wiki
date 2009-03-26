@@ -6,6 +6,6 @@
    * Fix SSL connection bug that may crash Pidgin when connection is unstable
    * Clicking reply link now add in_reply_to_id http parameter (make the message appear sa "reply to message" in web-site)
    * Remove "twitter.com" label. Now conversation showed as if coming from each individual user
-   * Add * (Favorite) and RT (Retweet) link for easy favorite and retweet (thanks to @nopparat)
+   * Add (Favorite) and RT (Retweet) link for easy favorite and retweet (thanks to @nopparat)
    * Move "Enable reply link" preference to Twitgin "Configure plug-in". 
    * Adium plugin port created
