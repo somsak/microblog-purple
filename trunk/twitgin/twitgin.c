@@ -345,7 +345,6 @@ gchar * format_datetime(PurpleConversation * conv, time_t mtime) {
 void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 
 	PurpleConversation * conv;
-	PurpleMessageFlags flags;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
 	gchar * fmt_txt = NULL, * tmp = NULL;
 	gchar * displaying_txt = NULL;
@@ -397,14 +396,9 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 
 	}
 	purple_debug_info(DBGID, "displaying text = ##%s##\n", displaying_txt);
-	flags = PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW;
-	purple_debug_info(DBGID, "NICK = ##%s## ##%s##\n", account, cur_msg->msg_txt);
-	if (strstr(account, cur_msg->msg_txt)) {
-		flags |= PURPLE_MESSAGE_NICK;
-	}
 	purple_conv_im_write(PURPLE_CONV_IM(conv),
 		cur_msg->from, displaying_txt, 
-		flags,
+		PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NICK,
 		cur_msg->msg_time);
 
 	g_free(displaying_txt);
