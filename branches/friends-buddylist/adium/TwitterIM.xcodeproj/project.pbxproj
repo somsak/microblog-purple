@@ -1,0 +1,477 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 45;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		8D5B49B0048680CD000E48DA /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C167DFE841241C02AAC07 /* InfoPlist.strings */; };
+		8D5B49B4048680CD000E48DA /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7ADFEA557BF11CA2CBB /* Cocoa.framework */; };
+		921CB17B0F57554500BEFF77 /* libgmodule.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB17A0F57554500BEFF77 /* libgmodule.framework */; };
+		921CB17F0F57555800BEFF77 /* libgobject.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB17E0F57555800BEFF77 /* libgobject.framework */; };
+		921CB1980F57559A00BEFF77 /* libgthread.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB1970F57559A00BEFF77 /* libgthread.framework */; };
+		921CB19C0F5755B300BEFF77 /* libmeanwhile.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB19B0F5755B300BEFF77 /* libmeanwhile.framework */; };
+		921CB4430F586ABC00BEFF77 /* FriBidi.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921CB19F0F5755CD00BEFF77 /* FriBidi.framework */; };
+		923E3A280F6327AD008A6C74 /* mb_http.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1AC0F5F59F700AD9F9E /* mb_http.c */; };
+		923E3A290F6327B0008A6C74 /* mb_net.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1AE0F5F59F700AD9F9E /* mb_net.c */; };
+		923E3A2A0F6327B3008A6C74 /* mb_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B00F5F59F700AD9F9E /* mb_util.c */; };
+		923E3A2B0F6327B4008A6C74 /* mbchprpl.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B20F5F59F700AD9F9E /* mbchprpl.c */; };
+		923E3A2C0F6327B5008A6C74 /* tw_cmd.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B40F5F59F700AD9F9E /* tw_cmd.c */; };
+		923E3A2D0F6327B8008A6C74 /* tw_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B60F5F59F700AD9F9E /* tw_util.c */; };
+		923E3A2E0F6327BA008A6C74 /* twitter.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1B70F5F59F700AD9F9E /* twitter.c */; };
+		923E3A2F0F6327BE008A6C74 /* twitterim.c in Sources */ = {isa = PBXBuildFile; fileRef = 924CE1BC0F5F59F700AD9F9E /* twitterim.c */; };
+		92F887B80F53AE4F0039CBA9 /* ESTwitterAccount.m in Sources */ = {isa = PBXBuildFile; fileRef = 92F887B30F53AE4F0039CBA9 /* ESTwitterAccount.m */; };
+		92F887B90F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 92F887B50F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m */; };
+		92F887BA0F53AE4F0039CBA9 /* ESTwitterService.m in Sources */ = {isa = PBXBuildFile; fileRef = 92F887B70F53AE4F0039CBA9 /* ESTwitterService.m */; };
+		92F887DC0F53AF450039CBA9 /* twitter16.png in Resources */ = {isa = PBXBuildFile; fileRef = 92F887D90F53AF450039CBA9 /* twitter16.png */; };
+		92F887DD0F53AF450039CBA9 /* twitter22.png in Resources */ = {isa = PBXBuildFile; fileRef = 92F887DA0F53AF450039CBA9 /* twitter22.png */; };
+		92F887DE0F53AF450039CBA9 /* twitter48.png in Resources */ = {isa = PBXBuildFile; fileRef = 92F887DB0F53AF450039CBA9 /* twitter48.png */; };
+		92F887E00F53AF6A0039CBA9 /* AIUtilities.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92F887DF0F53AF6A0039CBA9 /* AIUtilities.framework */; };
+		92F887E40F53AF7C0039CBA9 /* Adium.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92F887E30F53AF7C0039CBA9 /* Adium.framework */; };
+		92F887E80F53AF890039CBA9 /* AdiumLibpurple.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92F887E70F53AF890039CBA9 /* AdiumLibpurple.framework */; };
+		92F887F30F53B1330039CBA9 /* libpurple.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92F887F20F53B1330039CBA9 /* libpurple.framework */; };
+		92F887FA0F53B15E0039CBA9 /* libglib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92F887F90F53B15E0039CBA9 /* libglib.framework */; };
+		92F8881A0F53B2970039CBA9 /* libintl.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92F888190F53B2970039CBA9 /* libintl.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		921CAEF10F56FD5200BEFF77 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		924CE3D10F60132800AD9F9E /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		089C1672FE841209C02AAC07 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
+		089C167EFE841241C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		089C167FFE841241C02AAC07 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
+		1058C7ADFEA557BF11CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
+		32DBCF630370AF2F00C91783 /* TwitterIM_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TwitterIM_Prefix.pch; sourceTree = "<group>"; };
+		8D5B49B6048680CD000E48DA /* TwitterIM.AdiumLibpurplePlugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TwitterIM.AdiumLibpurplePlugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		8D5B49B7048680CD000E48DA /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		921CB17A0F57554500BEFF77 /* libgmodule.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libgmodule.framework; path = "../../adium-1.3.3/Frameworks/libgmodule.framework"; sourceTree = SOURCE_ROOT; };
+		921CB17E0F57555800BEFF77 /* libgobject.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libgobject.framework; path = "../../adium-1.3.3/Frameworks/libgobject.framework"; sourceTree = SOURCE_ROOT; };
+		921CB1970F57559A00BEFF77 /* libgthread.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libgthread.framework; path = "../../adium-1.3.3/Frameworks/libgthread.framework"; sourceTree = SOURCE_ROOT; };
+		921CB19B0F5755B300BEFF77 /* libmeanwhile.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libmeanwhile.framework; path = "../../adium-1.3.3/Frameworks/libmeanwhile.framework"; sourceTree = SOURCE_ROOT; };
+		921CB19F0F5755CD00BEFF77 /* FriBidi.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FriBidi.framework; path = "../../adium-1.3.3/build/Development/FriBidi.framework"; sourceTree = SOURCE_ROOT; };
+		924CE1A20F5F59F700AD9F9E /* COPYING */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
+		924CE1A30F5F59F700AD9F9E /* dummy_twitterim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dummy_twitterim.c; sourceTree = "<group>"; };
+		924CE1A40F5F59F700AD9F9E /* identica.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = identica.c; sourceTree = "<group>"; };
+		924CE1A50F5F59F700AD9F9E /* identica16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = identica16.png; sourceTree = "<group>"; };
+		924CE1A60F5F59F700AD9F9E /* identica22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = identica22.png; sourceTree = "<group>"; };
+		924CE1A70F5F59F700AD9F9E /* identica48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = identica48.png; sourceTree = "<group>"; };
+		924CE1A80F5F59F700AD9F9E /* laconica16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = laconica16.png; sourceTree = "<group>"; };
+		924CE1A90F5F59F700AD9F9E /* laconica22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = laconica22.png; sourceTree = "<group>"; };
+		924CE1AA0F5F59F700AD9F9E /* laconica48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = laconica48.png; sourceTree = "<group>"; };
+		924CE1AB0F5F59F700AD9F9E /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		924CE1AC0F5F59F700AD9F9E /* mb_http.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_http.c; sourceTree = "<group>"; };
+		924CE1AD0F5F59F700AD9F9E /* mb_http.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_http.h; sourceTree = "<group>"; };
+		924CE1AE0F5F59F700AD9F9E /* mb_net.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_net.c; sourceTree = "<group>"; };
+		924CE1AF0F5F59F700AD9F9E /* mb_net.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_net.h; sourceTree = "<group>"; };
+		924CE1B00F5F59F700AD9F9E /* mb_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mb_util.c; sourceTree = "<group>"; };
+		924CE1B10F5F59F700AD9F9E /* mb_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mb_util.h; sourceTree = "<group>"; };
+		924CE1B20F5F59F700AD9F9E /* mbchprpl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mbchprpl.c; sourceTree = "<group>"; };
+		924CE1B30F5F59F700AD9F9E /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
+		924CE1B40F5F59F700AD9F9E /* tw_cmd.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tw_cmd.c; sourceTree = "<group>"; };
+		924CE1B50F5F59F700AD9F9E /* tw_cmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tw_cmd.h; sourceTree = "<group>"; };
+		924CE1B60F5F59F700AD9F9E /* tw_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tw_util.c; sourceTree = "<group>"; };
+		924CE1B70F5F59F700AD9F9E /* twitter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = twitter.c; sourceTree = "<group>"; };
+		924CE1B80F5F59F700AD9F9E /* twitter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 2; path = twitter.h; sourceTree = "<group>"; };
+		924CE1B90F5F59F700AD9F9E /* twitter16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter16.png; sourceTree = "<group>"; };
+		924CE1BA0F5F59F700AD9F9E /* twitter22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter22.png; sourceTree = "<group>"; };
+		924CE1BB0F5F59F700AD9F9E /* twitter48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = twitter48.png; sourceTree = "<group>"; };
+		924CE1BC0F5F59F700AD9F9E /* twitterim.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = twitterim.c; sourceTree = "<group>"; };
+		92F887B20F53AE4F0039CBA9 /* ESTwitterAccount.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ESTwitterAccount.h; sourceTree = "<group>"; };
+		92F887B30F53AE4F0039CBA9 /* ESTwitterAccount.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ESTwitterAccount.m; sourceTree = "<group>"; };
+		92F887B40F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ESTwitterLibPurpleServicePlugin.h; sourceTree = "<group>"; };
+		92F887B50F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ESTwitterLibPurpleServicePlugin.m; sourceTree = "<group>"; };
+		92F887B60F53AE4F0039CBA9 /* ESTwitterService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ESTwitterService.h; sourceTree = "<group>"; };
+		92F887B70F53AE4F0039CBA9 /* ESTwitterService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ESTwitterService.m; sourceTree = "<group>"; };
+		92F887D90F53AF450039CBA9 /* twitter16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = twitter16.png; path = ../microblog/twitter16.png; sourceTree = SOURCE_ROOT; };
+		92F887DA0F53AF450039CBA9 /* twitter22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = twitter22.png; path = ../microblog/twitter22.png; sourceTree = SOURCE_ROOT; };
+		92F887DB0F53AF450039CBA9 /* twitter48.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = twitter48.png; path = ../microblog/twitter48.png; sourceTree = SOURCE_ROOT; };
+		92F887DF0F53AF6A0039CBA9 /* AIUtilities.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AIUtilities.framework; path = "../../adium-1.3.3/build/Development/AIUtilities.framework"; sourceTree = SOURCE_ROOT; };
+		92F887E30F53AF7C0039CBA9 /* Adium.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; name = Adium.framework; path = "../../adium-1.3.3/build/Development/Adium.framework"; sourceTree = SOURCE_ROOT; };
+		92F887E70F53AF890039CBA9 /* AdiumLibpurple.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AdiumLibpurple.framework; path = "../../adium-1.3.3/build/Development/AdiumLibpurple.framework"; sourceTree = SOURCE_ROOT; };
+		92F887F20F53B1330039CBA9 /* libpurple.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libpurple.framework; path = "../../adium-1.3.3/Frameworks/libpurple.framework"; sourceTree = SOURCE_ROOT; };
+		92F887F90F53B15E0039CBA9 /* libglib.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libglib.framework; path = "../../adium-1.3.3/Frameworks/libglib.framework"; sourceTree = SOURCE_ROOT; };
+		92F888190F53B2970039CBA9 /* libintl.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = libintl.framework; path = "../../adium-1.3.3/Frameworks/libintl.framework"; sourceTree = SOURCE_ROOT; };
+		D2F7E65807B2D6F200F64583 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8D5B49B3048680CD000E48DA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8D5B49B4048680CD000E48DA /* Cocoa.framework in Frameworks */,
+				92F887E00F53AF6A0039CBA9 /* AIUtilities.framework in Frameworks */,
+				92F887E40F53AF7C0039CBA9 /* Adium.framework in Frameworks */,
+				92F887E80F53AF890039CBA9 /* AdiumLibpurple.framework in Frameworks */,
+				92F887F30F53B1330039CBA9 /* libpurple.framework in Frameworks */,
+				92F887FA0F53B15E0039CBA9 /* libglib.framework in Frameworks */,
+				92F8881A0F53B2970039CBA9 /* libintl.framework in Frameworks */,
+				921CB17B0F57554500BEFF77 /* libgmodule.framework in Frameworks */,
+				921CB17F0F57555800BEFF77 /* libgobject.framework in Frameworks */,
+				921CB1980F57559A00BEFF77 /* libgthread.framework in Frameworks */,
+				921CB19C0F5755B300BEFF77 /* libmeanwhile.framework in Frameworks */,
+				921CB4430F586ABC00BEFF77 /* FriBidi.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		089C166AFE841209C02AAC07 /* TwitterIM */ = {
+			isa = PBXGroup;
+			children = (
+				92F887B20F53AE4F0039CBA9 /* ESTwitterAccount.h */,
+				92F887B30F53AE4F0039CBA9 /* ESTwitterAccount.m */,
+				92F887B40F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.h */,
+				92F887B50F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m */,
+				92F887B60F53AE4F0039CBA9 /* ESTwitterService.h */,
+				92F887B70F53AE4F0039CBA9 /* ESTwitterService.m */,
+				08FB77AFFE84173DC02AAC07 /* Classes */,
+				32C88E010371C26100C91783 /* Other Sources */,
+				089C167CFE841241C02AAC07 /* Resources */,
+				089C1671FE841209C02AAC07 /* Frameworks and Libraries */,
+				19C28FB8FE9D52D311CA2CBB /* Products */,
+			);
+			name = TwitterIM;
+			sourceTree = "<group>";
+		};
+		089C1671FE841209C02AAC07 /* Frameworks and Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				1058C7ACFEA557BF11CA2CBB /* Linked Frameworks */,
+				1058C7AEFEA557BF11CA2CBB /* Other Frameworks */,
+			);
+			name = "Frameworks and Libraries";
+			sourceTree = "<group>";
+		};
+		089C167CFE841241C02AAC07 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				92F887D90F53AF450039CBA9 /* twitter16.png */,
+				92F887DA0F53AF450039CBA9 /* twitter22.png */,
+				92F887DB0F53AF450039CBA9 /* twitter48.png */,
+				8D5B49B7048680CD000E48DA /* Info.plist */,
+				089C167DFE841241C02AAC07 /* InfoPlist.strings */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		08FB77AFFE84173DC02AAC07 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				924CE1A10F5F59F700AD9F9E /* microblog */,
+			);
+			name = Classes;
+			sourceTree = "<group>";
+		};
+		1058C7ACFEA557BF11CA2CBB /* Linked Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				921CB19F0F5755CD00BEFF77 /* FriBidi.framework */,
+				921CB19B0F5755B300BEFF77 /* libmeanwhile.framework */,
+				921CB1970F57559A00BEFF77 /* libgthread.framework */,
+				921CB17E0F57555800BEFF77 /* libgobject.framework */,
+				921CB17A0F57554500BEFF77 /* libgmodule.framework */,
+				92F888190F53B2970039CBA9 /* libintl.framework */,
+				92F887F90F53B15E0039CBA9 /* libglib.framework */,
+				92F887F20F53B1330039CBA9 /* libpurple.framework */,
+				92F887E70F53AF890039CBA9 /* AdiumLibpurple.framework */,
+				92F887E30F53AF7C0039CBA9 /* Adium.framework */,
+				92F887DF0F53AF6A0039CBA9 /* AIUtilities.framework */,
+				1058C7ADFEA557BF11CA2CBB /* Cocoa.framework */,
+			);
+			name = "Linked Frameworks";
+			sourceTree = "<group>";
+		};
+		1058C7AEFEA557BF11CA2CBB /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				089C167FFE841241C02AAC07 /* AppKit.framework */,
+				D2F7E65807B2D6F200F64583 /* CoreData.framework */,
+				089C1672FE841209C02AAC07 /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		19C28FB8FE9D52D311CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8D5B49B6048680CD000E48DA /* TwitterIM.AdiumLibpurplePlugin */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		32C88E010371C26100C91783 /* Other Sources */ = {
+			isa = PBXGroup;
+			children = (
+				32DBCF630370AF2F00C91783 /* TwitterIM_Prefix.pch */,
+			);
+			name = "Other Sources";
+			sourceTree = "<group>";
+		};
+		924CE1A10F5F59F700AD9F9E /* microblog */ = {
+			isa = PBXGroup;
+			children = (
+				924CE1A20F5F59F700AD9F9E /* COPYING */,
+				924CE1A30F5F59F700AD9F9E /* dummy_twitterim.c */,
+				924CE1A40F5F59F700AD9F9E /* identica.c */,
+				924CE1A50F5F59F700AD9F9E /* identica16.png */,
+				924CE1A60F5F59F700AD9F9E /* identica22.png */,
+				924CE1A70F5F59F700AD9F9E /* identica48.png */,
+				924CE1A80F5F59F700AD9F9E /* laconica16.png */,
+				924CE1A90F5F59F700AD9F9E /* laconica22.png */,
+				924CE1AA0F5F59F700AD9F9E /* laconica48.png */,
+				924CE1AB0F5F59F700AD9F9E /* Makefile */,
+				924CE1AC0F5F59F700AD9F9E /* mb_http.c */,
+				924CE1AD0F5F59F700AD9F9E /* mb_http.h */,
+				924CE1AE0F5F59F700AD9F9E /* mb_net.c */,
+				924CE1AF0F5F59F700AD9F9E /* mb_net.h */,
+				924CE1B00F5F59F700AD9F9E /* mb_util.c */,
+				924CE1B10F5F59F700AD9F9E /* mb_util.h */,
+				924CE1B20F5F59F700AD9F9E /* mbchprpl.c */,
+				924CE1B30F5F59F700AD9F9E /* README.txt */,
+				924CE1B40F5F59F700AD9F9E /* tw_cmd.c */,
+				924CE1B50F5F59F700AD9F9E /* tw_cmd.h */,
+				924CE1B60F5F59F700AD9F9E /* tw_util.c */,
+				924CE1B70F5F59F700AD9F9E /* twitter.c */,
+				924CE1B80F5F59F700AD9F9E /* twitter.h */,
+				924CE1B90F5F59F700AD9F9E /* twitter16.png */,
+				924CE1BA0F5F59F700AD9F9E /* twitter22.png */,
+				924CE1BB0F5F59F700AD9F9E /* twitter48.png */,
+				924CE1BC0F5F59F700AD9F9E /* twitterim.c */,
+			);
+			name = microblog;
+			path = ../microblog;
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8D5B49AC048680CD000E48DA /* TwitterIM */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1DEB913A08733D840010E9CD /* Build configuration list for PBXNativeTarget "TwitterIM" */;
+			buildPhases = (
+				8D5B49AF048680CD000E48DA /* Resources */,
+				8D5B49B1048680CD000E48DA /* Sources */,
+				8D5B49B3048680CD000E48DA /* Frameworks */,
+				921CAEF10F56FD5200BEFF77 /* CopyFiles */,
+				924CE3D10F60132800AD9F9E /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TwitterIM;
+			productInstallPath = "$(HOME)/Library/Bundles";
+			productName = TwitterIM;
+			productReference = 8D5B49B6048680CD000E48DA /* TwitterIM.AdiumLibpurplePlugin */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		089C1669FE841209C02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 1DEB913E08733D840010E9CD /* Build configuration list for PBXProject "TwitterIM" */;
+			compatibilityVersion = "Xcode 3.1";
+			hasScannedForEncodings = 1;
+			mainGroup = 089C166AFE841209C02AAC07 /* TwitterIM */;
+			projectDirPath = "";
+			projectRoot = ..;
+			targets = (
+				8D5B49AC048680CD000E48DA /* TwitterIM */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8D5B49AF048680CD000E48DA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8D5B49B0048680CD000E48DA /* InfoPlist.strings in Resources */,
+				92F887DC0F53AF450039CBA9 /* twitter16.png in Resources */,
+				92F887DD0F53AF450039CBA9 /* twitter22.png in Resources */,
+				92F887DE0F53AF450039CBA9 /* twitter48.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8D5B49B1048680CD000E48DA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				92F887B80F53AE4F0039CBA9 /* ESTwitterAccount.m in Sources */,
+				92F887B90F53AE4F0039CBA9 /* ESTwitterLibPurpleServicePlugin.m in Sources */,
+				92F887BA0F53AE4F0039CBA9 /* ESTwitterService.m in Sources */,
+				923E3A280F6327AD008A6C74 /* mb_http.c in Sources */,
+				923E3A290F6327B0008A6C74 /* mb_net.c in Sources */,
+				923E3A2A0F6327B3008A6C74 /* mb_util.c in Sources */,
+				923E3A2B0F6327B4008A6C74 /* mbchprpl.c in Sources */,
+				923E3A2C0F6327B5008A6C74 /* tw_cmd.c in Sources */,
+				923E3A2D0F6327B8008A6C74 /* tw_util.c in Sources */,
+				923E3A2E0F6327BA008A6C74 /* twitter.c in Sources */,
+				923E3A2F0F6327BE008A6C74 /* twitterim.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		089C167DFE841241C02AAC07 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				089C167EFE841241C02AAC07 /* English */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		1DEB913B08733D840010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ADIUM = "../../adium-1.3.3";
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/$(ADIUM)/build/Development\"",
+					"\"$(SRCROOT)/$(ADIUM)/Frameworks\"",
+				);
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = TwitterIM_Prefix.pch;
+				HEADER_SEARCH_PATHS = (
+					"$(ADIUM)/build/Development/Adium.framework/Headers//**",
+					"$(ADIUM)/Frameworks/libintl.framework/Headers//**",
+					"$(ADIUM)/Frameworks/libpurple.framework/Headers/**",
+					"$(ADIUM)/Frameworks/libglib.framework/Headers//**",
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Library/Application Support/Adium 2.0/PlugIns/";
+				OTHER_CFLAGS = (
+					"-DMBPURPLE_VERSION=\\\"0.2.1\\\"",
+					"-DPURPLE_STATIC_PRPL",
+				);
+				PRODUCT_NAME = TwitterIM;
+				USER_HEADER_SEARCH_PATHS = "";
+				VALID_ARCHS = i386;
+				WRAPPER_EXTENSION = AdiumLibpurplePlugin;
+			};
+			name = Debug;
+		};
+		1DEB913C08733D840010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ADIUM = "../../adium-1.3.3";
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/$(ADIUM)/build/Development\"",
+					"\"$(SRCROOT)/$(ADIUM)/Frameworks\"",
+				);
+				GCC_MODEL_TUNING = "";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = TwitterIM_Prefix.pch;
+				HEADER_SEARCH_PATHS = (
+					"$(ADIUM)/build/Development/Adium.framework/Headers//**",
+					"$(ADIUM)/Frameworks/libintl.framework/Headers//**",
+					"$(ADIUM)/Frameworks/libpurple.framework/Headers/**",
+					"$(ADIUM)/Frameworks/libglib.framework/Headers//**",
+				);
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Library/Application Support/Adium 2.0/PlugIns/";
+				OTHER_CFLAGS = (
+					"-DMBPURPLE_VERSION=\\\"0.2.1\\\"",
+					"-DPURPLE_STATIC_PRPL",
+				);
+				PRODUCT_NAME = TwitterIM;
+				USER_HEADER_SEARCH_PATHS = "";
+				VALID_ARCHS = i386;
+				WRAPPER_EXTENSION = AdiumLibpurplePlugin;
+			};
+			name = Release;
+		};
+		1DEB913F08733D840010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				SDKROOT = macosx10.5;
+				VALID_ARCHS = i386;
+			};
+			name = Debug;
+		};
+		1DEB914008733D840010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				SDKROOT = macosx10.5;
+				VALID_ARCHS = i386;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB913A08733D840010E9CD /* Build configuration list for PBXNativeTarget "TwitterIM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB913B08733D840010E9CD /* Debug */,
+				1DEB913C08733D840010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1DEB913E08733D840010E9CD /* Build configuration list for PBXProject "TwitterIM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB913F08733D840010E9CD /* Debug */,
+				1DEB914008733D840010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 089C1669FE841209C02AAC07 /* Project object */;
+}
