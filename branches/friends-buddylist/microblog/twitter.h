@@ -118,14 +118,26 @@ typedef struct _TwitterProxyData {
 	PurpleSslConnection * conn_data;
 } TwitterProxyData;
 
+typedef enum {
+	TWITTER_BUDDY_TYPE_UNKNOWN = 0,
+	TWITTER_BUDDY_TYPE_SYSTEM,
+	TWITTER_BUDDY_TYPE_NORMAL,
+} TwitterBuddyType;
+
 typedef struct _TwitterBuddy {
 	TwitterAccount *ta;
 	PurpleBuddy *buddy;
+	TwitterBuddyType type;
 	gint uid;
 	gchar *name;
 	gchar *status;
 	gchar *thumb_url;
 } TwitterBuddy;
+
+#define TWITTER_BUDDY_IS_TYPE(tb, btype) ((tb) && (tb)->type == (btype))
+#define TWITTER_BUDDY_IS_UNKNOWN(tb) TWITTER_BUDDY_IS_TYPE((tb), TWITTER_BUDDY_TYPE_UNKNOWN)
+#define TWITTER_BUDDY_IS_SYSTEM(tb) TWITTER_BUDDY_IS_TYPE((tb), TWITTER_BUDDY_TYPE_SYSTEM)
+#define TWITTER_BUDDY_IS_NORMAL(tb) TWITTER_BUDDY_IS_TYPE((tb), TWITTER_BUDDY_TYPE_NORMAL)
 
 #define TW_MSGFLAG_SKIP 0x1
 #define TW_MSGFLAG_DOTAG 0x2

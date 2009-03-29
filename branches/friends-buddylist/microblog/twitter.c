@@ -89,8 +89,15 @@ static TwitterBuddy * twitter_new_buddy()
 	buddy->name = NULL;
 	buddy->status = NULL;
 	buddy->thumb_url = NULL;
+	buddy->type = TWITTER_BUDDY_TYPE_UNKNOWN;
 	
 	return buddy;
+}
+
+static TwitterBuddy * twitter_find_buddy(TwitterAccount *ac, const gchar *who)
+{
+	PurpleBuddy *b = purple_find_buddy(ac->account, who);
+	return (b ? b->proto_data : NULL);
 }
 
 TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, unsigned int count, const char * sys_msg)
@@ -451,16 +458,17 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 			twitter_group = purple_group_new(tc_def(TC_USER_GROUP));
 			purple_blist_add_group(twitter_group, NULL);
 		}
-		purple_debug_info(DBGID, "setting protocol-specific buddy information to purplebuddy\n");
-		if(buddy->proto_data == NULL) {
-			tbuddy = twitter_new_buddy();
-			buddy->proto_data = tbuddy;
-			tbuddy->buddy = buddy;
-			tbuddy->ta = ta;
-			tbuddy->uid = TL_FRIENDS;
-			tbuddy->name = g_strdup(tc_def(TC_FRIENDS_USER));
-		}
 		purple_blist_add_buddy(buddy, NULL, twitter_group, NULL);
+	}
+	purple_debug_info(DBGID, "setting protocol-specific buddy information to purplebuddy\n");
+	if(buddy->proto_data == NULL) {
+		tbuddy = twitter_new_buddy();
+		buddy->proto_data = tbuddy;
+		tbuddy->buddy = buddy;
+		tbuddy->ta = ta;
+		tbuddy->uid = TL_FRIENDS;
+		tbuddy->name = g_strdup(tc_def(TC_FRIENDS_USER));
+		tbuddy->type = TWITTER_BUDDY_TYPE_SYSTEM;
 	}
 	purple_prpl_got_user_status(ta->account, buddy->name, purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE), NULL);
 	// We'll deal with public and users timeline later
@@ -740,6 +748,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags)
 {
 	TwitterAccount * ta = gc->proto_data;
+	TwitterBuddy * tb = twitter_find_buddy(ta, who);
 	MbConnData * conn_data = NULL;
 	gchar * post_data = NULL, * tmp_msg_txt = NULL, * user_name = NULL;
 	gint msg_len, twitter_port, len;
@@ -761,6 +770,14 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 		g_free(tmp_msg_txt);
 		tmp_msg_txt = new_msg_txt;
 	}
+
+	if (!TWITTER_BUDDY_IS_SYSTEM(tb))
+	{
+		gchar * new_msg_txt = g_strdup_printf("@%s %s", who, tmp_msg_txt);
+		g_free(tmp_msg_txt);
+		tmp_msg_txt = new_msg_txt;
+	}
+
 	msg_len = strlen(tmp_msg_txt);
 
 	purple_debug_info(DBGID, "sending message %s\n", tmp_msg_txt);
