@@ -349,7 +349,7 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 	gchar * fmt_txt = NULL, * tmp = NULL;
 	gchar * displaying_txt = NULL;
 	gchar * linkify_txt = NULL;
-	gchar * fav_txt = NULL, * rt_txt = NULL;
+	gchar * fav_txt = NULL, * rt_txt = NULL, * datetime_txt = NULL;
 	const char * embed_rt_txt = NULL;
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 	const char * uri_txt = mb_get_uri_txt(ta->account);
@@ -385,14 +385,24 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 
 			rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, name, account, cur_msg->from, embed_rt_txt);
 		}
+
+		//display link to message status in the timestamp
+		if(purple_prefs_get_bool(TW_PREF_MS_LINK)) {
+			
+			datetime_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\"><a href=\"http://twitter.com/%s/status/%llu\">%s</a></FONT>", cur_msg->from, cur_msg->id, format_datetime(conv, cur_msg->msg_time)); 
+		}
+		else {
+			datetime_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT>", format_datetime(conv, cur_msg->msg_time)); 
+		}
 		
-		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s%s%s", format_datetime(conv, cur_msg->msg_time), linkify_txt, 
+		displaying_txt = g_strdup_printf("%s %s%s%s", datetime_txt, linkify_txt, 
 			fav_txt ? fav_txt : "", rt_txt ? rt_txt : "");
 
 		if(fav_txt) g_free(fav_txt);
 		if(rt_txt) g_free(rt_txt);
+		if(datetime_txt) g_free(datetime_txt);
 	} else {
-		displaying_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> %s ", format_datetime(conv, cur_msg->msg_time), linkify_txt);
+		displaying_txt = g_strdup_printf("%s %s", format_datetime(conv, cur_msg->msg_time), linkify_txt);
 
 	}
 	purple_debug_info(DBGID, "displaying text = ##%s##\n", displaying_txt);
@@ -497,6 +507,9 @@ static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_RT_LINK, _("Enable retweet link"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_MS_LINK, _("Enable message status link"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_AVATAR_SIZE, _("Avatar size"));
@@ -628,6 +641,7 @@ static void plugin_init(PurplePlugin *plugin) {
 	purple_prefs_add_bool(TW_PREF_REPLY_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_FAV_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_RT_LINK, TRUE);
+	purple_prefs_add_bool(TW_PREF_MS_LINK, TRUE);
 	purple_prefs_add_int(TW_PREF_AVATAR_SIZE, 24);
 
 	purple_signal_register(plugin, "twitgin-replying-message",
