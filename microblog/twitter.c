@@ -687,7 +687,6 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	MbHttpData * response = conn_data->response;
 	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
-	unsigned long long id;
 	
 	purple_debug_info(DBGID, "send_im_handler\n");
 	
@@ -722,12 +721,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	if(id_node) {
 		id_str = xmlnode_get_data_unescaped(id_node);
 	}
-	id = strtoull(id_str, NULL, 10);
-	if (id > ta->last_msg_id) {
-		ta->last_msg_id = id;
-		mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, id);
-	}
-	
+
 	// save it to account
 	g_hash_table_insert(ta->sent_id_hash, id_str, id_str);
 	
