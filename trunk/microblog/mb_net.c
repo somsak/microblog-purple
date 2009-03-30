@@ -249,7 +249,7 @@ void mb_conn_post_ssl_request(gpointer data, PurpleSslConnection * ssl, PurpleIn
 		return;
 	}
 	// add this to internal hash table
-	purple_debug_info(MB_NET, "adding SSL connection %p to ssl_conn_hash with key = %p\n", conn_data, conn_data->ssl_conn_data);
+	purple_debug_info(MB_NET, "adding SSL connection %p to ta->ssl_conn_hash(%p) with key = %p\n", conn_data, ta->ssl_conn_hash, conn_data->ssl_conn_data);
 	g_hash_table_insert(ta->ssl_conn_hash, conn_data->ssl_conn_data, conn_data);
 	
 	purple_debug_info(MB_NET, "mb_conn posting request\n");
@@ -300,7 +300,7 @@ void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType erro
 	*/
 	error = purple_ssl_strerror(errortype);
 	if(error) {
-		purple_connection_error(ta->gc, purple_ssl_strerror(errortype));
+		purple_connection_error(ta->gc, error);
 	} else {
 		purple_connection_error(ta->gc, _("SSL Connection error"));
 	}
