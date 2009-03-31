@@ -59,19 +59,6 @@ enum _TweetProxyDataErrorActions {
 	TW_RAISE_ERROR = 1,
 };
 
-// Hold parameter for statuses request
-typedef struct _TwitterTimeLineReq {
-	gchar * path;
-	gchar * name;
-	gint timeline_id;
-	guint count;
-	gboolean use_since_id;
-	gchar * sys_msg;
-} TwitterTimeLineReq;
-
-extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, unsigned int id, const char * sys_msg);
-extern void twitter_free_tlr(TwitterTimeLineReq * tlr);
-
 typedef struct _TwitterAccount {
 	PurpleAccount *account;
 	PurpleConnection *gc;
@@ -79,9 +66,15 @@ typedef struct _TwitterAccount {
 	PurpleConnectionState state;
 	GHashTable * conn_hash;
 	GHashTable * ssl_conn_hash;
-	guint timeline_timer;
+
+	guint timeline_timer; //TODO: rename me
 	unsigned long long last_msg_id;
 	time_t last_msg_time;
+
+	guint replies_timeline_timer;
+	unsigned long long last_replies_id;
+	time_t last_replies_time;
+
 	GHashTable * sent_id_hash;
 	gchar * tag;
 	gint tag_pos;
@@ -89,6 +82,32 @@ typedef struct _TwitterAccount {
 } TwitterAccount;
 
 typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
+
+typedef struct _TwitterTimeLineReq TwitterTimeLineReq;
+
+typedef gint (* TlrSuccessFunc)(MbAccount *ta, TwitterTimeLineReq *tlr,
+		GList *msg_list, time_t last_msg_time_t);
+typedef gint (* TlrErrorFunc)(); //TODO
+
+// Hold parameter for statuses request
+struct _TwitterTimeLineReq {
+	gchar * path;
+	gchar * name;
+	gint timeline_id;
+	guint count;
+	gboolean use_since_id;
+	gchar * sys_msg;
+	TlrSuccessFunc success_cb;
+	TlrErrorFunc error_cb;
+};
+
+TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, unsigned int count, const char * sys_msg,
+		TlrSuccessFunc success_cb, TlrErrorFunc error_cb);
+extern void twitter_free_tlr(TwitterTimeLineReq * tlr);
+
+extern gint twitter_friends_timeline_success_handler(MbAccount *ta, TwitterTimeLineReq *tlr,
+		GList *msg_list, time_t last_msg_time_t);
+
 
 enum tag_position {
 	MB_TAG_NONE = 0,
@@ -132,6 +151,7 @@ typedef struct _TwitterBuddy {
 	gchar *name;
 	gchar *status;
 	gchar *thumb_url;
+	guint last_msg_id;
 } TwitterBuddy;
 
 #define TWITTER_BUDDY_IS_TYPE(tb, btype) ((tb) && (tb)->type == (btype))
@@ -147,6 +167,7 @@ typedef struct _TwitterMsg {
 	gchar * avatar_url;
 	gchar * from;
 	gchar * msg_txt;
+	gchar * to;
 	time_t msg_time;
 	gint flag;
 } TwitterMsg;
