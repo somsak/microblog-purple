@@ -89,7 +89,8 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 
 	path = purple_account_get_string(data->ma->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
 	count = 0; //< replies timeline has no count
-	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end reply messages"));
+	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end reply messages"),
+			twitter_friends_timeline_success_handler, NULL);
 	tlr->use_since_id = FALSE;
 	time(&now);
 	serv_got_im(data->ma->gc, tlr->name, _("getting reply messages"), PURPLE_MESSAGE_SYSTEM, now);

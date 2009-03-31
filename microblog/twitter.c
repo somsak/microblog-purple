@@ -66,6 +66,7 @@
 
 #define DBGID "twitter"
 #define TW_ACCT_LAST_MSG_ID "twitter_last_msg_id"
+#define TW_ACCT_LAST_REPLIES_ID "twitter_last_replies_id"
 
 //static const char twitter_host[] = "twitter.com";
 static gint twitter_port = 443;
@@ -81,7 +82,7 @@ PurplePlugin * twitgin_plugin = NULL;
 
 static TwitterBuddy * twitter_new_buddy()
 {
-	TwitterBuddy * buddy = g_new(TwitterBuddy, 1);
+	TwitterBuddy * buddy = g_new0(TwitterBuddy, 1);
 	
 	buddy->ta = NULL;
 	buddy->buddy = NULL;
@@ -100,7 +101,8 @@ static TwitterBuddy * twitter_find_buddy(TwitterAccount *ac, const gchar *who)
 	return (b ? b->proto_data : NULL);
 }
 
-TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, unsigned int count, const char * sys_msg)
+TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, unsigned int count, const char * sys_msg,
+		TlrSuccessFunc success_cb, TlrErrorFunc error_cb)
 {
 	TwitterTimeLineReq * tlr = g_new(TwitterTimeLineReq, 1);
 	tlr->path = g_strdup(path);
@@ -113,6 +115,8 @@ TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int i
 	} else {
 		tlr->sys_msg = NULL;
 	}
+	tlr->success_cb = success_cb;
+	tlr->error_cb = error_cb;
 	return tlr;
 }
 
@@ -130,8 +134,10 @@ GList * twitter_statuses(PurpleAccount *acct)
 	PurpleStatusType *status;
 	
 	//Online people have a status message and also a date when it was set	
-	//status = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE, "message", _("Message"), purple_value_new(PURPLE_TYPE_STRING), "message_date", _("Message changed"), purple_value_new(PURPLE_TYPE_STRING), NULL);
-	status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE);
+	status = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE, "message", _("Message"), purple_value_new(PURPLE_TYPE_STRING), "message_date", _("Message changed"), purple_value_new(PURPLE_TYPE_STRING), NULL);
+	//status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE);
+	//purple_status_type_add_attr(status, "message", _("Online"), purple_value_new(PURPLE_TYPE_STRING));
+
 	types = g_list_append(types, status);
 	
 	//Offline people dont have messages
@@ -154,6 +160,181 @@ void twitter_buddy_free(PurpleBuddy * buddy)
 	}
 }
 
+void twitter_msg_free(TwitterMsg *msg)
+{
+	if (!msg)
+		return;
+	if (msg->to) g_free(msg->to);
+	if (msg->msg_txt) g_free(msg->msg_txt);
+	if (msg->from) g_free(msg->from);
+	if (msg->avatar_url) g_free(msg->avatar_url);
+	g_free(msg);
+}
+void twitter_msg_list_free(GList *msg_list)
+{
+	return;
+	GList *l;
+	for (l = msg_list; l; l = l->next)
+		twitter_msg_free(l->data);
+	g_list_free(msg_list);
+}
+gboolean twitter_account_names_equal(TwitterAccount *ac, const char *name1, const char *name2)
+{
+	gboolean equal;
+	char *name1_normalized = g_strdup(purple_normalize(ac->account, name1));
+	equal = !strcmp(name1_normalized, purple_normalize(ac->account, name2));
+	g_free(name1_normalized);
+	return equal;
+}
+
+//this is a placeholder. TODO: Check account preferences
+gchar *twitter_account_format_im(TwitterAccount *ta, TwitterMsg *cur_msg)
+{
+	gchar *space_loc; 
+	space_loc = strchr(cur_msg->msg_txt, ' ');
+	if (!space_loc)
+		return NULL;
+	return g_strdup(space_loc + 1);
+}
+
+gint twitter_replies_timeline_success_handler(MbAccount *ta, TwitterTimeLineReq *tlr,
+		GList *msg_list, time_t last_msg_time_t)
+{
+	GList *it;
+	// reverse the list and append it
+	// only if id > last_msg_id
+	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
+
+		TwitterMsg *cur_msg = it->data;
+		if(cur_msg->id > ta->last_replies_id) {
+			ta->last_replies_id = cur_msg->id;
+			mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_REPLIES_ID, ta->last_replies_id);
+		}
+		//TODO: add option to not display
+		if (cur_msg->to && twitter_account_names_equal(ta, ta->account->username, cur_msg->to)) {
+			gchar *msg_txt = twitter_account_format_im(ta, cur_msg);
+			if (msg_txt)
+			{
+				serv_got_im(ta->gc, cur_msg->from, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+				g_free(msg_txt);
+			}
+		}
+		//TODO: bug - if a user sends messages from a non-pidgin client
+		//pidgin won't see the message in the conv. 
+		/* else if (cur_msg->to && cur_msg->from 
+				&& twitter_account_names_equal(ta, ta->account->username, cur_msg->from)
+				&& !in_sent_id_hash
+				&& (msg_txt = twitter_account_format_im(ta, cur_msg))) {
+
+			//Message from account, to other user, but not sent from pidgin
+			//Show in im window
+			PurpleConversation *conv = purple_find_conversation_with_account(
+					PURPLE_CONV_TYPE_IM, cur_msg->to,
+					ta->account);
+			PurpleConvIm *conv_im;
+			if (!conv)
+			{
+				conv = purple_conversation_new(PURPLE_CONV_TYPE_IM, ta->account, cur_msg->to);
+			}
+			if (conv && (conv_im = purple_conversation_get_im_data(conv)) != NULL)
+			{
+				purple_conversation_get_im_data(conv);
+				if (conv_im)
+				{
+					purple_conv_im_write(conv_im, ta->account->username,
+							msg_txt, PURPLE_MESSAGE_SEND,
+							cur_msg->msg_time);
+				}
+			}
+			g_free(msg_txt);
+		}*/
+	}
+	if(ta->last_replies_time < last_msg_time_t) {
+		ta->last_replies_time = last_msg_time_t;
+	}
+	return 0;
+}
+gboolean twitter_fetch_replies_messages(gpointer data)
+{
+	TwitterAccount *ta = data;
+	TwitterTimeLineReq * tlr;
+	const gchar * tl_path;
+
+	tl_path = purple_account_get_string(ta->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_REPLIES_USER), TL_REPLIES, TW_STATUS_COUNT_MAX,
+			NULL, twitter_replies_timeline_success_handler, NULL);
+	purple_debug_info(DBGID, "fetching replies from %s to %s\n", tlr->path, tlr->name);
+	twitter_fetch_new_messages(ta, tlr);
+	return TRUE;
+}
+
+gint twitter_replies_timeline_success_handler_init(MbAccount *ta, TwitterTimeLineReq *tlr,
+		GList *msg_list, time_t last_msg_time_t)
+{
+	GList *it;
+	gint interval = purple_account_get_int(ta->account, tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
+	for (it = msg_list; it; it = it->next)
+	{
+		TwitterMsg *cur_msg = it->data;
+		if (cur_msg->id > ta->last_replies_id)
+		{
+			ta->last_replies_id = cur_msg->id;
+			mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_REPLIES_ID, ta->last_replies_id);
+		}
+	}
+
+	ta->replies_timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_replies_messages, ta);
+	return 0;
+}
+
+void twitter_msg_set_buddy_status(MbAccount *ta, TwitterMsg *msg)
+{
+	TwitterBuddy *tb;
+	if (!msg || !msg->from)
+		return;
+	tb = twitter_find_buddy(ta, msg->from);
+	if (!tb)
+		return;
+	if (tb->last_msg_id > msg->id)
+		return;
+	purple_prpl_got_user_status(ta->account, msg->from, purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE),
+			"message", msg->msg_txt, NULL);
+}
+gint twitter_friends_timeline_success_handler(MbAccount *ta, TwitterTimeLineReq *tlr,
+		GList *msg_list, time_t last_msg_time_t)
+{
+	gboolean hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
+	GList *it;
+	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
+
+		gboolean in_sent_id_hash = FALSE;
+		TwitterMsg *cur_msg = it->data;
+		gchar *id_str = g_strdup_printf("%llu", cur_msg->id);
+		if(cur_msg->id > ta->last_msg_id) {
+			ta->last_msg_id = cur_msg->id;
+			mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
+		}
+		in_sent_id_hash = g_hash_table_remove(ta->sent_id_hash, id_str);
+
+		if(!(hide_myself && in_sent_id_hash)) {
+			gchar *msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
+			// we still call serv_got_im here, so purple take the message to the log
+			serv_got_im(ta->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			// by handling diaplying-im-msg, the message shouldn't be displayed anymore
+			purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
+			g_free(msg_txt);
+		}
+
+		twitter_msg_set_buddy_status(ta, cur_msg);
+
+		g_free(id_str);
+	}
+	if(ta->last_msg_time < last_msg_time_t) {
+		ta->last_msg_time = last_msg_time_t;
+	}
+	return 0;
+}
+
 // Function to fetch first batch of new message
 void twitter_fetch_first_new_messages(TwitterAccount * ta)
 {
@@ -165,7 +346,14 @@ void twitter_fetch_first_new_messages(TwitterAccount * ta)
 	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
 	count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
 	purple_debug_info(DBGID, "count = %d\n", count);
-	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, count, NULL);
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, count, NULL, twitter_friends_timeline_success_handler, NULL);
+	
+	twitter_fetch_new_messages(ta, tlr);
+
+	tl_path = purple_account_get_string(ta->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_REPLIES_USER), TL_REPLIES, 1, NULL,
+			twitter_replies_timeline_success_handler_init, NULL);
+	purple_debug_info(DBGID, "fetching replies from %s to %s\n", tlr->path, tlr->name);
 	twitter_fetch_new_messages(ta, tlr);
 }
 
@@ -174,20 +362,13 @@ gboolean twitter_fetch_all_new_messages(gpointer data)
 {
 	TwitterAccount * ta = data;
 	TwitterTimeLineReq * tlr = NULL;
-	gint i;
 	const gchar * tl_path;
 	
-	for(i = TC_FRIENDS_TIMELINE; i <= TC_USER_TIMELINE; i+=2) {
-		//FIXME: i + 1 is not a very good strategy here
-		if(!purple_find_buddy(ta->account, tc_def(i + 1))) {
-			purple_debug_info(DBGID, "skipping %s\n", tlr->name);
-			continue;
-		}
-		tl_path = purple_account_get_string(ta->account, tc_name(i), tc_def(i));
-		tlr = twitter_new_tlr(tl_path, tc_def(i + 1), i, TW_STATUS_COUNT_MAX, NULL);
-		purple_debug_info(DBGID, "fetching updates from %s to %s\n", tlr->path, tlr->name);
-		twitter_fetch_new_messages(ta, tlr);
-	}
+	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, TW_STATUS_COUNT_MAX, NULL,
+			twitter_friends_timeline_success_handler, NULL);
+	twitter_fetch_new_messages(ta, tlr);
+
 	return TRUE;
 }
 
@@ -197,12 +378,24 @@ static void twitter_list_sent_id_hash(gpointer key, gpointer value, gpointer use
 	purple_debug_info(DBGID, "key/value = %s/%s\n", key, value);
 }
 #endif
+gchar * twitter_msg_get_to(const char *msg)
+{
+	const char *msg_space_loc;
+	if (msg == NULL || msg[0] != '@')
+		return NULL;
 
-GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
+	msg_space_loc = strchr(msg, ' ');
+	if (!msg_space_loc)
+		return NULL;
+
+	return g_strndup(msg + 1, msg_space_loc - msg - 1);
+}
+
+GList * twitter_decode_messages(const char * data, time_t * last_msg_time) //XXX: last_msg_time shouldn't be here
 {
 	GList * retval = NULL;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
-	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL;
+	gchar * from, * to, * msg_txt, * avatar_url, *xml_str = NULL;
 	TwitterMsg * cur_msg = NULL;
 	unsigned long long cur_id;
 	time_t msg_time_t;
@@ -224,6 +417,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 		msg_txt = NULL;
 		from = NULL;
 		xml_str = NULL;
+		to = NULL;
 		//skip = FALSE;
 		
 		// ID
@@ -264,6 +458,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 		text = xmlnode_get_child(status, "text");
 		if(text) {
 			msg_txt = xmlnode_get_data_unescaped(text);
+			to = twitter_msg_get_to(msg_txt);
 		}
 
 		// user name
@@ -284,6 +479,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 			
 			purple_debug_info(DBGID, "from = %s, msg = %s\n", from, msg_txt);
 			cur_msg->id = cur_id;
+			cur_msg->to = to;
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
@@ -305,6 +501,8 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 	return retval;
 }
 
+
+
 gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 {
 	MbAccount * ta = conn_data->ta;
@@ -312,10 +510,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	MbHttpData * response = conn_data->response;
 	TwitterTimeLineReq * tlr = data;
 	time_t last_msg_time_t = 0;
-	GList * msg_list = NULL, *it = NULL;
-	TwitterMsg * cur_msg = NULL;
-	gboolean hide_myself;
-	gchar * id_str = NULL, * msg_txt = NULL;
+	GList * msg_list = NULL;
 	
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
@@ -324,58 +519,39 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	
 	if(response->status == HTTP_MOVED_TEMPORARILY) {
 		// no new messages
+		//TODO: error cb here? - Neaveru
 		twitter_free_tlr(tlr);
 		purple_debug_info(DBGID, "no new messages\n");
 		return 0;
 	}
 	if(response->status != HTTP_OK) {
+		//TODO: error cb here - Neaveru
 		twitter_free_tlr(tlr);
 		purple_debug_info(DBGID, "something's wrong with the message\n");
 		return 0; //< should we return -1 instead?
 	}
 	if(response->content_len == 0) {
+		//TODO: error cb here? - Neaveru
 		purple_debug_info(DBGID, "no data to parse\n");
 		twitter_free_tlr(tlr);
 		return 0;
 	}
 	purple_debug_info(DBGID, "http_data = #%s#\n", response->content->str);
 	msg_list = twitter_decode_messages(response->content->str, &last_msg_time_t);
+	/*
 	if(msg_list == NULL) {
 		twitter_free_tlr(tlr);
 		return 0;
 	}
+	*/
 	
 	// reverse the list and append it
 	// only if id > last_msg_id
-	hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	msg_list = g_list_reverse(msg_list);
-	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
+	if (tlr->success_cb)
+		tlr->success_cb(ta, tlr, msg_list, last_msg_time_t);
 
-		cur_msg = it->data;
-		if(cur_msg->id > ta->last_msg_id) {
-			ta->last_msg_id = cur_msg->id;
-			mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
-		}
-		id_str = g_strdup_printf("%llu", cur_msg->id);
-		if(!(hide_myself && (g_hash_table_remove(ta->sent_id_hash, id_str) == TRUE))) {
-			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
-			// we still call serv_got_im here, so purple take the message to the log
-			serv_got_im(ta->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
-			// by handling diaplying-im-msg, the message shouldn't be displayed anymore
-			purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
-			g_free(msg_txt);
-		}
-		g_free(id_str);
-		g_free(cur_msg->msg_txt);
-		g_free(cur_msg->from);
-		g_free(cur_msg->avatar_url);
-		g_free(cur_msg);
-		it->data = NULL;
-	}
-	if(ta->last_msg_time < last_msg_time_t) {
-		ta->last_msg_time = last_msg_time_t;
-	}
-	g_list_free(msg_list);
+	twitter_msg_list_free(msg_list);
 	if(tlr->sys_msg) {
 		serv_got_im(ta->gc, tlr->name, tlr->sys_msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
 	}
@@ -422,8 +598,14 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 		purple_debug_info(DBGID, "tlr->count = %d\n", tlr->count);
 		mb_http_data_add_param_int(request, "count", tlr->count);
 	}
-	if(tlr->use_since_id && (ta->last_msg_id > 0) ) {
-		mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
+	if (tlr->timeline_id == TC_REPLIES_TIMELINE) { //this sucks
+		if(tlr->use_since_id && (ta->last_replies_id > 0) ) {
+			mb_http_data_add_param_int(request, "since_id", ta->last_replies_id);
+		}
+	} else {
+		if(tlr->use_since_id && (ta->last_msg_id > 0) ) {
+			mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
+		}
 	}
 	conn_data->handler_data = tlr;
 	
@@ -440,6 +622,8 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 	PurpleBuddy *buddy;
 	TwitterBuddy *tbuddy;
 	PurpleGroup *twitter_group = NULL;
+	GSList *buddies;
+	GSList *l;
 
 	purple_debug_info(DBGID, "buddy list for account %s\n", ta->account->username);
 
@@ -471,6 +655,21 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 		tbuddy->type = TWITTER_BUDDY_TYPE_SYSTEM;
 	}
 	purple_prpl_got_user_status(ta->account, buddy->name, purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE), NULL);
+
+	buddies = purple_find_buddies(ta->account, NULL);
+	for (l = buddies; l; l = l->next)
+	{
+		buddy = l->data;
+		if (!buddy || buddy->proto_data)
+			continue;
+		tbuddy = twitter_new_buddy();
+		buddy->proto_data = tbuddy;
+		tbuddy->buddy = buddy;
+		tbuddy->ta = ta;
+		//tbuddy->uid = -1; //?
+		//tbuddy->name = g_strdup(buddy->name); //?
+		tbuddy->type = TWITTER_BUDDY_TYPE_NORMAL;
+	}
 	// We'll deal with public and users timeline later
 }
 
@@ -507,8 +706,11 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 	ta->gc = acct->gc;
 	ta->state = PURPLE_CONNECTING;
 	ta->timeline_timer = -1;
+	ta->replies_timeline_timer = -1;
 	ta->last_msg_id = mbpurple_account_get_ull(acct, TW_ACCT_LAST_MSG_ID, 0);
+	ta->last_replies_id = mbpurple_account_get_ull(acct, TW_ACCT_LAST_REPLIES_ID, 0);
 	ta->last_msg_time = 0;
+	ta->last_replies_time = 0;
 	ta->conn_hash = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
 	ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
 	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -566,6 +768,10 @@ void mb_account_free(MbAccount * ta)
 	if(ta->timeline_timer != -1) {
 		purple_debug_info(DBGID, "removing timer\n");
 		purple_timeout_remove(ta->timeline_timer);
+	}
+	if (ta->replies_timeline_timer != -1)
+	{
+		purple_timeout_remove(ta->replies_timeline_timer);
 	}
 
 	// new SSL-base connection hash
@@ -695,7 +901,6 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	MbHttpData * response = conn_data->response;
 	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
-	unsigned long long id;
 	
 	purple_debug_info(DBGID, "send_im_handler\n");
 	
@@ -730,12 +935,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	if(id_node) {
 		id_str = xmlnode_get_data_unescaped(id_node);
 	}
-	id = strtoull(id_str, NULL, 10);
-	if (id > ta->last_msg_id) {
-		ta->last_msg_id = id;
-		mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, id);
-	}
-	
+
 	// save it to account
 	g_hash_table_insert(ta->sent_id_hash, id_str, id_str);
 	
@@ -826,20 +1026,21 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 
 gchar * twitter_status_text(PurpleBuddy *buddy)
 {
-	TwitterBuddy * tbuddy = buddy->proto_data;
-	
-	if (tbuddy && tbuddy->status && strlen(tbuddy->status))
-		return g_strdup(tbuddy->status);
-	
+	PurplePresence *presence = purple_buddy_get_presence(buddy);
+	PurpleStatus *status = purple_presence_get_active_status(presence);
+	const char *message = status ? purple_status_get_attr_string(status, "message") : NULL;
+
+	if (message && strlen(message) > 0)
+		return g_strdup(g_markup_escape_text(message, -1));
+
 	return NULL;
 }
 
-// There's no concept of status in TwitterIM for now
 void twitter_set_status(PurpleAccount *acct, PurpleStatus *status)
 {
-  const char *msg = purple_status_get_attr_string(status, "message");
-  purple_debug_info(DBGID, "setting %s's status to %s: %s\n",
-                    acct->username, purple_status_get_name(status), msg);
+	const char *msg = purple_status_get_attr_string(status, "message");
+	purple_debug_info(DBGID, "setting %s's status to %s: %s\n",
+			acct->username, purple_status_get_name(status), msg);
 
 }
 
