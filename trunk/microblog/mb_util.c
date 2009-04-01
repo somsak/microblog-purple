@@ -147,7 +147,7 @@ time_t mb_mktime(char * time_str)
 	// Always return GMT time
 	printf("asctime = %s\n", asctime(&msg_time));
 #endif
-	retval = mktime(&msg_time) + cur_timezone;
+	retval = mktime(&msg_time) - cur_timezone;
 	return retval;
 }
 
