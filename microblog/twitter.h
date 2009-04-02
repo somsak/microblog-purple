@@ -41,7 +41,12 @@ extern "C" {
 #define TW_STATUS_COUNT_MAX 200
 #define TW_INIT_TWEET 15
 #define TW_STATUS_TXT_MAX 140
-#define TW_AGENT_SOURCE "mbpidgin"
+
+#ifdef MBADIUM
+	#define TW_AGENT_SOURCE "mbadium" 
+#else
+	#define TW_AGENT_SOURCE "mbpidgin"
+#endif
 
 #define TW_FORMAT_BUFFER 2048
 #define TW_FORMAT_NAME_MAX 100
