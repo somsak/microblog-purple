@@ -374,6 +374,7 @@ void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition cond)
 		purple_input_remove(conn_data->conn_event_handle);
 		g_hash_table_remove(ta->conn_hash, &source);
 		purple_proxy_connect_cancel_with_handle(conn_data);
+		close(source);
 		call_handler = TRUE;
 	} // global if else for connection state
 	
