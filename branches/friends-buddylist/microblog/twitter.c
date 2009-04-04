@@ -189,13 +189,35 @@ void twitter_msg_free(TwitterMsg *msg)
 	if (msg->avatar_url) g_free(msg->avatar_url);
 	g_free(msg);
 }
+
 void twitter_msg_list_free(GList *msg_list)
 {
-	return;
 	GList *l;
 	for (l = msg_list; l; l = l->next)
 		twitter_msg_free(l->data);
 	g_list_free(msg_list);
+}
+
+void twitter_user_free(TwitterUser *user)
+{
+	if (!user)
+		return;
+	if (user->name)
+		g_free(user->name);;
+	if (user->screen_name)
+		g_free(user->screen_name);
+	if (user->profile_image_url)
+		g_free(user->profile_image_url);
+	if (user->status_text)
+		g_free(user->status_text);
+	g_free(user);
+}
+void twitter_user_list_free(GList *user_list)
+{
+	GList *l;
+	for (l = user_list; l; l = l->next)
+		twitter_user_free(l->data);
+	g_list_free(user_list);
 }
 gboolean twitter_account_names_equal(TwitterAccount *ac, const char *name1, const char *name2)
 {
@@ -366,6 +388,73 @@ gchar * twitter_msg_get_to(const char *msg)
 	return g_strndup(msg + 1, msg_space_loc - msg - 1);
 }
 
+gchar * xmlnode_get_child_data_unescaped(xmlnode *node, const gchar *child_name)
+{
+	xmlnode *child;
+	if (node == NULL)
+		return NULL;
+	if ((child = xmlnode_get_child(node, child_name)) == NULL)
+		return NULL;
+	return xmlnode_get_data_unescaped(child);
+}
+
+GList * twitter_decode_users(const char * data) //XXX: last_msg_time shouldn't be here
+{
+	xmlnode * top = NULL;
+	GList * users_list = NULL;
+	xmlnode * user_node = NULL;
+
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	top = xmlnode_from_str(data, -1);
+	if(top == NULL) {
+		purple_debug_info(DBGID, "failed to parse XML data\n");
+		return NULL;
+	}
+
+	purple_debug_info(DBGID, "successfully parse XML\n");
+
+	for (user_node = xmlnode_get_child(top, "user"); user_node; user_node = xmlnode_get_next_twin(user_node))
+	{
+		TwitterUser * cur_user;
+		guint id;
+		gchar * id_str = xmlnode_get_child_data_unescaped(user_node, "id");
+		gchar * name = xmlnode_get_child_data_unescaped(user_node, "name"); 
+		gchar * screen_name = xmlnode_get_child_data_unescaped(user_node, "screen_name"); 
+		gchar * profile_image_url = xmlnode_get_child_data_unescaped(user_node, "profile_image_url"); 
+		gchar * status_text;
+		xmlnode *status_node = xmlnode_get_child(user_node, "status");
+		status_text = xmlnode_get_child_data_unescaped(status_node, "text");
+
+		id = (id_str ? atoi(id_str) : 0);
+
+		if (screen_name && id)
+		{
+			cur_user = g_new0(TwitterUser, 1);
+			cur_user->id = id;
+			cur_user->name = name;
+			cur_user->screen_name = screen_name;
+			cur_user->profile_image_url = profile_image_url;
+			cur_user->status_text = status_text;
+			users_list = g_list_append(users_list, cur_user);
+		} else {
+			if (id_str)
+				g_free(id_str);
+			if (name)
+				g_free(name);
+			if (screen_name)
+				g_free(screen_name);
+			if (profile_image_url)
+				g_free(profile_image_url);
+			if (status_text)
+				g_free(status_text);
+		}
+	}
+	
+	xmlnode_free(top);
+
+	return users_list;
+}
+
 GList * twitter_decode_messages(const char * data, time_t * last_msg_time) //XXX: last_msg_time shouldn't be here
 {
 	GList * retval = NULL;
@@ -476,14 +565,16 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time) //XXX
 	return retval;
 }
 
+void twitter_fetch_friends_page(TwitterAccount *ta, guint page);
 gint twitter_fetch_friends_handler(MbConnData * conn_data, gpointer data)
 {
 	//TODO: write a wrapper around all this too
 	MbAccount * ta = conn_data->ta;
 	MbHttpData * response = conn_data->response;
-	time_t last_msg_time_t = 0;
-	GList * msg_list = NULL;
+	GList * user_list = NULL;
 	GList * it = NULL;
+	gint count = 0;
+	guint page = GPOINTER_TO_INT(data);
 	
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	
@@ -504,42 +595,44 @@ gint twitter_fetch_friends_handler(MbConnData * conn_data, gpointer data)
 		return 0;
 	}
 	purple_debug_info(DBGID, "http_data = #%s#\n", response->content->str);
-	msg_list = twitter_decode_messages(response->content->str, &last_msg_time_t);
+	user_list = twitter_decode_users(response->content->str);
 
-	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
+	for(it = g_list_first(user_list); it; it = g_list_next(it)) {
 
-		TwitterMsg *msg = it->data;
-		TwitterBuddy *tb = twitter_find_buddy(ta, msg->from);
+		TwitterUser *user = it->data;
+		TwitterBuddy *tb = twitter_find_buddy(ta, user->screen_name);
+		count++;
 		if (!tb)
 		{
-			//TODO: alias
-			twitter_buddy_add(ta, msg->from, NULL);
-			purple_prpl_got_user_status(ta->account, msg->from, purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE),
-					"message", msg->msg_txt, NULL);
+			tb = twitter_buddy_add(ta, user->screen_name, user->name);
+			purple_prpl_got_user_status(ta->account, user->screen_name, purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE),
+					"message", user->status_text, NULL);
 		}
 	}
 
-	// reverse the list and append it
-	// only if id > last_msg_id
-	msg_list = g_list_reverse(msg_list);
+	//TODO, this is bad and inaccurate
+	if (count == 100)
+		twitter_fetch_friends_page(ta, page+1);
 
-	twitter_msg_list_free(msg_list);
+	twitter_user_list_free(user_list);
 	return 0;
 }
-void twitter_fetch_friends(TwitterAccount *ta)
+void twitter_fetch_friends_page(TwitterAccount *ta, guint page)
 {
 	MbConnData * conn_data = NULL;
-	gchar * post_data = NULL, * tmp_msg_txt = NULL, * user_name = NULL;
-	gint twitter_port, len;
+	gchar * post_data = NULL, * user_name = NULL;
+	gint twitter_port;
 	gchar * twitter_host, * path;
 	gboolean use_https;
+	if (page == 0)
+		page = 1;
 	
 	purple_debug_info(DBGID, "retrieving all friends\n");
 
 	// connection
 	//TODO: there should really be a wrapper around all this stuff
 	twitter_get_user_host(ta, &user_name, &twitter_host);
-	//this shouldn't be strdup'd
+	//this shouldn't be strdup'd?
 	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_FRIENDS_STATUSES), tc_def(TC_FRIENDS_STATUSES)));
 	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
 	
@@ -552,13 +645,15 @@ void twitter_fetch_friends(TwitterAccount *ta)
 	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_fetch_friends_handler, use_https);
 	mb_conn_data_set_error(conn_data, "Retrieve friends error", MB_ERROR_NOACTION);
 	mb_conn_data_set_retry(conn_data, 0);
-	conn_data->request->type = HTTP_POST; //set_type ?
+	conn_data->request->type = HTTP_GET; 
 	mb_http_data_set_host(conn_data->request, twitter_host);
 	mb_http_data_set_path(conn_data->request, path);
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
 	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
 	mb_http_data_set_basicauth(conn_data->request, 	user_name,purple_account_get_password(ta->account));
+	mb_http_data_add_param_int(conn_data->request, "page", page);
+        conn_data->handler_data = GINT_TO_POINTER(page);
 
 	/*if(ta->reply_to_status_id > 0) {
 		purple_debug_info(DBGID, "setting in_reply_to_status_id = %llu\n", ta->reply_to_status_id);
@@ -566,19 +661,13 @@ void twitter_fetch_friends(TwitterAccount *ta)
 		ta->reply_to_status_id = 0;
 	}*/
 	
-	//why not g_strdup_printf ?
-	post_data = g_malloc(TW_MAXBUFF);
-	len = snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
-	mb_http_data_set_content(conn_data->request, post_data, len);
-	
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);
 	g_free(user_name);
 	g_free(path);
 	g_free(post_data);
-	
-	return;
 }
+#define twitter_fetch_friends(ta) twitter_fetch_friends_page(ta, 1);
 
 // Function to fetch first batch of new message
 void twitter_fetch_first_new_messages(TwitterAccount * ta)
@@ -805,18 +894,18 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
 	MbHttpData * response = conn_data->response;
 	
 	if(response->status == HTTP_OK) {
-		gint interval = purple_account_get_int(conn_data->ta->account, tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
+		gint interval = purple_account_get_int(ta->account, tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
 		
-		purple_connection_set_state(conn_data->ta->gc, PURPLE_CONNECTED);
-		conn_data->ta->state = PURPLE_CONNECTED;
-		twitter_get_buddy_list(conn_data->ta);
+		purple_connection_set_state(ta->gc, PURPLE_CONNECTED);
+		ta->state = PURPLE_CONNECTED;
+		twitter_get_buddy_list(ta);
 		purple_debug_info(DBGID, "refresh interval = %d\n", interval);
-		conn_data->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, conn_data->ta);
-		twitter_fetch_first_new_messages(conn_data->ta);
+		ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, ta);
+		twitter_fetch_first_new_messages(ta);
 		return 0;
 	} else {
-		purple_connection_set_state(conn_data->ta->gc, PURPLE_DISCONNECTED);
-		conn_data->ta->state = PURPLE_DISCONNECTED;
+		purple_connection_set_state(ta->gc, PURPLE_DISCONNECTED);
+		ta->state = PURPLE_DISCONNECTED;
 		purple_connection_error(ta->gc, _("Authentication error"));
 		return -1;
 	}

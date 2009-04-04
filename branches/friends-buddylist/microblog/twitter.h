@@ -79,6 +79,8 @@ typedef struct _TwitterAccount {
 	gchar * tag;
 	gint tag_pos;
 	unsigned long long reply_to_status_id;
+
+	guint friends_count;
 } TwitterAccount;
 
 typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
@@ -171,6 +173,14 @@ typedef struct _TwitterMsg {
 	time_t msg_time;
 	gint flag;
 } TwitterMsg;
+
+typedef struct _TwitterUser {
+	guint id;
+	gchar * name;
+	gchar * screen_name;
+	gchar * profile_image_url;
+	gchar * status_text;
+} TwitterUser;
 
 extern PurplePluginProtocolInfo twitter_prpl_info;
 extern const char * _TweetTimeLineNames[];
