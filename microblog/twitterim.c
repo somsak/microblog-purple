@@ -104,6 +104,11 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_tw_conf[TC_PLUGIN].conf = NULL;
 	_tw_conf[TC_PLUGIN].def_str = (gchar *)plugin;
 
+	_tw_conf[TC_FRIENDS_AUTO_UPDATE].conf = g_strdup("twitter_friends_autoupdate");
+	_tw_conf[TC_FRIENDS_AUTO_UPDATE].def_bool = FALSE;
+	option = purple_account_option_bool_new(_("Auto-update buddy list"), tc_name(TC_FRIENDS_AUTO_UPDATE), tc_def_bool(TC_FRIENDS_AUTO_UPDATE));
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
 	_tw_conf[TC_HIDE_SELF].conf = g_strdup("twitter_hide_myself");
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
@@ -111,7 +116,12 @@ gboolean plugin_load(PurplePlugin *plugin)
 	
 	_tw_conf[TC_MSG_REFRESH_RATE].conf = g_strdup("twitter_msg_refresh_rate");
 	_tw_conf[TC_MSG_REFRESH_RATE].def_int = 60;
-	option = purple_account_option_int_new(_("Message refresh rate (seconds)"), tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
+	option = purple_account_option_int_new(_("Timeline refresh rate (seconds)"), tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	_tw_conf[TC_REPLIES_REFRESH_RATE].conf = g_strdup("twitter_replies_refresh_rate");
+	_tw_conf[TC_REPLIES_REFRESH_RATE].def_int = 120;
+	option = purple_account_option_int_new(_("Replies refresh rate (seconds)"), tc_name(TC_REPLIES_REFRESH_RATE), tc_def_int(TC_REPLIES_REFRESH_RATE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_INITIAL_TWEET].conf = g_strdup("twitter_init_tweet");
@@ -162,6 +172,11 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_tw_conf[TC_REPLIES_TIMELINE].conf = g_strdup("twitter_replies_timeline");
 	_tw_conf[TC_REPLIES_TIMELINE].def_str = g_strdup("/statuses/replies.xml");
 	option = purple_account_option_string_new(_("Replies timeline path"), tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	_tw_conf[TC_FRIENDS_STATUSES].conf = g_strdup("twitter_friends_statuses");
+	_tw_conf[TC_FRIENDS_STATUSES].def_str = g_strdup("/statuses/friends.xml");
+	option = purple_account_option_string_new(_("Friends statuses path"), tc_name(TC_FRIENDS_STATUSES), tc_def(TC_FRIENDS_STATUSES));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	// and now for non-option global
