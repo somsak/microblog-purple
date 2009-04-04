@@ -159,6 +159,25 @@ void twitter_buddy_free(PurpleBuddy * buddy)
 		buddy->proto_data = NULL;
 	}
 }
+TwitterBuddy *twitter_buddy_add(TwitterAccount *ta, const gchar *screenname, const gchar *alias)
+{
+	PurpleGroup *g;
+	PurpleBuddy *b = purple_buddy_new(ta->account, screenname, alias);
+	TwitterBuddy *tw;
+
+	//TODO: config
+	if ((g = purple_find_group("twitter")) == NULL)
+		g = purple_group_new("twitter");
+	purple_blist_add_buddy(b, NULL, g, NULL);
+
+	//TODO: function
+	tw = twitter_new_buddy();
+	tw->buddy = b;
+	tw->ta = ta;
+	tw->type = TWITTER_BUDDY_TYPE_NORMAL;
+	b->proto_data = tw;
+	return tw;
+}
 
 void twitter_msg_free(TwitterMsg *msg)
 {
@@ -272,7 +291,7 @@ gint twitter_replies_timeline_success_handler_init(MbAccount *ta, TwitterTimeLin
 		GList *msg_list, time_t last_msg_time_t)
 {
 	GList *it;
-	gint interval = purple_account_get_int(ta->account, tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
+	gint interval = purple_account_get_int(ta->account, tc_name(TC_REPLIES_REFRESH_RATE), tc_def_int(TC_REPLIES_REFRESH_RATE));
 	for (it = msg_list; it; it = it->next)
 	{
 		TwitterMsg *cur_msg = it->data;
@@ -334,50 +353,6 @@ gint twitter_friends_timeline_success_handler(MbAccount *ta, TwitterTimeLineReq 
 	}
 	return 0;
 }
-
-// Function to fetch first batch of new message
-void twitter_fetch_first_new_messages(TwitterAccount * ta)
-{
-	TwitterTimeLineReq * tlr;
-	const gchar * tl_path;
-	int count;
-	
-	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
-	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
-	count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
-	purple_debug_info(DBGID, "count = %d\n", count);
-	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, count, NULL, twitter_friends_timeline_success_handler, NULL);
-	
-	twitter_fetch_new_messages(ta, tlr);
-
-	tl_path = purple_account_get_string(ta->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
-	tlr = twitter_new_tlr(tl_path, tc_def(TC_REPLIES_USER), TL_REPLIES, 1, NULL,
-			twitter_replies_timeline_success_handler_init, NULL);
-	purple_debug_info(DBGID, "fetching replies from %s to %s\n", tlr->path, tlr->name);
-	twitter_fetch_new_messages(ta, tlr);
-}
-
-// Function to fetch all new messages periodically
-gboolean twitter_fetch_all_new_messages(gpointer data)
-{
-	TwitterAccount * ta = data;
-	TwitterTimeLineReq * tlr = NULL;
-	const gchar * tl_path;
-	
-	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
-	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, TW_STATUS_COUNT_MAX, NULL,
-			twitter_friends_timeline_success_handler, NULL);
-	twitter_fetch_new_messages(ta, tlr);
-
-	return TRUE;
-}
-
-#if 0
-static void twitter_list_sent_id_hash(gpointer key, gpointer value, gpointer user_data)
-{
-	purple_debug_info(DBGID, "key/value = %s/%s\n", key, value);
-}
-#endif
 gchar * twitter_msg_get_to(const char *msg)
 {
 	const char *msg_space_loc;
@@ -501,10 +476,161 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time) //XXX
 	return retval;
 }
 
+gint twitter_fetch_friends_handler(MbConnData * conn_data, gpointer data)
+{
+	//TODO: write a wrapper around all this too
+	MbAccount * ta = conn_data->ta;
+	MbHttpData * response = conn_data->response;
+	time_t last_msg_time_t = 0;
+	GList * msg_list = NULL;
+	GList * it = NULL;
+	
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	
+	if(response->status == HTTP_MOVED_TEMPORARILY) {
+		// no new messages
+		//TODO: error cb here? - Neaveru
+		purple_debug_info(DBGID, "no new messages\n");
+		return 0;
+	}
+	if(response->status != HTTP_OK) {
+		//TODO: error cb here - Neaveru
+		purple_debug_info(DBGID, "something's wrong with the message\n");
+		return 0; //< should we return -1 instead?
+	}
+	if(response->content_len == 0) {
+		//TODO: error cb here? - Neaveru
+		purple_debug_info(DBGID, "no data to parse\n");
+		return 0;
+	}
+	purple_debug_info(DBGID, "http_data = #%s#\n", response->content->str);
+	msg_list = twitter_decode_messages(response->content->str, &last_msg_time_t);
+
+	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
+
+		TwitterMsg *msg = it->data;
+		TwitterBuddy *tb = twitter_find_buddy(ta, msg->from);
+		if (!tb)
+		{
+			//TODO: alias
+			twitter_buddy_add(ta, msg->from, NULL);
+			purple_prpl_got_user_status(ta->account, msg->from, purple_primitive_get_id_from_type(PURPLE_STATUS_AVAILABLE),
+					"message", msg->msg_txt, NULL);
+		}
+	}
+
+	// reverse the list and append it
+	// only if id > last_msg_id
+	msg_list = g_list_reverse(msg_list);
+
+	twitter_msg_list_free(msg_list);
+	return 0;
+}
+void twitter_fetch_friends(TwitterAccount *ta)
+{
+	MbConnData * conn_data = NULL;
+	gchar * post_data = NULL, * tmp_msg_txt = NULL, * user_name = NULL;
+	gint twitter_port, len;
+	gchar * twitter_host, * path;
+	gboolean use_https;
+	
+	purple_debug_info(DBGID, "retrieving all friends\n");
+
+	// connection
+	//TODO: there should really be a wrapper around all this stuff
+	twitter_get_user_host(ta, &user_name, &twitter_host);
+	//this shouldn't be strdup'd
+	path = g_strdup(purple_account_get_string(ta->account, tc_name(TC_FRIENDS_STATUSES), tc_def(TC_FRIENDS_STATUSES)));
+	use_https = purple_account_get_bool(ta->account, tc_name(TC_USE_HTTPS), tc_def_bool(TC_USE_HTTPS));
+	
+	if(use_https) {
+		twitter_port = TW_HTTPS_PORT;
+	} else {
+		twitter_port = TW_HTTP_PORT;
+	}
+
+	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_fetch_friends_handler, use_https);
+	mb_conn_data_set_error(conn_data, "Retrieve friends error", MB_ERROR_NOACTION);
+	mb_conn_data_set_retry(conn_data, 0);
+	conn_data->request->type = HTTP_POST; //set_type ?
+	mb_http_data_set_host(conn_data->request, twitter_host);
+	mb_http_data_set_path(conn_data->request, path);
+	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
+	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
+	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
+	mb_http_data_set_basicauth(conn_data->request, 	user_name,purple_account_get_password(ta->account));
+
+	/*if(ta->reply_to_status_id > 0) {
+		purple_debug_info(DBGID, "setting in_reply_to_status_id = %llu\n", ta->reply_to_status_id);
+		mb_http_data_add_param_ull(conn_data->request, "in_reply_to_status_id", ta->reply_to_status_id);
+		ta->reply_to_status_id = 0;
+	}*/
+	
+	//why not g_strdup_printf ?
+	post_data = g_malloc(TW_MAXBUFF);
+	len = snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
+	mb_http_data_set_content(conn_data->request, post_data, len);
+	
+	mb_conn_process_request(conn_data);
+	g_free(twitter_host);
+	g_free(user_name);
+	g_free(path);
+	g_free(post_data);
+	
+	return;
+}
+
+// Function to fetch first batch of new message
+void twitter_fetch_first_new_messages(TwitterAccount * ta)
+{
+	TwitterTimeLineReq * tlr;
+	const gchar * tl_path;
+	int count;
+
+	twitter_fetch_friends(ta);
+	
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
+	count = purple_account_get_int(ta->account, tc_name(TC_INITIAL_TWEET), tc_def_int(TC_INITIAL_TWEET));
+	purple_debug_info(DBGID, "count = %d\n", count);
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, count, NULL, twitter_friends_timeline_success_handler, NULL);
+	
+	twitter_fetch_new_messages(ta, tlr);
+
+	tl_path = purple_account_get_string(ta->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_REPLIES_USER), TL_REPLIES, 1, NULL,
+			twitter_replies_timeline_success_handler_init, NULL);
+	purple_debug_info(DBGID, "fetching replies from %s to %s\n", tlr->path, tlr->name);
+	twitter_fetch_new_messages(ta, tlr);
+}
+
+// Function to fetch all new messages periodically
+gboolean twitter_fetch_all_new_messages(gpointer data)
+{
+	TwitterAccount * ta = data;
+	TwitterTimeLineReq * tlr = NULL;
+	const gchar * tl_path;
+	
+	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
+	tlr = twitter_new_tlr(tl_path, tc_def(TC_FRIENDS_USER), TL_FRIENDS, TW_STATUS_COUNT_MAX, NULL,
+			twitter_friends_timeline_success_handler, NULL);
+	twitter_fetch_new_messages(ta, tlr);
+
+	return TRUE;
+}
+
+#if 0
+static void twitter_list_sent_id_hash(gpointer key, gpointer value, gpointer user_data)
+{
+	purple_debug_info(DBGID, "key/value = %s/%s\n", key, value);
+}
+#endif
+
 
 
 gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 {
+	//TODO: write a wrapper around all this too
 	MbAccount * ta = conn_data->ta;
 	const gchar * username;
 	MbHttpData * response = conn_data->response;
@@ -848,7 +974,7 @@ void twitter_login(PurpleAccount *acct)
 	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_verify_authen, use_https);
 	mb_conn_data_set_error(conn_data, "Authentication error", MB_ERROR_RAISE_ERROR);
 	mb_conn_data_set_retry(conn_data, purple_account_get_int(acct, tc_name(TC_GLOBAL_RETRY), tc_def_int(TC_GLOBAL_RETRY)));
-	
+
 	conn_data->request->type = HTTP_GET;
 	mb_http_data_set_host(conn_data->request, twitter_host);
 	mb_http_data_set_path(conn_data->request, path);
