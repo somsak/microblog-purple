@@ -675,8 +675,10 @@ void twitter_fetch_first_new_messages(TwitterAccount * ta)
 	TwitterTimeLineReq * tlr;
 	const gchar * tl_path;
 	int count;
+	gboolean fetch_friends = purple_account_get_bool(ta->account, tc_name(TC_FRIENDS_AUTO_UPDATE), tc_def_bool(TC_FRIENDS_AUTO_UPDATE));
 
-	twitter_fetch_friends(ta);
+	if (fetch_friends)
+		twitter_fetch_friends(ta);
 	
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	tl_path = purple_account_get_string(ta->account, tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
