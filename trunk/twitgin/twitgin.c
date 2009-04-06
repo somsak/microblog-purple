@@ -153,6 +153,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	int proto_id = 0;
 	gchar * src = NULL;
 	const char * decoded_rt;
+	char * unescaped_rt;
 
 	purple_debug_info(DBGID, "twittgin_uri_handler\n");	
 	// do not need to test, because the conversation window must be open before one can click
@@ -210,9 +211,11 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 			message = g_hash_table_lookup(params, "msg");
 			from = g_hash_table_lookup(params, "from");
 			decoded_rt = purple_url_decode(message);
-			retweet_message = g_strdup_printf("rt @%s: %s", from, decoded_rt);
+			unescaped_rt = purple_unescape_html(decoded_rt);
+			retweet_message = g_strdup_printf("rt @%s: %s", from, unescaped_rt);
 			gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, retweet_message, -1);
 			gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
+			g_free(unescaped_rt);
 			g_free(retweet_message);
 			return TRUE;
 		}
