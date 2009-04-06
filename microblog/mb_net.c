@@ -209,7 +209,8 @@ void mb_conn_connect_cb(gpointer data, int source, const gchar * error_message)
 	if (!ta || ta->state == PURPLE_DISCONNECTED || !ta->account || ta->account->disconnecting)
 	{
 		purple_debug_info(MB_NET, "we're going to be disconnected?\n");
-		purple_proxy_connect_cancel_with_handle(conn_data);
+		close(source);
+		//purple_proxy_connect_cancel_with_handle(conn_data);
 		//conn_data->conn_data = NULL;
 		return;
 	}
