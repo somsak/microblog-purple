@@ -41,7 +41,7 @@
 	return @"microblog-Twitter";
 }
 - (NSString *)shortDescription{
-	return @"A microblog based Twitter connection";
+	return @"microblog-Twitter";
 }
 - (NSString *)longDescription{
 	return @"microblog-Twitter";
@@ -52,6 +52,7 @@
 - (NSCharacterSet *)ignoredCharacters{
 	return [NSCharacterSet characterSetWithCharactersInString:@""];
 }
+
 - (BOOL)caseSensitive{
 	return NO;
 }
