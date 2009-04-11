@@ -12,6 +12,10 @@ extern "C" {
 
 extern const char * mb_get_uri_txt(PurpleAccount * pa);
 extern time_t mb_mktime(char * time_str);
+extern void mb_account_set_ull(PurpleAccount * account, const char * name, unsigned long long value);
+extern unsigned long long mb_account_get_ull(PurpleAccount * account, const char * name, unsigned long long default_value);
+extern void mb_account_set_idhash(PurpleAccount * account, const char * name, GHashTable * id_hash);
+extern void mb_account_get_idhash(PurpleAccount * account, const char * name, GHashTable * id_hash);
 
 #ifdef __cplusplus
 }
