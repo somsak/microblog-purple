@@ -30,6 +30,8 @@
 #	include <netinet/in.h>
 #endif
 
+#define DBGID "mb_util"
+
 
 static const char * month_abb_names[] = {
 	"Jan",
@@ -160,6 +162,79 @@ const char * mb_get_uri_txt(PurpleAccount * pa)
 	}
 	// no support for laconica for now
 	return NULL;
+}
+
+void mb_account_set_ull(PurpleAccount * account, const char * name, unsigned long long value)
+{
+	gchar * tmp_str;
+
+	tmp_str = g_strdup_printf("%llu", value);
+	purple_account_set_string(account, name, tmp_str);
+	g_free(tmp_str);
+}
+
+unsigned long long mb_account_get_ull(PurpleAccount * account, const char * name, unsigned long long default_value)
+{
+	const char * tmp_str;
+
+	tmp_str = purple_account_get_string(account, name, NULL);
+	if(tmp_str) {
+		return strtoull(tmp_str, NULL, 10);
+	} else {
+		return default_value;
+	}
+}
+
+static void mb_account_foreach_idhash(gpointer key, gpointer val, gpointer userdata)
+{
+	GString * output = userdata;
+	gchar * str_key = key;
+
+	if(output->len > 0) {
+		g_string_append_printf(output, ",%s", str_key);
+		purple_debug_info(DBGID, "appending idhash %s\n", str_key);
+	} else {
+		g_string_append(output, str_key);
+		purple_debug_info(DBGID, "setting idhash %s\n", str_key);
+	}
+}
+
+// work around to save a idhash to account
+// Use , separater
+void mb_account_set_idhash(PurpleAccount * account, const char * name, GHashTable * id_hash)
+{
+	GString * output = g_string_new("");
+
+	g_hash_table_foreach(id_hash, mb_account_foreach_idhash, output);
+
+	purple_debug_info(DBGID, "set_idhash output value = %s\n", output->str);
+
+	purple_account_set_string(account, name, output->str);
+
+	g_string_free(output, TRUE);
+}
+
+// work around to load a idhash from account
+// Use , separater
+void mb_account_get_idhash(PurpleAccount * account, const char * name, GHashTable * id_hash)
+{
+	const gchar * id_list;
+	gchar * tmp, * hash_val;
+	char * save_ptr = NULL, * val;
+
+	id_list = purple_account_get_string(account, name, NULL);
+
+	purple_debug_info(DBGID, "getting idlist = %s\n", id_list);
+	if(id_list) {
+		tmp = g_strdup(id_list);
+		for(val = strtok_r(tmp, ",", &save_ptr); val != NULL; val = strtok_r(NULL, ",", &save_ptr)) {
+			hash_val = g_strdup(val);
+			purple_debug_info(DBGID, "inserting value = %s\n", hash_val);
+			g_hash_table_insert(id_hash, hash_val, hash_val);
+			// hash_val will be freed by idhash
+		}
+		g_free(tmp);
+	}
 }
 
 

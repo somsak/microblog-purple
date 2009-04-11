@@ -66,6 +66,7 @@
 
 #define DBGID "twitter"
 #define TW_ACCT_LAST_MSG_ID "twitter_last_msg_id"
+#define TW_ACCT_SENT_MSG_IDS "twitter_sent_msg_ids"
 
 //static const char twitter_host[] = "twitter.com";
 static gint twitter_port = 443;
@@ -211,8 +212,6 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 	status = xmlnode_get_child(top, "status");
 	purple_debug_info(DBGID, "timezone = %ld\n", timezone);
 	
-	//hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
-	
 	while(status) {
 		msg_txt = NULL;
 		from = NULL;
@@ -224,20 +223,6 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 		if(id_node) {
 			xml_str = xmlnode_get_data_unescaped(id_node);
 		}
-		// Check for duplicate message
-		/*
-		if(hide_myself) {
-			purple_debug_info(DBGID, "checking for duplicate message\n");
-#if 0
-			g_hash_table_foreach(ta->sent_id_hash, twitter_list_sent_id_hash, NULL);
-#endif			
-			if(g_hash_table_remove(ta->sent_id_hash, xml_str)  == TRUE) {
-				// Dupplicate ID, moved to next value
-				purple_debug_info(DBGID, "duplicate id = %s\n", xml_str);
-				skip = TRUE;
-			}
-		}
-		*/
 		cur_id = strtoull(xml_str, NULL, 10);
 		g_free(xml_str);
 
@@ -347,7 +332,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		cur_msg = it->data;
 		if(cur_msg->id > ta->last_msg_id) {
 			ta->last_msg_id = cur_msg->id;
-			mbpurple_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
+			mb_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
 		}
 		id_str = g_strdup_printf("%llu", cur_msg->id);
 		if(!(hide_myself && (g_hash_table_remove(ta->sent_id_hash, id_str) == TRUE))) {
@@ -499,7 +484,7 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 	ta->gc = acct->gc;
 	ta->state = PURPLE_CONNECTING;
 	ta->timeline_timer = -1;
-	ta->last_msg_id = mbpurple_account_get_ull(acct, TW_ACCT_LAST_MSG_ID, 0);
+	ta->last_msg_id = mb_account_get_ull(acct, TW_ACCT_LAST_MSG_ID, 0);
 	ta->last_msg_time = 0;
 	ta->conn_hash = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
 	ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -543,8 +528,23 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 	}	
 }
 
+static gboolean foreach_remove_expire_idhash(gpointer key, gpointer val, gpointer userdata)
+{
+	MbAccount * ma = (MbAccount *)userdata;
+	unsigned long long msg_id;
+
+	msg_id = strtoull(key, NULL, 10);
+	if(ma->last_msg_id >= msg_id) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
 void mb_account_free(MbAccount * ta)
 {	
+	guint num_remove;
+
 	//purple_debug_info(DBGID, "mb_account_free\n");
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 	
@@ -578,7 +578,9 @@ void mb_account_free(MbAccount * ta)
 		g_hash_table_destroy(ta->conn_hash);
 		ta->conn_hash = NULL;
 	}
-	
+	num_remove = g_hash_table_foreach_remove(ta->sent_id_hash, foreach_remove_expire_idhash, ta);
+	purple_debug_info(DBGID, "%u key removed\n", num_remove);
+	mb_account_set_idhash(ta->account, TW_ACCT_SENT_MSG_IDS, ta->sent_id_hash);
 	if(ta->sent_id_hash) {
 		purple_debug_info(DBGID, "destroying sent_id hash\n");
 		g_hash_table_destroy(ta->sent_id_hash);
@@ -618,6 +620,7 @@ void twitter_login(PurpleAccount *acct)
 	
 	// Create account data
 	ta = mb_account_new(acct);
+	mb_account_get_idhash(acct, TW_ACCT_SENT_MSG_IDS,ta->sent_id_hash);
 
 	twitter_get_user_host(ta, &user_name, &twitter_host);
 

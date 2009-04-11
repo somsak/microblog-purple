@@ -198,12 +198,6 @@ extern MbAccount * mb_account_new(PurpleAccount * acct);
 extern void mb_account_free(MbAccount * ta);
 
 /*
- * Utility functions
- */
-extern void mbpurple_account_set_ull(PurpleAccount * account, const char * name, unsigned long long value);
-extern unsigned long long mbpurple_account_get_ull(PurpleAccount * account, const char * name, unsigned long long default_value);
-
-/*
  * Protocol functions
  */
 extern void twitter_set_status(PurpleAccount *acct, PurpleStatus *status);
