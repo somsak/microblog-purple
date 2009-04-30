@@ -208,9 +208,8 @@ void mb_account_set_idhash(PurpleAccount * account, const char * name, GHashTabl
 	g_hash_table_foreach(id_hash, mb_account_foreach_idhash, output);
 
 	purple_debug_info(DBGID, "set_idhash output value = %s\n", output->str);
-
+	// empty string will be set if sent_id_hash is empty
 	purple_account_set_string(account, name, output->str);
-
 	g_string_free(output, TRUE);
 }
 
@@ -219,25 +218,24 @@ void mb_account_set_idhash(PurpleAccount * account, const char * name, GHashTabl
 void mb_account_get_idhash(PurpleAccount * account, const char * name, GHashTable * id_hash)
 {
 	const gchar * id_list;
-	gchar * tmp, * hash_val;
-	char * save_ptr = NULL, * val;
+	gchar * hash_val;
+	gchar ** id_list_str, **tmp;
 
 	id_list = purple_account_get_string(account, name, NULL);
 
 	purple_debug_info(DBGID, "getting idlist = %s\n", id_list);
-	if(id_list) {
-		tmp = g_strdup(id_list);
-		for(val = strtok_r(tmp, ",", &save_ptr); val != NULL; val = strtok_r(NULL, ",", &save_ptr)) {
-			hash_val = g_strdup(val);
+	if(id_list && (strlen(id_list) > 0)) {
+		id_list_str = g_strsplit(id_list, ",", 0);
+		tmp = id_list_str;
+		while( (*tmp) != NULL) {
+			hash_val = g_strdup(*tmp);
 			purple_debug_info(DBGID, "inserting value = %s\n", hash_val);
 			g_hash_table_insert(id_hash, hash_val, hash_val);
-			// hash_val will be freed by idhash
+			tmp++;
 		}
-		g_free(tmp);
+		g_strfreev(id_list_str);
 	}
 }
-
-
 
 #ifdef UTEST
 int main(int argc, char * argv[])
