@@ -87,6 +87,7 @@ typedef struct _MbHttpData {
 	gint type;
 	gint state;
 	
+	gchar * header_packet;
 	gchar * packet;
 	gchar * cur_packet;
 	gint packet_len;
@@ -277,6 +278,13 @@ extern gboolean mb_http_data_rm_param(MbHttpData * data, const gchar * key);
 	@param data MbHttpData
 */
 extern void mb_http_data_truncate(MbHttpData * data);
+
+/*
+   	Prepare data separately in header and packet
+
+	The prepared data can be used for purple url fetch util
+ */
+extern void mb_http_data_prepare_fetch(MbHttpData * data);
 
 #ifdef __cplusplus
 }

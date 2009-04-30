@@ -535,6 +535,7 @@ static gboolean foreach_remove_expire_idhash(gpointer key, gpointer val, gpointe
 
 	msg_id = strtoull(key, NULL, 10);
 	if(ma->last_msg_id >= msg_id) {
+		purple_debug_info(DBGID, "removing %s since it is less than %llu\n", (gchar *)key, ma->last_msg_id);
 		return TRUE;
 	} else {
 		return FALSE;
