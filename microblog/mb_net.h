@@ -5,6 +5,8 @@
 #ifndef __MB_NET__
 #define __MB_NET__
 
+#include <util.h>
+
 #include "mb_http.h"
 #include "twitter.h"
 
@@ -50,6 +52,8 @@ typedef struct _MbConnData {
 	// SSL connection seems not being freed
 	PurpleSslConnection * ssl_conn_data;
 	gboolean is_ssl;
+
+	PurpleUtilFetchUrlData * fetch_url_data;
 } MbConnData;
 
 /*
