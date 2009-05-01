@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include <util.h>
 
 #ifndef G_GNUC_NULL_TERMINATED
 #  if __GNUC__ >= 4
@@ -39,6 +40,8 @@ static void mb_conn_get_result(gpointer data, gint source, PurpleInputCondition 
 static void mb_conn_get_ssl_result(gpointer data, PurpleSslConnection * ssl, PurpleInputCondition cond);
 static void mb_conn_connect_ssl_error(PurpleSslConnection *ssl, PurpleSslErrorType errortype, gpointer data);
 
+// Fetch URL callback
+static void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data, const gchar * url_text, gsize len, const gchar * error_message);
  
 MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbHandlerFunc handler, gboolean is_ssl)
 {
@@ -66,6 +69,8 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 	} else {
 		conn_data->request->proto = MB_HTTP;
 	}
+
+	conn_data->fetch_url_data = NULL;
 	
 	purple_debug_info(MB_NET, "new: create conn_data = %p\n", conn_data);
 	return conn_data;
@@ -74,6 +79,11 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 void mb_conn_data_free(MbConnData * conn_data)
 {
 	purple_debug_info(MB_NET, "free: conn_data = %p\n", conn_data);
+
+	if(conn_data->fetch_url_data) {
+		purple_util_fetch_url_cancel(conn_data->fetch_url_data);
+	}
+
 	if(conn_data->conn_event_handle) {
 		//purple_debug_info(MB_NET, "removing connection %p from conn_hash\n", conn_data->conn_data);
 		//g_hash_table_remove(conn_data->ta->conn_hash, conn_data->conn_data);
@@ -124,6 +134,7 @@ void mb_conn_data_set_retry(MbConnData * data, gint retry)
 	data->max_retry = retry;
 }
 
+/*
 void mb_conn_process_request(MbConnData * data)
 {
 	MbAccount *ta = data->ta;
@@ -135,16 +146,88 @@ void mb_conn_process_request(MbConnData * data)
 		purple_debug_info(MB_NET, "connecting using SSL connection\n");
 		data->ssl_conn_data = purple_ssl_connect(ta->account, data->host, data->port, mb_conn_post_ssl_request, mb_conn_connect_ssl_error, data);
 		purple_debug_info(MB_NET, "after connect\n");
-		/*
-		if(data->ssl_conn_data != NULL) {
-			purple_debug_info(MB_NET, "connect (seems to) success\n");
-		}
-		*/
+		//
+		//if(data->ssl_conn_data != NULL) {
+		//	purple_debug_info(MB_NET, "connect (seems to) success\n");
+		//}
 	} else {
 		purple_debug_info(MB_NET, "connecting using non-SSL connection to %s, %d\n", data->host, data->port);
 		purple_proxy_connect(data, ta->account, data->host, data->port, mb_conn_connect_cb, data);
 		purple_debug_info(MB_NET, "after connect\n");
 	}
+}
+*/
+
+gchar * mb_conn_url_unparse(MbConnData * data)
+{
+	gchar port_str[20];
+
+	if( ((data->port == 80) && !(data->is_ssl)) ||
+		((data->port == 443) && (data->is_ssl)))
+	{
+		port_str[0] = '\0';
+	} else {
+		snprintf(port_str, 19, ":%hd", data->port);
+	}
+
+	// parameter is ignored here since we handle header ourself
+	return g_strdup_printf("%s%s%s/%s", 
+			data->is_ssl ? "https://" : "http://",
+			data->host,
+			port_str,
+			data->request->path
+		);
+}
+
+
+void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data, const gchar * url_text, gsize len, const gchar * error_message)
+{
+	MbConnData * conn_data = (MbConnData *)user_data;
+	MbAccount * ma = conn_data->ta;
+
+	// in whatever situation, url_data should be handled only by libpurple
+	conn_data->fetch_url_data = NULL;
+
+	if(url_text) {
+		mb_http_data_post_read(conn_data->response, url_text, len);
+		if(conn_data->handler) {
+			gint retval;
+
+			purple_debug_info(MB_NET, "going to call handler\n");
+			retval = conn_data->handler(conn_data, conn_data->handler_data);
+			purple_debug_info(MB_NET, "handler returned, retval = %d\n", retval);
+			if(retval == 0) {
+				// Everything's good. Free data structure and go-on with usual works
+				purple_debug_info(MB_NET, "everything's ok, freeing data\n");
+				mb_conn_data_free(conn_data);
+			} else if(retval == -1) {
+				// Something's wrong. Requeue the whole process
+				purple_debug_info(MB_NET, "handler return -1, retry again\n");
+				mb_http_data_truncate(conn_data->response);
+				mb_conn_process_request(conn_data);
+			} 
+		}
+	} else {
+		purple_connection_error(ma->gc, _(error_message));
+		mb_conn_data_free(conn_data);
+	}
+}
+
+void mb_conn_process_request(MbConnData * data)
+{
+	MbAccount * ta = data->ta;
+	gchar * url;
+
+	purple_debug_info(MB_NET, "NEW mb_conn_process_request, conn_data = %p\n", data);
+
+	purple_debug_info(MB_NET, "connecting to %s on port %hd\n", data->host, data->port);
+
+	url = mb_conn_url_unparse(data);
+
+	// we manage user_agent by ourself so ignore this completely
+	mb_http_data_prepare_write(data->request);
+	data->fetch_url_data = purple_util_fetch_url_request(url, TRUE, "", TRUE, data->request->packet, TRUE, mb_conn_fetch_url_cb, (gpointer)data);
+	g_free(url);
 }
 
 void mb_conn_post_request(gpointer data, gint source, PurpleInputCondition cond)

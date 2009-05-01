@@ -17,13 +17,6 @@
 
 #include "mb_http.h"
 
-/*
- * Prepare data to write
- *
- * After calling this function, data->packet will point to packet buffer
- */
-static void mb_http_data_prepare_write(MbHttpData * data);
-
 // function below might be static instead
 static MbHttpParam * mb_http_param_new(void)
 {
@@ -85,7 +78,6 @@ MbHttpData * mb_http_data_new(void)
 	data->type = HTTP_GET; //< default is get
 	data->state = MB_HTTP_STATE_INIT;
 	
-	data->header_packet = NULL;
 	data->packet = NULL;
 	data->cur_packet = NULL;
 	
@@ -133,11 +125,6 @@ void mb_http_data_free(MbHttpData * data) {
 	if(data->chunked_content) {
 		purple_debug_info(MB_HTTPID, "freeing chunked request\n");
 		g_string_free(data->chunked_content, TRUE);
-	}
-
-	if(data->header_packet) {
-		purple_debug_info(MB_HTTPID, "freeing header packet\n");
-		g_free(data->header_packet);
 	}
 	
 	if(data->packet) {
@@ -404,46 +391,31 @@ static void mb_http_data_header_assemble(gpointer key, gpointer value, gpointer 
 	data->cur_packet += len;
 }
 
-static void mb_http_data_prepare_write(MbHttpData * data)
-{
-	gchar * cur_packet;
-
-	mb_http_data_prepare_fetch(data);
-	data->packet = g_malloc0(data->packet_len + 1);
-	cur_packet = data->packet;
-	strcpy(cur_packet, data->header_packet);
-	if(data->content) {
-		cur_packet += strlen(data->header_packet);
-		memcpy(cur_packet, data->content->str, data->content->len);
-	}
-	data->cur_packet = data->packet;
-}
-
-void mb_http_data_prepare_fetch(MbHttpData * data)
+void mb_http_data_prepare_write(MbHttpData * data)
 {
 	GList * it;
 	MbHttpParam * p;
 	gchar * cur_packet;
-	gint packet_len, header_len, len;
+	gint packet_len, len;
 
 	if(data->path == NULL) return;
 
 	// assemble all headers
 	// I don't sure how hash table will behave, so assemple everything should be better
-	header_len = data->headers_len + data->params_len + strlen(data->path) + 100; //< for \r\n\r\n and GET|POST and other stuff
-	if(data->header_packet) {
-		g_free(data->header_packet);
+	packet_len = data->headers_len + data->params_len + strlen(data->path) + 100; //< for \r\n\r\n and GET|POST and other stuff
+	if(data->content) {
+		packet_len += data->content->len;
 	}
-	purple_debug_info(MB_HTTPID, "header_len = %d\n", header_len);
-	data->header_packet = g_malloc0(header_len + 1);
-
-	cur_packet = data->header_packet;
+	data->packet = g_malloc0(packet_len + 1);
+	cur_packet = data->packet;
+	
 	// GET|POST and parameter part
 	if(data->type == HTTP_GET) {
 		len = sprintf(cur_packet, "GET %s", data->path);
 	} else {
 		len = sprintf(cur_packet, "POST %s", data->path);
 	}
+	//printf("cur_packet = %s\n", cur_packet);
 	cur_packet += len;
 	if(data->params) {
 		(*cur_packet) = '?';
@@ -455,9 +427,10 @@ void mb_http_data_prepare_fetch(MbHttpData * data)
 		}
 		cur_packet--;
 	}
+	(*cur_packet) = ' ';
 	len = sprintf(cur_packet, " HTTP/1.1\r\n");
 	cur_packet += len;
-
+	
 	// headers part
 	data->cur_packet = cur_packet;
 	g_hash_table_foreach(data->headers, mb_http_data_header_assemble, data);
@@ -474,20 +447,28 @@ void mb_http_data_prepare_fetch(MbHttpData * data)
 	}
 	
 	// end header part
-	sprintf(cur_packet, "\r\n");
-	header_len = cur_packet - data->header_packet + 2;
-
-	data->packet_len = header_len;
-        if(data->content != NULL) {
-		data->packet_len += data->content->len;
+	len = sprintf(cur_packet, "\r\n");
+	cur_packet += len;
+	
+	// Content part
+	if(data->content) {
+	/*
+		len = sprintf(cur_packet, "%s", data->content->str);
+		cur_packet += len;
+	*/
+		memcpy(cur_packet, data->content->str, data->content->len);
+		cur_packet += data->content->len;
 	}
-	if(data->packet) {
-		g_free(data->packet);
-	}
-	data->cur_packet = data->packet = NULL;
+	
+	data->packet_len = cur_packet - data->packet;
+	
+	// reset back to head of packet, ready to transfer
+	data->cur_packet = data->packet;
+	
+	//printf("current data = #%s#\n", data->packet);
 }
 
-static void mb_http_data_post_read(MbHttpData * data, gchar * buf, gint buf_len)
+void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len)
 {
 	gint packet_len = (buf_len > MB_MAXBUFF) ? buf_len : MB_MAXBUFF;
 	gint cur_pos_len, whole_len;
