@@ -384,7 +384,6 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	}
 	
 	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_fetch_new_messages_handler, use_https);
-	mb_conn_data_set_error(conn_data, "Fetching status error", MB_ERROR_NOACTION);
 	mb_conn_data_set_retry(conn_data, 0);
 	
 	request = conn_data->request;
@@ -502,27 +501,6 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 	
 	purple_debug_info(DBGID, "closing each connection\n");
 	if(conn_data) {
-		/*
-		purple_debug_info(DBGID, "is_https = %d\n", is_https);
-		if(is_https) {
-			PurpleSslConnection * ssl = NULL;
-			
-			ssl = conn_data->ssl_conn_data;
-			if(ssl) {
-				purple_debug_info(DBGID, "removing current ssl socket from eventloop\n");
-				purple_input_remove(ssl->inpa);
-			}
-			purple_debug_info(DBGID, "closing SSL socket\n");
-		} else {
-			purple_debug_info(DBGID, "cancelling connection with handle = %p\n", conn_data);
-			purple_proxy_connect_cancel_with_handle(conn_data);
-			if(conn_data->conn_event_handle >= 0) {
-				purple_debug_info(DBGID, "removing event handle\n");
-				purple_input_remove(conn_data->conn_event_handle);
-			}
-		}
-		purple_debug_info(DBGID, "free all data\n");
-		*/
 		purple_debug_info(DBGID, "we have %p -> %p\n", key, value);
 		mb_conn_data_free(conn_data);
 	}	
@@ -636,7 +614,6 @@ void twitter_login(PurpleAccount *acct)
 	purple_debug_info(DBGID, "path = %s\n", path);
 	
 	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_verify_authen, use_https);
-	mb_conn_data_set_error(conn_data, "Authentication error", MB_ERROR_RAISE_ERROR);
 	mb_conn_data_set_retry(conn_data, purple_account_get_int(acct, tc_name(TC_GLOBAL_RETRY), tc_def_int(TC_GLOBAL_RETRY)));
 	
 	conn_data->request->type = HTTP_GET;
@@ -774,7 +751,6 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 		twitter_port = TW_HTTP_PORT;
 	}
 	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_send_im_handler, use_https);
-	mb_conn_data_set_error(conn_data, "Sending status error", MB_ERROR_NOACTION);
 	mb_conn_data_set_retry(conn_data, 0);
 	conn_data->request->type = HTTP_POST;
 	mb_http_data_set_host(conn_data->request, twitter_host);
@@ -857,7 +833,6 @@ void twitter_favorite_message(MbAccount * ta, gchar * msg_id)
         }
 
         conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, NULL, use_https);
-        mb_conn_data_set_error(conn_data, "Favourite message error", MB_ERROR_NOACTION);
         mb_conn_data_set_retry(conn_data, 0);
 
         request = conn_data->request;
