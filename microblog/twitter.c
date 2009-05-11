@@ -466,6 +466,7 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
 		twitter_fetch_first_new_messages(conn_data->ta);
 		return 0;
 	} else {
+		// XXX: Crash at the line below
 		purple_connection_set_state(conn_data->ta->gc, PURPLE_DISCONNECTED);
 		conn_data->ta->state = PURPLE_DISCONNECTED;
 		purple_connection_error(ta->gc, _("Authentication error"));
