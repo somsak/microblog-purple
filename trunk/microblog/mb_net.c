@@ -146,6 +146,7 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 			} 
 		}
 	} else {
+		// XXX: Crash here too
 		purple_connection_error(ma->gc, _(error_message));
 		mb_conn_data_free(conn_data);
 	}
