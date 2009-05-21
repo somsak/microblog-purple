@@ -36,6 +36,9 @@
 		
 		[textField_refreshRate setStringValue:@"60"];
 	}
+	
+	//Set Host to default to twitter.com
+	[textField_connectHost setStringValue:@"twitter.com"];
 }
 
 - (void)saveConfiguration
