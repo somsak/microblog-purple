@@ -21,9 +21,9 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>1.0</string>
+	<string>0.2.1a</string>
 	<key>MBPURPLE_VERSION</key>
-	<string>0.2.0</string>
+	<string>0.2.1a</string>
 	<key>NSPrincipalClass</key>
 	<string>ESTwitterLibPurpleServicePlugin</string>
 </dict>
