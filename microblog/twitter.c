@@ -333,15 +333,15 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		if(cur_msg->id > ta->last_msg_id) {
 			ta->last_msg_id = cur_msg->id;
 			mb_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
-			id_str = g_strdup_printf("%llu", cur_msg->id);
-			if(!(hide_myself && (g_hash_table_remove(ta->sent_id_hash, id_str) == TRUE))) {
-				msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
-				// we still call serv_got_im here, so purple take the message to the log
-				serv_got_im(ta->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
-				// by handling diaplying-im-msg, the message shouldn't be displayed anymore
-				purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
-				g_free(msg_txt);
-			}
+		}
+		id_str = g_strdup_printf("%llu", cur_msg->id);
+		if(!(hide_myself && (g_hash_table_remove(ta->sent_id_hash, id_str) == TRUE))) {
+			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
+			// we still call serv_got_im here, so purple take the message to the log
+			serv_got_im(ta->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			// by handling diaplying-im-msg, the message shouldn't be displayed anymore
+			purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
+			g_free(msg_txt);
 		}
 		g_free(id_str);
 		g_free(cur_msg->msg_txt);
@@ -400,7 +400,7 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 		mb_http_data_add_param_int(request, "count", tlr->count);
 	}
 	if(tlr->use_since_id && (ta->last_msg_id > 0) ) {
-		mb_http_data_add_param_int(request, "since_id", ta->last_msg_id);
+		mb_http_data_add_param_ull(request, "since_id", ta->last_msg_id);
 	}
 	conn_data->handler_data = tlr;
 	

@@ -422,6 +422,7 @@ void mb_http_data_prepare_write(MbHttpData * data)
 		cur_packet++;
 		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
 			p = it->data;
+			purple_debug_info(MB_HTTPID, "%s: key = %s, value = %s\n", __FUNCTION__, p->key, p->value);
 			len = sprintf(cur_packet, "%s=%s&", p->key, p->value);
 			cur_packet += len;
 		}
@@ -465,7 +466,7 @@ void mb_http_data_prepare_write(MbHttpData * data)
 	// reset back to head of packet, ready to transfer
 	data->cur_packet = data->packet;
 	
-	//printf("current data = #%s#\n", data->packet);
+	purple_debug_info(MB_HTTPID, "prepared packet = %s\n", data->packet);
 }
 
 void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len)
