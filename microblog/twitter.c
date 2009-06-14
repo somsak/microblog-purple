@@ -600,8 +600,10 @@ void twitter_login(PurpleAccount *acct)
 	
 	// Create account data
 	ta = mb_account_new(acct);
+	purple_debug_info(DBGID, "creating id hash for sentid\n");
 	mb_account_get_idhash(acct, TW_ACCT_SENT_MSG_IDS,ta->sent_id_hash);
 
+	purple_debug_info(DBGID, "getting user/host\n");
 	twitter_get_user_host(ta, &user_name, &twitter_host);
 
 	purple_debug_info(DBGID, "user_name = %s\n", user_name);

@@ -223,8 +223,8 @@ void mb_account_get_idhash(PurpleAccount * account, const char * name, GHashTabl
 
 	id_list = purple_account_get_string(account, name, NULL);
 
-	purple_debug_info(DBGID, "getting idlist = %s\n", id_list);
 	if(id_list && (strlen(id_list) > 0)) {
+		purple_debug_info(DBGID, "got idlist = %s\n", id_list);
 		id_list_str = g_strsplit(id_list, ",", 0);
 		tmp = id_list_str;
 		while( (*tmp) != NULL) {

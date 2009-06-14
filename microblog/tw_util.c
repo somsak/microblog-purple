@@ -90,10 +90,10 @@ void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host)
 {
 	char * at_sign = NULL;
 
-	purple_debug_info(DBGID, "twitter_get_user_host\n");
+	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 	(*user_name) = g_strdup(purple_account_get_username(ta->account));
-	purple_debug_info(DBGID, "username = %s\n", (*user_name));
-	if( (at_sign = strchr(*user_name, '@')) == NULL) {
+	purple_debug_info(DBGID, "username = ##%s##\n", (*user_name));
+	if( (at_sign = strrchr(*user_name, '@')) == NULL) {
 		if(host != NULL) {
 			(*host) = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
 			purple_debug_info(DBGID, "host (config) = %s\n", (*host));
@@ -117,7 +117,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 	gchar * username;
 	GString * output;
 	gchar * src = NULL;
-	gchar * name, *name_color;
+	gchar * name, *name_color, * uri_txt = NULL;
 	gchar sym, old_char, previous_char;
 	int i = 0, j = 0;
 	gboolean from_eq_username = FALSE;
@@ -128,6 +128,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 	output = g_string_new("");
 
 	// tag for the first thing
+	purple_debug_info(DBGID, "checking for tag\n");
 	if( (msg->flag & TW_MSGFLAG_DOTAG) && ta->tag ) {
 		purple_debug_info(DBGID, "do the tagging of message, for the tag %s\n", ta->tag);
 		if(ta->tag_pos == MB_TAG_PREFIX) {
@@ -141,6 +142,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 	}
 
 	// color of name
+	purple_debug_info(DBGID, "changing colours\n");
 	if(msg->from) {
 		if( strcmp(msg->from, username) == 0) {
 			from_eq_username = TRUE;
@@ -154,11 +156,21 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 		g_string_append_printf(output, "<font color=\"%s\"><b>", name_color);
 		//	self-filter is not possible now
 		//	if(strcmp(msg->from, username) != 0) {
-		if(reply_link && conv_name) {
+		uri_txt = mb_get_uri_txt(ta->account);
+		if(reply_link && conv_name && uri_txt) {
 			if(from_eq_username) {
 				g_string_append_printf(output, "<i>");
 			}
-			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", mb_get_uri_txt(ta->account), conv_name, msg->from, username, msg->id, msg->from);
+			/*
+			purple_debug_info(DBGID, "current output = %s\n", output->str);
+			purple_debug_info(DBGID, "url text = %s\n", mb_get_uri_txt(ta->account));
+			purple_debug_info(DBGID, "conversation name = %s\n", conv_name);
+			purple_debug_info(DBGID, "from = %s\n", msg->from);
+			purple_debug_info(DBGID, "username = %s\n", username);
+			purple_debug_info(DBGID, "id = %llu\n", msg->id);
+			*/
+			
+			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&idimg=%llu\">%s</a>:", uri_txt, conv_name, msg->from, username, msg->id, msg->from);
 			if(from_eq_username) {
 				g_string_append_printf(output, "</i>");
 			}

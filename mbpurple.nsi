@@ -56,6 +56,7 @@ Section "MainSection" SEC01
     
     SetOverwrite try
     
+	; Icon
 	SetOutPath "$PidginDir\pixmaps\pidgin"
 	File "/oname=protocols\16\twitter.png" "microblog\twitter16.png"
 	File "/oname=protocols\22\twitter.png" "microblog\twitter22.png"
@@ -67,6 +68,12 @@ Section "MainSection" SEC01
 	File "/oname=protocols\22\laconica.png" "microblog\laconica22.png"
 	File "/oname=protocols\48\laconica.png" "microblog\laconica48.png"
 
+	;CA Certs
+	SetOverwrite try
+	SetOutPath "$PidginDir\ca-certs"
+	File "certs\EquifaxSecureGlobaleBusinessCA.pem"
+	
+	; main DLL
     SetOverwrite try
 	copy:
 		ClearErrors
@@ -98,6 +105,19 @@ Section "Uninstall"
 	Call un.GetPidginInstPath
 	
 	uninstall: 
+		; certs
+		Delete "$PidginDir\ca-certs\EquifaxSecureGlobaleBusinessCA.pem"
+		; icons
+		Delete "$PidginDir\protocols\16\twitter.png"
+		Delete "$PidginDir\protocols\22\twitter.png"
+		Delete "$PidginDir\protocols\48\twitter.png"
+		Delete "$PidginDir\protocols\16\identica.png"
+		Delete "$PidginDir\protocols\22\identica.png"
+		Delete "$PidginDir\protocols\48\identica.png"
+		Delete "$PidginDir\protocols\16\laconica.png"
+		Delete "$PidginDir\protocols\22\laconica.png"
+		Delete "$PidginDir\protocols\48\laconica.png"
+		; main DLLs
 		Delete "$PidginDir\plugins\libtwitter.dll"
 		Delete "$PidginDir\plugins\twitgin.dll"
 		IfErrors dllbusy
