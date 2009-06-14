@@ -185,19 +185,24 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
 			gchar * sender, *tmp;
 			gchar * name_to_reply;
-			unsigned long long msg_id;
+			unsigned long long msg_id = 0;
 
 			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
 			purple_debug_info(DBGID, "conv = %p\n", conv);
 			gtkconv = PIDGIN_CONVERSATION(conv);
 			sender = g_hash_table_lookup(params, "to");		
 			tmp = g_hash_table_lookup(params, "id");
-			msg_id = strtoull(tmp, NULL, 10);
-			name_to_reply = g_strdup_printf("@%s ", sender);
-			gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, name_to_reply, -1);
-			gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
-			g_free(name_to_reply);
-			purple_signal_emit(twitgin_plugin, "twitgin-replying-message", proto, msg_id);
+			if(tmp) {
+				msg_id = strtoull(tmp, NULL, 10);
+			}
+			purple_debug_info(DBGID, "sender = %s, id = %llu\n", sender, msg_id);
+			if(msg_id > 0) {
+				name_to_reply = g_strdup_printf("@%s ", sender);
+				gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, name_to_reply, -1);
+				gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
+				g_free(name_to_reply);
+				purple_signal_emit(twitgin_plugin, "twitgin-replying-message", proto, msg_id);
+			}
 			return TRUE;
 		}
 
