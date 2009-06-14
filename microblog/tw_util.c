@@ -191,7 +191,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 			purple_debug_info(DBGID, "id = %llu\n", msg->id);
 			*/
 			
-			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&idimg=%llu\">%s</a>:", uri_txt, conv_name, msg->from, username, msg->id, msg->from);
+			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv_name, msg->from, username, msg->id, msg->from);
 			if(from_eq_username) {
 				g_string_append_printf(output, "</i>");
 			}

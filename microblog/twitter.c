@@ -764,9 +764,26 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	mb_http_data_set_basicauth(conn_data->request, 	user_name,purple_account_get_password(ta->account));
 
 	if(ta->reply_to_status_id > 0) {
-		purple_debug_info(DBGID, "setting in_reply_to_status_id = %llu\n", ta->reply_to_status_id);
-		mb_http_data_add_param_ull(conn_data->request, "in_reply_to_status_id", ta->reply_to_status_id);
-		ta->reply_to_status_id = 0;
+		int i;
+		gboolean do_reply = FALSE;
+		// do not add reply tag if the message does not contains @ in the front
+		for(i = 0; i < strlen(message); i++) {
+			if(isspace(message[i])) {
+				continue;
+			} else {
+				if(message[i] == '@') {
+					do_reply = TRUE;
+				}
+				break;
+			}
+		}
+		if(do_reply) {
+			purple_debug_info(DBGID, "setting in_reply_to_status_id = %llu\n", ta->reply_to_status_id);
+			mb_http_data_add_param_ull(conn_data->request, "in_reply_to_status_id", ta->reply_to_status_id);
+			ta->reply_to_status_id = 0;
+		} else {
+			ta->reply_to_status_id = 0;
+		}
 	}
 	
 	post_data = g_malloc(TW_MAXBUFF);
