@@ -1,3 +1,24 @@
+/*
+    Copyright 2008, Somsak Sriprayoonsakul <somsaks@gmail.com>
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	
+    Some part of the code is copied from facebook-pidgin protocols. 
+    For the facebook-pidgin projects, please see http://code.google.com/p/pidgin-facebookchat/.
+	
+    Courtesy to eionrobb at gmail dot com
+*/
 /**
  * This is a "script" to modify account.xml and replace old prpl name to new one
  *
