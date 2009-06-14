@@ -11,11 +11,11 @@ DISTFILES = COPYING global.mak Makefile mbpurple.nsi README.txt version.mak
 
 default: build
 
-build install uninstall clean: 
+build install uninstall clean : 
 	for dir in $(SUBDIRS); do \
 		make -C "$$dir" $@ || exit 1; \
 	done
-	
+
 distdir: 
 	rm -rf $(PACKAGE)-$(VERSION)
 	mkdir $(PACKAGE)-$(VERSION)
