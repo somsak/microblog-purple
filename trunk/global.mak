@@ -6,13 +6,13 @@
 
 # PIDGIN_TREE_TOP is only meaningful on Windows, point it to top directory of Pidgin. IT MUST BE A RELATIVE PATH
 # It MUST realitve to each subdirectory (microblog, twitgin)
-PIDGIN_TREE_TOP := ../../pidgin-2.5.5
+PIDGIN_TREE_TOP := ../../pidgin-2.5.6
 
 
 # For Linux
 DESTDIR := 
 PREFIX := $(shell pkg-config --variable=prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
-LIBDIR := $(PREFIX)/lib
+LIBDIR := $(shell pkg-config --variable=libdir $(PIDGIN_NAME) 2> /dev/null || echo $(PREFIX)/lib)
 
 # Is this WIN32?
 IS_WIN32 = $(shell (uname -a | grep -q -i cygwin) && echo 1 || echo 0)
@@ -20,6 +20,9 @@ IS_WIN32 = $(shell (uname -a | grep -q -i cygwin) && echo 1 || echo 0)
 # for override those attributes
 -include ../local.mak
 
+##################
+# Windows build section
+##################
 ifeq ($(strip $(IS_WIN32)), 1)
 # WIN32
 # Use makefile and headers supplied by Pidgin 
@@ -56,7 +59,7 @@ LIBS += -lglib-2.0 \
 			$(PIDGIN_TOP)/pidgin$(PLUGIN_SUFFIX)
 			
 PURPLE_LIBS = -L$(GTK_TOP)/lib -L$(PURPLE_TOP) $(LIBS)
-PURPLE_CFLAGS = -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSION)\" $(INCLUDE_PATHS)
+PURPLE_CFLAGS = -g -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSION)\" $(INCLUDE_PATHS)
 
 PURPLE_PROTOCOL_PIXMAP_DIR = $(PURPLE_INSTALL_DIR)/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR = $(PURPLE_INSTALL_PLUGINS_DIR)
@@ -64,6 +67,9 @@ PURPLE_PLUGIN_DIR = $(PURPLE_INSTALL_PLUGINS_DIR)
 
 #include $(PIDGIN_COMMON_RULES)
 
+##################
+# Linux build is below
+##################
 else
 
 IS_PIDGIN = $(shell pkg-config --atleast-version=2.0 pidgin && echo 1 || echo 0)
