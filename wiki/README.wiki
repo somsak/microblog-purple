@@ -51,3 +51,4 @@ Assuming Adium is already installed, download the "TwitterIM.AdiumLibpurplePlugi
  # Go to Project -> Active Target "TwitterIM" and ensure that all build paths are set appropriately for your computer.
  # Build plugin
  # to install, just click on "Products" and then TwitterIM.AdiumLibpurplePlugin.
+ # Please note that this plugin is only built and tested for Intel Macs running MacOS 10.5.x.
