@@ -1,8 +1,94 @@
 mbpurple (0.2.2-1~ppa1) jaunty; urgency=low
 
-  * New upstream version
+  [ somsaks ]
+  * Move twitter_favorite_message into twitter.c
+  * Fix issue #69
+  * Fix retweet text not working
+  * Adium (Xcode) compatibility merge
 
- -- Sugree Phatanapherom <sugree@gmail.com>  Sun, 14 Jun 2009 17:30:12 +0700
+  [ jsippel ]
+  * merging branch adium-merge into trunk
+
+  [ somsaks ]
+  * Remove possible crash in debugging message
+  * Fix retweet bug on Identi.ca
+  * Embed src into all links
+  * Fix duplicate logging
+  * Move twitter message decode outside timeline fetching code
+  * Fix "help is not displayed" bug
+  * Enable/disable rt and * through preference windows
+  * Add avatar preference
+
+  [ jsippel ]
+  * updated to allow for advanced configurations, including refresh
+    rate, SSL, and host name
+  * updated to allow for advanced configurations, including refresh
+    rate, SSL, and host name
+
+  [ sugree ]
+  * fixed missing tab highlight
+  * added no_log back. use PURPLE_MESSAGE_NICK instead.
+
+  [ nopparat.no ]
+  * Make timestamp link back to message status (just like twitter web)
+
+  [ neaveru ]
+  * Issue 81 fix. Change in status causes missing timeline event
+
+  [ somsaks ]
+  * Add more debugging message, hunting down the cause that crash
+    Pidgin.
+
+  [ sugree ]
+  * fixed incorrect timezone calculation
+
+  [ jsippel ]
+  * Added #ifdef to set client name to mbadium
+
+  [ sugree ]
+  * according to proxy.c, fd must be closed manually.
+  * unescape rt
+  * trying to fix segfault when disconnected while connecting
+
+  [ jsippel ]
+  * fixed some UI stuff for the Options panel
+
+  [ somsaks ]
+  * Add function to save sent id hash, so self tweet will not coming
+    back, while tweets from other client will coming back
+  * Fix(ing) mb_http to use purple_fetch_url
+  * git-svn-id: https://microblog-purple.googlecode.com/svn/trunk@280
+    c93ce494-aa52-0410-a5ec-afe58518fd76
+  * Completely change to purple_fetch_url
+  * Rip off code that is unnecessary
+  * Patch with diff from bug reporter
+
+  [ jsippel ]
+  * updated version
+  * added default value
+  * updating adium version
+  * updating adium version
+  * updating adium version
+
+  [ sugree ]
+  * ignored all tweets with old id
+
+  [ somsaks ]
+  * Fix the duplicate tweets due to overflow problem
+  * Update version
+  * Fix urgent bugs
+  * git-svn-id: https://microblog-purple.googlecode.com/svn/trunk@293
+    c93ce494-aa52-0410-a5ec-afe58518fd76
+  * Add GPL header
+  * Makefile for certs dir
+  * Fix reply bug (occur from my Typo!)
+
+  [ Sugree Phatanapherom ]
+  * Imported Upstream version 0.2.2
+  * reset permission
+  * debian
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Sun, 14 Jun 2009 19:59:07 +0700
 
 mbpurple (0.2.1-1~ppa4) intrepid; urgency=low
 
