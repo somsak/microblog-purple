@@ -63,6 +63,7 @@ PURPLE_CFLAGS = -g -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VE
 
 PURPLE_PROTOCOL_PIXMAP_DIR = $(PURPLE_INSTALL_DIR)/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR = $(PURPLE_INSTALL_PLUGINS_DIR)
+PURPLE_CACERTS_DIR := $(PURPLE_INSTALL_DIR)/ca-certs
 
 
 #include $(PIDGIN_COMMON_RULES)
@@ -88,6 +89,7 @@ LIBDIR := $(PREFIX)/lib
 
 # LINUX and others, use pkg-config
 PURPLE_LIBS = $(shell pkg-config --libs purple)
+PURPLE_DATAROOT_DIR = $(shell pkg-config --variable=datarootdir purple)
 PURPLE_CFLAGS = $(CFLAGS) -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
 PURPLE_CFLAGS += $(shell pkg-config --cflags purple)
 PURPLE_CFLAGS += $(shell pkg-config --cflags pidgin)
@@ -97,6 +99,7 @@ EXE_SUFFIX :=
 
 PURPLE_PROTOCOL_PIXMAP_DIR := $(DESTDIR)$(PREFIX)/share/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR := $(DESTDIR)$(LIBDIR)/purple-2
+PURPLE_CACERTS_DIR := $(DESTDIR)$(PURPLE_DATAROOT_DIR)/purple/ca-certs
 
 PIDGIN_LIBS = $(shell pkg-config --libs $(PIDGIN_NAME))
 PIDGIN_CFLAGS = $(CFLAGS) -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
