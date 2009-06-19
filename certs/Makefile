@@ -1,6 +1,19 @@
+all: build 
+
 include ../global.mak
 
-build install uninstall clean:
-	# do nothing, this certs is actually meaningful on Windows
+CERTS = EquifaxSecureGlobaleBusinessCA.pem
+
+build clean:
 	
-DISTFILES = EquifaxSecureGlobaleBusinessCA.pem Makefile
+install :
+	for cert in $(CERTS); do \
+		install -m 0644 $$cert $(PURPLE_CACERTS_DIR); \
+	done
+
+uninstall :
+	for cert in $(CERTS); do \
+		rm -f $(PURPLE_CACERTS_DIR)/$$cert; \
+	done
+	
+DISTFILES = $(CERTS) Makefile
