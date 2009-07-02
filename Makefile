@@ -35,3 +35,21 @@ pidgin-microblog.exe: build mbpurple.nsi
 
 pidgin-microblog-$(VERSION).exe: pidgin-microblog.exe
 	mv -f $< $@
+	
+zipdist: pidgin-microblog-$(VERSION).zip
+
+pidgin-microblog.zip: build
+	rm -rf $(PACKAGE)-$(VERSION)
+	mkdir $(PACKAGE)-$(VERSION)
+	PURPLE_PLUGIN_DIR=$(PWD)/$(PACKAGE)-$(VERSION)/plugins && \
+		PURPLE_INSTALL_DIR=$(PWD)/$(PACKAGE)-$(VERSION) && \
+		mkdir -p $$PURPLE_PLUGIN_DIR && \
+		for dir in $(SUBDIRS); do \
+			make -C "$$dir" install PURPLE_INSTALL_DIR=$$PURPLE_INSTALL_DIR PURPLE_PLUGIN_DIR=$$PURPLE_PLUGIN_DIR; \
+		done
+	zip -r $@ $(PACKAGE)-$(VERSION)
+	rm -rf $(PACKAGE)-$(VERSION)
+
+pidgin-microblog-$(VERSION).zip: pidgin-microblog.zip
+	mv -f $< $@
+
