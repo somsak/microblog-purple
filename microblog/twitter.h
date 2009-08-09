@@ -181,6 +181,7 @@ extern const char * _TweetTimeLineConfigs[];
 enum _TweetConfig {
 	TC_HIDE_SELF = 0,
 	TC_PLUGIN,
+	TC_PRIVACY,
 	TC_MSG_REFRESH_RATE,
 	TC_INITIAL_TWEET,
 	TC_GLOBAL_RETRY,

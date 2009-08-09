@@ -108,6 +108,11 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_tw_conf[TC_HIDE_SELF].def_bool = TRUE;
 	option = purple_account_option_bool_new(_("Hide myself in conversation"), tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	_tw_conf[TC_PRIVACY].conf = g_strdup("twitter_privacy");
+	_tw_conf[TC_PRIVACY].def_bool = FALSE;
+	option = purple_account_option_bool_new(_("Not receive messages while unavailable"), tc_name(TC_PRIVACY), tc_def_bool(TC_PRIVACY));
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_MSG_REFRESH_RATE].conf = g_strdup("twitter_msg_refresh_rate");
 	_tw_conf[TC_MSG_REFRESH_RATE].def_int = 60;
