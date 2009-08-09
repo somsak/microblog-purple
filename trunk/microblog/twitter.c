@@ -127,6 +127,9 @@ GList * twitter_statuses(PurpleAccount *acct)
 	//status = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE, "message", _("Message"), purple_value_new(PURPLE_TYPE_STRING), "message_date", _("Message changed"), purple_value_new(PURPLE_TYPE_STRING), NULL);
 	status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE);
 	types = g_list_append(types, status);
+
+	status = purple_status_type_new_full(PURPLE_STATUS_UNAVAILABLE, NULL, _("Unavailable"), TRUE, TRUE, FALSE);
+	types = g_list_append(types, status);
 	
 	//Offline people dont have messages
 	status = purple_status_type_new_full(PURPLE_STATUS_OFFLINE, NULL, _("Offline"), TRUE, TRUE, FALSE);
@@ -148,9 +151,28 @@ void twitter_buddy_free(PurpleBuddy * buddy)
 	}
 }
 
+// Privacy mode skip fetching messages during unavailable state
+gboolean twitter_skip_fetching_messages(PurpleAccount * acct) 
+{
+	gboolean privacy_mode = purple_account_get_bool(acct, tc_name(TC_PRIVACY), tc_def_bool(TC_PRIVACY));
+	gboolean available = purple_status_is_available(purple_account_get_active_status(acct));
+
+	if(privacy_mode && !available) {
+		purple_debug_info(DBGID, "Unavailable, skipping fetching due privacy mode\n");
+		return TRUE;
+	}
+	else {
+		return FALSE;
+	}
+}
+
 // Function to fetch first batch of new message
 void twitter_fetch_first_new_messages(TwitterAccount * ta)
 {
+	if(twitter_skip_fetching_messages(ta->account)) {
+		return;
+	}
+
 	TwitterTimeLineReq * tlr;
 	const gchar * tl_path;
 	int count;
@@ -170,6 +192,10 @@ gboolean twitter_fetch_all_new_messages(gpointer data)
 	TwitterTimeLineReq * tlr = NULL;
 	gint i;
 	const gchar * tl_path;
+
+	if(twitter_skip_fetching_messages(ta->account)) {
+		return TRUE;
+	}
 	
 	for(i = TC_FRIENDS_TIMELINE; i <= TC_USER_TIMELINE; i+=2) {
 		//FIXME: i + 1 is not a very good strategy here
