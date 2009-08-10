@@ -140,7 +140,12 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 	// in whatever situation, url_data should be handled only by libpurple
 	conn_data->fetch_url_data = NULL;
 
-	if(url_text) {
+	if(error_message != NULL) {
+		if(ma->gc != NULL) {
+			purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, error_message);
+		}
+		mb_conn_data_free(conn_data);
+	} else {
 		mb_http_data_post_read(conn_data->response, url_text, len);
 		if(conn_data->handler) {
 			gint retval;
@@ -165,10 +170,6 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 				}
 			} 
 		}
-	} else {
-		// XXX: Crash here too
-		purple_connection_error(ma->gc, _(error_message));
-		mb_conn_data_free(conn_data);
 	}
 }
 
