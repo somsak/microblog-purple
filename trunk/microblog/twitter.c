@@ -218,6 +218,31 @@ static void twitter_list_sent_id_hash(gpointer key, gpointer value, gpointer use
 }
 #endif
 
+//
+// Decode error message from twitter
+//
+char * twitter_decode_error(const char * data)
+{
+	xmlnode * top = NULL, * error = NULL;
+	gchar * error_str = NULL;
+
+	top = xmlnode_from_str(data, -1);
+	if(top == NULL) {
+		purple_debug_info(DBGID, "failed to parse XML data from error response\n");
+		return NULL;
+	}
+	error = xmlnode_get_child(top, "error");
+	if(error) {
+		error_str = xmlnode_get_data_unescaped(error);
+	}
+	xmlnode_free(top);
+
+	return error_str;
+}
+
+//
+// Decode timeline message
+//
 GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 {
 	GList * retval = NULL;
@@ -334,8 +359,24 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	}
 	if(response->status != HTTP_OK) {
 		twitter_free_tlr(tlr);
-		purple_debug_info(DBGID, "something's wrong with the message\n");
-		return 0; //< should we return -1 instead?
+		if(response->status == HTTP_BAD_REQUEST) {
+			// rate limit exceed?
+			if(response->content_len > 0) {
+				gchar * error_str = NULL;
+
+				error_str = twitter_decode_error(response->content->str);
+				if(ta->gc != NULL) {
+					purple_connection_set_state(ta->gc, PURPLE_DISCONNECTED);
+					ta->state = PURPLE_DISCONNECTED;
+					purple_connection_error(ta->gc, error_str);
+				}
+				g_free(error_str);
+			}
+			return 0; //< return 0 so the request is not being issued again
+		} else {
+			purple_debug_info(DBGID, "something's wrong with the message?, status = %d\n", response->status);
+			return 0; //< should we return -1 instead?
+		}
 	}
 	if(response->content_len == 0) {
 		purple_debug_info(DBGID, "no data to parse\n");
