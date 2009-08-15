@@ -56,7 +56,7 @@
 // Fetch URL callback
 static void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data, const gchar * url_text, gsize len, const gchar * error_message);
  
-MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbHandlerFunc handler, gboolean is_ssl)
+MbConnData * mb_conn_data_new(MbAccount * ma, const gchar * host, gint port, MbHandlerFunc handler, gboolean is_ssl)
 {
 	MbConnData * conn_data = NULL;
 	
@@ -64,7 +64,7 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 	
 	conn_data->host = g_strdup(host);
 	conn_data->port = port;
-	conn_data->ta = ta;
+	conn_data->ma = ma;
 	conn_data->handler = handler;
 	conn_data->handler_data = NULL;
 	conn_data->retry = 0;
@@ -82,12 +82,14 @@ MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint port, MbH
 	conn_data->fetch_url_data = NULL;
 	
 	purple_debug_info(MB_NET, "new: create conn_data = %p\n", conn_data);
+	g_slist_prepend(ma->conn_data_list, conn_data);
+	purple_debug_info(MB_NET, "registered new connection data with MbAccount\n");
 	return conn_data;
 }
 
 void mb_conn_data_free(MbConnData * conn_data)
 {
-	purple_debug_info(MB_NET, "free: conn_data = %p\n", conn_data);
+	purple_debug_info(MB_NET, "%s: conn_data = %p\n", __FUNCTION__, conn_data);
 
 	if(conn_data->fetch_url_data) {
 		purple_util_fetch_url_cancel(conn_data->fetch_url_data);
@@ -97,10 +99,20 @@ void mb_conn_data_free(MbConnData * conn_data)
 		purple_debug_info(MB_NET, "freeing host name\n");
 		g_free(conn_data->host);
 	}
+
 	purple_debug_info(MB_NET, "freeing HTTP data->response\n");
 	mb_http_data_free(conn_data->response);
+
 	purple_debug_info(MB_NET, "freeing HTTP data->request\n");
 	mb_http_data_free(conn_data->request);
+
+	purple_debug_info(MB_NET, "unregistering conn_data from MbAccount\n");
+	if(conn_data->ma->conn_data_list) {
+		GSList * list = g_slist_find(conn_data->ma->conn_data_list, conn_data);
+		if(list) {
+			conn_data->ma->conn_data_list = g_slist_delete_link(conn_data->ma->conn_data_list, list);
+		}
+	}
 	purple_debug_info(MB_NET, "freeing self at %p\n", conn_data);
 	g_free(conn_data);
 }
@@ -135,7 +147,7 @@ gchar * mb_conn_url_unparse(MbConnData * data)
 void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data, const gchar * url_text, gsize len, const gchar * error_message)
 {
 	MbConnData * conn_data = (MbConnData *)user_data;
-	MbAccount * ma = conn_data->ta;
+	MbAccount * ma = conn_data->ma;
 
 	// in whatever situation, url_data should be handled only by libpurple
 	conn_data->fetch_url_data = NULL;

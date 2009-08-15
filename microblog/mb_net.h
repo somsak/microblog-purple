@@ -34,7 +34,7 @@ typedef void (*MbHandlerDataFreeFunc)(gpointer);
 typedef struct _MbConnData {
 	gchar * host;
 	gint port;
-	MbAccount * ta;
+	MbAccount * ma;
 	gchar * error_message;
 	MbHttpData * request;
 	MbHttpData * response;
@@ -42,17 +42,7 @@ typedef struct _MbConnData {
 	gint max_retry;
 	MbHandlerFunc handler;
 	gpointer handler_data;
-	MbHandlerDataFreeFunc handler_data_free;
-	gint action_on_error;
-	// should I keep conn_data data here? 
-	// I found that the conn_data will be freed immediately after connection established
-	// so this value will be nullify immediately after connect_cb
-	//PurpleProxyConnectData * conn_data; 
-	guint conn_event_handle;
-	// SSL connection seems not being freed
-	PurpleSslConnection * ssl_conn_data;
 	gboolean is_ssl;
-
 	PurpleUtilFetchUrlData * fetch_url_data;
 } MbConnData;
 
