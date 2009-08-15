@@ -101,13 +101,12 @@ typedef struct _TwitterTimeLineReq {
 extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, unsigned int id, const char * sys_msg);
 extern void twitter_free_tlr(TwitterTimeLineReq * tlr);
 
-typedef struct _TwitterAccount {
+typedef struct _MbAccount {
 	PurpleAccount *account;
 	PurpleConnection *gc;
 	gchar *login_challenge;
 	PurpleConnectionState state;
-	GHashTable * conn_hash;
-	GHashTable * ssl_conn_hash;
+	GSList * conn_data_list;
 	guint timeline_timer;
 	unsigned long long last_msg_id;
 	time_t last_msg_time;
@@ -115,9 +114,9 @@ typedef struct _TwitterAccount {
 	gchar * tag;
 	gint tag_pos;
 	unsigned long long reply_to_status_id;
-} TwitterAccount;
+} MbAccount;
 
-typedef TwitterAccount MbAccount; //< for the sake of simplicity for now
+typedef MbAccount TwitterAccount; //< for the sake of simplicity for now
 
 enum tag_position {
 	MB_TAG_NONE = 0,

@@ -336,7 +336,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 
 gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 {
-	MbAccount * ta = conn_data->ta;
+	MbAccount * ma = conn_data->ma;
 	const gchar * username;
 	MbHttpData * response = conn_data->response;
 	TwitterTimeLineReq * tlr = data;
@@ -349,7 +349,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
 	
-	username = (const gchar *)purple_account_get_username(ta->account);
+	username = (const gchar *)purple_account_get_username(ma->account);
 	
 	if(response->status == HTTP_MOVED_TEMPORARILY) {
 		// no new messages
@@ -365,10 +365,10 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 				gchar * error_str = NULL;
 
 				error_str = twitter_decode_error(response->content->str);
-				if(ta->gc != NULL) {
-					purple_connection_set_state(ta->gc, PURPLE_DISCONNECTED);
-					ta->state = PURPLE_DISCONNECTED;
-					purple_connection_error(ta->gc, error_str);
+				if(ma->gc != NULL) {
+					purple_connection_set_state(ma->gc, PURPLE_DISCONNECTED);
+					ma->state = PURPLE_DISCONNECTED;
+					purple_connection_error(ma->gc, error_str);
 				}
 				g_free(error_str);
 			}
@@ -392,22 +392,22 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	
 	// reverse the list and append it
 	// only if id > last_msg_id
-	hide_myself = purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
+	hide_myself = purple_account_get_bool(ma->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF));
 	msg_list = g_list_reverse(msg_list);
 	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
 
 		cur_msg = it->data;
-		if(cur_msg->id > ta->last_msg_id) {
-			ta->last_msg_id = cur_msg->id;
-			mb_account_set_ull(ta->account, TW_ACCT_LAST_MSG_ID, ta->last_msg_id);
+		if(cur_msg->id > ma->last_msg_id) {
+			ma->last_msg_id = cur_msg->id;
+			mb_account_set_ull(ma->account, TW_ACCT_LAST_MSG_ID, ma->last_msg_id);
 		}
 		id_str = g_strdup_printf("%llu", cur_msg->id);
-		if(!(hide_myself && (g_hash_table_remove(ta->sent_id_hash, id_str) == TRUE))) {
+		if(!(hide_myself && (g_hash_table_remove(ma->sent_id_hash, id_str) == TRUE))) {
 			msg_txt = g_strdup_printf("%s: %s", cur_msg->from, cur_msg->msg_txt);
 			// we still call serv_got_im here, so purple take the message to the log
-			serv_got_im(ta->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
+			serv_got_im(ma->gc, tlr->name, msg_txt, PURPLE_MESSAGE_RECV, cur_msg->msg_time);
 			// by handling diaplying-im-msg, the message shouldn't be displayed anymore
-			purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ta, tlr->name, cur_msg);
+			purple_signal_emit(tc_def(TC_PLUGIN), "twitter-message", ma, tlr->name, cur_msg);
 			g_free(msg_txt);
 		}
 		g_free(id_str);
@@ -417,12 +417,12 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 		g_free(cur_msg);
 		it->data = NULL;
 	}
-	if(ta->last_msg_time < last_msg_time_t) {
-		ta->last_msg_time = last_msg_time_t;
+	if(ma->last_msg_time < last_msg_time_t) {
+		ma->last_msg_time = last_msg_time_t;
 	}
 	g_list_free(msg_list);
 	if(tlr->sys_msg) {
-		serv_got_im(ta->gc, tlr->name, tlr->sys_msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
+		serv_got_im(ma->gc, tlr->name, tlr->sys_msg, PURPLE_MESSAGE_SYSTEM, time(NULL));
 	}
 	twitter_free_tlr(tlr);
 	return 0;
@@ -519,50 +519,50 @@ void twitter_get_buddy_list(TwitterAccount * ta)
 
 gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
 {
-	MbAccount * ta = conn_data->ta;
+	MbAccount * ma = conn_data->ma;
 	MbHttpData * response = conn_data->response;
 	
 	if(response->status == HTTP_OK) {
-		gint interval = purple_account_get_int(conn_data->ta->account, tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
+		gint interval = purple_account_get_int(conn_data->ma->account, tc_name(TC_MSG_REFRESH_RATE), tc_def_int(TC_MSG_REFRESH_RATE));
 		
-		purple_connection_set_state(conn_data->ta->gc, PURPLE_CONNECTED);
-		conn_data->ta->state = PURPLE_CONNECTED;
-		twitter_get_buddy_list(conn_data->ta);
+		purple_connection_set_state(conn_data->ma->gc, PURPLE_CONNECTED);
+		conn_data->ma->state = PURPLE_CONNECTED;
+		twitter_get_buddy_list(conn_data->ma);
 		purple_debug_info(DBGID, "refresh interval = %d\n", interval);
-		conn_data->ta->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, conn_data->ta);
-		twitter_fetch_first_new_messages(conn_data->ta);
+		conn_data->ma->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, conn_data->ma);
+		twitter_fetch_first_new_messages(conn_data->ma);
 		return 0;
 	} else {
 		// XXX: Crash at the line below
-		purple_connection_set_state(conn_data->ta->gc, PURPLE_DISCONNECTED);
-		conn_data->ta->state = PURPLE_DISCONNECTED;
-		purple_connection_error(ta->gc, _("Authentication error"));
+		purple_connection_set_state(conn_data->ma->gc, PURPLE_DISCONNECTED);
+		conn_data->ma->state = PURPLE_DISCONNECTED;
+		purple_connection_error(ma->gc, _("Authentication error"));
 		return -1;
 	}
 }
 
 MbAccount * mb_account_new(PurpleAccount * acct)
 {
-	MbAccount * ta = NULL;
+	MbAccount * ma = NULL;
 	
-	purple_debug_info(DBGID, "mb_account_new\n");
-	ta = g_new(MbAccount, 1);
-	ta->account = acct;
-	ta->gc = acct->gc;
-	ta->state = PURPLE_CONNECTING;
-	ta->timeline_timer = -1;
-	ta->last_msg_id = mb_account_get_ull(acct, TW_ACCT_LAST_MSG_ID, 0);
-	ta->last_msg_time = 0;
-	ta->conn_hash = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
-	ta->ssl_conn_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
-	ta->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	ta->tag = NULL;
-	ta->tag_pos = MB_TAG_NONE;
-	ta->reply_to_status_id = 0;
-	acct->gc->proto_data = ta;
-	return ta;
+	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
+	ma = g_new(MbAccount, 1);
+	ma->account = acct;
+	ma->gc = acct->gc;
+	ma->state = PURPLE_CONNECTING;
+	ma->timeline_timer = -1;
+	ma->last_msg_id = mb_account_get_ull(acct, TW_ACCT_LAST_MSG_ID, 0);
+	ma->last_msg_time = 0;
+	ma->conn_data_list = NULL;
+	ma->sent_id_hash = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	ma->tag = NULL;
+	ma->tag_pos = MB_TAG_NONE;
+	ma->reply_to_status_id = 0;
+	acct->gc->proto_data = ma;
+	return ma;
 }
 
+/*
 static void mb_close_connection(gpointer key, gpointer value, gpointer user_data)
 {
 	MbConnData *conn_data = value;
@@ -573,6 +573,7 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 		mb_conn_data_free(conn_data);
 	}	
 }
+*/
 
 static gboolean foreach_remove_expire_idhash(gpointer key, gpointer val, gpointer userdata)
 {
@@ -588,72 +589,45 @@ static gboolean foreach_remove_expire_idhash(gpointer key, gpointer val, gpointe
 	}
 }
 
-void mb_account_free(MbAccount * ta)
+void mb_account_free(MbAccount * ma)
 {	
 	guint num_remove;
 
 	//purple_debug_info(DBGID, "mb_account_free\n");
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 	
-	if(ta->tag) {
-		g_free(ta->tag);
-		ta->tag = NULL;
+	if(ma->tag) {
+		g_free(ma->tag);
+		ma->tag = NULL;
 	}
-	ta->tag_pos = MB_TAG_NONE;
-	ta->state = PURPLE_DISCONNECTED;
+	ma->tag_pos = MB_TAG_NONE;
+	ma->state = PURPLE_DISCONNECTED;
 	
-	if(ta->timeline_timer != -1) {
+	if(ma->timeline_timer != -1) {
 		purple_debug_info(DBGID, "removing timer\n");
-		purple_timeout_remove(ta->timeline_timer);
+		purple_timeout_remove(ma->timeline_timer);
 	}
 
-	// new SSL-base connection hash
-	// Do I need to iterate over conn_hash now? since we use timer to free MbAccount
-	// so basically this should never be called	
-	if(ta->ssl_conn_hash) {
-		purple_debug_info(DBGID, "closing all active connection\n");
-		g_hash_table_foreach(ta->ssl_conn_hash, mb_close_connection, (gpointer)TRUE);
-		purple_debug_info(DBGID, "destroying connection hash\n");
-		g_hash_table_destroy(ta->ssl_conn_hash);
-		ta->ssl_conn_hash = NULL;
+	while(ma->conn_data_list) {
+		mb_conn_data_free(ma->conn_data_list->data);
+		// don't need to delete the list, it will be deleted by conn_data_free eventually
 	}
-	
-	if(ta->conn_hash) {
-		purple_debug_info(DBGID, "closing all non-ssl active connection\n");
-		g_hash_table_foreach(ta->conn_hash, mb_close_connection, (gpointer)FALSE);
-		purple_debug_info(DBGID, "destroying non-SSL connection hash\n");
-		g_hash_table_destroy(ta->conn_hash);
-		ta->conn_hash = NULL;
-	}
-	num_remove = g_hash_table_foreach_remove(ta->sent_id_hash, foreach_remove_expire_idhash, ta);
+
+	num_remove = g_hash_table_foreach_remove(ma->sent_id_hash, foreach_remove_expire_idhash, ma);
 	purple_debug_info(DBGID, "%u key removed\n", num_remove);
-	mb_account_set_idhash(ta->account, TW_ACCT_SENT_MSG_IDS, ta->sent_id_hash);
-	if(ta->sent_id_hash) {
+	mb_account_set_idhash(ma->account, TW_ACCT_SENT_MSG_IDS, ma->sent_id_hash);
+	if(ma->sent_id_hash) {
 		purple_debug_info(DBGID, "destroying sent_id hash\n");
-		g_hash_table_destroy(ta->sent_id_hash);
-		ta->sent_id_hash = NULL;
+		g_hash_table_destroy(ma->sent_id_hash);
+		ma->sent_id_hash = NULL;
 	}
 	
-	ta->account = NULL;
-	ta->gc = NULL;
+	ma->account = NULL;
+	ma->gc = NULL;
 	
 	purple_debug_info(DBGID, "free up memory used for microblog account structure\n");
-	g_free(ta);
+	g_free(ma);
 }
-
-/*
-gboolean twitter_close_timer(gpointer data)
-{
-	MbAccount * ma = data;
-
-	if( (g_hash_table_size(ma->ssl_conn_hash) > 0) || (g_hash_table_size(ma->conn_hash) > 0) ) {
-		return TRUE;
-	} else {
-		mb_account_free(ma);
-		return FALSE;
-	}
-}
-*/
 
 void twitter_login(PurpleAccount *acct)
 {
@@ -734,7 +708,7 @@ void twitter_close(PurpleConnection *gc)
 
 gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 {
-	MbAccount * ta = conn_data->ta;
+	MbAccount * ma = conn_data->ma;
 	MbHttpData * response = conn_data->response;
 	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
@@ -747,7 +721,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 		return -1;
 	}
 	
-	if(!purple_account_get_bool(ta->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF))) {
+	if(!purple_account_get_bool(ma->account, tc_name(TC_HIDE_SELF), tc_def_bool(TC_HIDE_SELF))) {
 		return 0;
 	}
 	
@@ -774,7 +748,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
 	}
 
 	// save it to account
-	g_hash_table_insert(ta->sent_id_hash, id_str, id_str);
+	g_hash_table_insert(ma->sent_id_hash, id_str, id_str);
 	
 	//hash_table supposed to free this for use
 	//g_free(id_str);
