@@ -124,28 +124,6 @@ enum tag_position {
 	MB_TAG_POSTFIX = 2,
 };
 
-struct _TwitterProxyData;
-
-// if handler return
-// 0 - Everything's ok
-// -1 - Requeue the whole process again
-typedef gint (*TwitterHandlerFunc)(struct _TwitterProxyData * , gpointer );
-
-typedef struct _TwitterProxyData {
-	TwitterAccount * ta;
-	gchar * error_message;
-	gchar * post_data;
-	gint retry;
-	gint max_retry;
-	gchar * result_data;
-	GList * result_list;
-	guint result_len;
-	TwitterHandlerFunc handler;
-	gpointer handler_data;
-	gint action_on_error;
-	PurpleSslConnection * conn_data;
-} TwitterProxyData;
-
 typedef struct _TwitterBuddy {
 	TwitterAccount *ta;
 	PurpleBuddy *buddy;
