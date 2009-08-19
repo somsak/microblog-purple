@@ -609,6 +609,7 @@ void mb_account_free(MbAccount * ma)
 	}
 
 	while(ma->conn_data_list) {
+		purple_debug_info(DBGID, "free-up connection with fetch_url_data = %p\n", ((MbConnData *)ma->conn_data_list->data)->fetch_url_data);
 		mb_conn_data_free(ma->conn_data_list->data);
 		// don't need to delete the list, it will be deleted by conn_data_free eventually
 	}
