@@ -82,7 +82,7 @@ MbConnData * mb_conn_data_new(MbAccount * ma, const gchar * host, gint port, MbH
 	conn_data->fetch_url_data = NULL;
 	
 	purple_debug_info(MB_NET, "new: create conn_data = %p\n", conn_data);
-	g_slist_prepend(ma->conn_data_list, conn_data);
+	ma->conn_data_list = g_slist_prepend(ma->conn_data_list, conn_data);
 	purple_debug_info(MB_NET, "registered new connection data with MbAccount\n");
 	return conn_data;
 }
@@ -149,6 +149,7 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 	MbConnData * conn_data = (MbConnData *)user_data;
 	MbAccount * ma = conn_data->ma;
 
+	purple_debug_info(MB_NET, "%s: url_data = %p\n", __FUNCTION__, url_data);
 	// in whatever situation, url_data should be handled only by libpurple
 	conn_data->fetch_url_data = NULL;
 
