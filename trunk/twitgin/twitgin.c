@@ -144,9 +144,9 @@ enum {
 	IDENTICA_PROTO = 2,
 };
 
-#if ! PURPLE_VERSION_CHECK(2, 6, 0)
-static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTable *params) 
+static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHashTable *params) 
 {
+	const char * cmd = cmd_arg;
 	char *acct_id = g_hash_table_lookup(params, "account");	
 	PurpleAccount *acct = NULL;
 	PurpleConversation * conv = NULL;
@@ -157,6 +157,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	char * unescaped_rt;
 
 	purple_debug_info(DBGID, "twittgin_uri_handler\n");	
+
 	// do not need to test, because the conversation window must be open before one can click
 	if (g_ascii_strcasecmp(proto, "tw") == 0) {
 		proto_id = TWITTER_PROTO;
@@ -177,7 +178,11 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 				break;
 		}
 	}
-	purple_debug_info(DBGID, "src = %s\n", src);
+	purple_debug_info(DBGID, "cmd = %s, src = %s\n", cmd, src);
+
+	while( (*cmd) == '/' ) {
+		cmd++;
+	}
 
 	if ( acct && (proto_id > 0) ) {
 		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
@@ -243,6 +248,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTa
 	return FALSE;
 }
 
+#if ! PURPLE_VERSION_CHECK(2, 6, 0)
 static PurpleNotifyUiOps twitgin_ops;
 static void *(*saved_notify_uri)(const char *uri);
 
@@ -436,13 +442,20 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 
 static gboolean twitgin_url_clicked_cb(GtkIMHtml * imhtml, GtkIMHtmlLink * link)
 {
+	const gchar * url = gtk_imhtml_link_get_url(link);
+
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	purple_debug_info(DBGID, "url = %s\n", url);
+
+	purple_got_protocol_handler_uri(url);
+
 	return TRUE;
 }
 
 static gboolean twitgin_context_menu(GtkIMHtml * imhtml, GtkIMHtmlLink * link, GtkWidget * menu)
 {
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	// Nothing yet T_T
 	return TRUE;
 }
 
@@ -471,14 +484,15 @@ static gboolean plugin_load(PurplePlugin *plugin)
 	}
 	
 #if PURPLE_VERSION_CHECK(2, 6, 0)
-	gtk_imhtml_class_register_protocol("mb://", twitgin_url_clicked_cb, twitgin_context_menu);
+	gtk_imhtml_class_register_protocol("tw://", twitgin_url_clicked_cb, twitgin_context_menu);
+	gtk_imhtml_class_register_protocol("idc://", twitgin_url_clicked_cb, twitgin_context_menu);
 #else
 	memcpy(&twitgin_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
 	saved_notify_uri = twitgin_ops.notify_uri;
 	twitgin_ops.notify_uri = twitgin_notify_uri;
 	purple_notify_set_ui_ops(&twitgin_ops);
-	purple_signal_connect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler), NULL);
 #endif
+	purple_signal_connect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler), NULL);
 
 	purple_signal_connect(pidgin_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying), NULL);
 
@@ -520,7 +534,8 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 	}
 	
 #if PURPLE_VERSION_CHECK(2, 6, 0)
-	gtk_imhtml_class_register_protocol("mb://", NULL, NULL);
+	gtk_imhtml_class_register_protocol("idc://", NULL, NULL);
+	gtk_imhtml_class_register_protocol("tw://", NULL, NULL);
 #else
 	twitgin_ops.notify_uri = saved_notify_uri;
 	purple_notify_set_ui_ops(&twitgin_ops);
