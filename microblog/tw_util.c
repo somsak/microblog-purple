@@ -62,19 +62,6 @@
 
 #define DBGID "tw_util"
 
-/*
-const char * mb_get_uri_txt(PurpleAccount * pa)
-{
-	if (strcmp(pa->protocol_id, "prpl-mbpurple-twitter") == 0) {
-		return "tw";
-	} else if(strcmp(pa->protocol_id, "prpl-mbpurple-identica") == 0) {
-		return "idc";
-	}
-	// no support for laconica for now
-	return NULL;
-}
-*/
-
 static void twitter_update_link(MbAccount * ta, GString * msg, char sym, const char * name)
 {
 	char * user_name;
@@ -138,7 +125,8 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 	gchar * username;
 	GString * output;
 	gchar * src = NULL;
-	gchar * name, *name_color, * uri_txt = NULL;
+	gchar * name, *name_color;
+	const gchar * uri_txt = NULL;
 	gchar sym, old_char, previous_char;
 	int i = 0, j = 0;
 	gboolean from_eq_username = FALSE;
@@ -191,7 +179,11 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 			purple_debug_info(DBGID, "id = %llu\n", msg->id);
 			*/
 			
+#if PURPLE_VERSION_CHECK(2, 6, 0)
+			g_string_append_printf(output, "<a href=\"%s:///reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv_name, msg->from, username, msg->id, msg->from);
+#else
 			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv_name, msg->from, username, msg->id, msg->from);
+#endif
 			if(from_eq_username) {
 				g_string_append_printf(output, "</i>");
 			}

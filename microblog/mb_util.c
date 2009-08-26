@@ -176,11 +176,19 @@ time_t mb_mktime(char * time_str)
 
 const char * mb_get_uri_txt(PurpleAccount * pa)
 {
+#if PURPLE_VERSION_CHECK(2, 6, 0) 
+	if ( (strcmp(pa->protocol_id, "prpl-mbpurple-twitter") == 0) ||
+		(strcmp(pa->protocol_id, "prpl-mbpurple-identica") == 0) )
+	{
+		return "mb";
+	}
+#else
 	if (strcmp(pa->protocol_id, "prpl-mbpurple-twitter") == 0) {
 		return "tw";
 	} else if(strcmp(pa->protocol_id, "prpl-mbpurple-identica") == 0) {
 		return "idc";
 	}
+#endif
 	// no support for laconica for now
 	return NULL;
 }
