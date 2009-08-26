@@ -144,6 +144,7 @@ enum {
 	IDENTICA_PROTO = 2,
 };
 
+#if ! PURPLE_VERSION_CHECK(2, 6, 0)
 static gboolean twittgin_uri_handler(const char *proto, const char *cmd, GHashTable *params) 
 {
 	char *acct_id = g_hash_table_lookup(params, "account");	
@@ -256,6 +257,7 @@ static void * twitgin_notify_uri(const char *uri) {
 	}
 	return retval;
 }
+#endif
 
 /*
  * Modify sending message in the same way as receiving message
@@ -382,7 +384,11 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 	if(uri_txt) {
 		// display favorite link, if enabled
 		if(purple_prefs_get_bool(TW_PREF_FAV_LINK)) {
+#if PURPLE_VERSION_CHECK(2, 6, 0)
+			fav_txt = g_strdup_printf(" <a href=\"%s:///fav?src=%s&account=%s&id=%llu\">*</a>", uri_txt, name, account, cur_msg->id);
+#else
 			fav_txt = g_strdup_printf(" <a href=\"%s:fav?src=%s&account=%s&id=%llu\">*</a>", uri_txt, name, account, cur_msg->id);
+#endif
 		}
 
 		// display rt link, if enabled
@@ -391,7 +397,11 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 			embed_rt_txt = purple_url_encode(cur_msg->msg_txt);
 			purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_rt_txt);
 
+#if PURPLE_VERSION_CHECK(2, 6, 0)
+			rt_txt = g_strdup_printf(" <a href=\"%s:///rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, name, account, cur_msg->from, embed_rt_txt);
+#else
 			rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, name, account, cur_msg->from, embed_rt_txt);
+#endif
 		}
 
 		//display link to message status in the timestamp
@@ -424,6 +434,18 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 	g_free(fmt_txt);
 }
 
+static gboolean twitgin_url_clicked_cb(GtkIMHtml * imhtml, GtkIMHtmlLink * link)
+{
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	return TRUE;
+}
+
+static gboolean twitgin_context_menu(GtkIMHtml * imhtml, GtkIMHtmlLink * link, GtkWidget * menu)
+{
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	return TRUE;
+}
+
 static gboolean plugin_load(PurplePlugin *plugin) 
 {
 		
@@ -448,11 +470,15 @@ static gboolean plugin_load(PurplePlugin *plugin)
 		convs = convs->next;
 	}
 	
+#if PURPLE_VERSION_CHECK(2, 6, 0)
+	gtk_imhtml_class_register_protocol("mb://", twitgin_url_clicked_cb, twitgin_context_menu);
+#else
 	memcpy(&twitgin_ops, purple_notify_get_ui_ops(), sizeof(PurpleNotifyUiOps));
 	saved_notify_uri = twitgin_ops.notify_uri;
 	twitgin_ops.notify_uri = twitgin_notify_uri;
 	purple_notify_set_ui_ops(&twitgin_ops);
 	purple_signal_connect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler), NULL);
+#endif
 
 	purple_signal_connect(pidgin_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying), NULL);
 
@@ -476,10 +502,12 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 	
 	purple_debug_info(DBGID, "plugin unloading\n");
 	
+#if ! PURPLE_VERSION_CHECK(2, 6, 0)
 	if(twitgin_notify_uri != purple_notify_get_ui_ops()->notify_uri) {
 		purple_debug_info(DBGID, "ui ops changed, cannot unloading\n");
 		return FALSE;
 	}	
+#endif
 	
 	while (convs) {
 		PurpleConversation *conv = (PurpleConversation *)convs->data;
@@ -491,9 +519,13 @@ static gboolean plugin_unload(PurplePlugin *plugin)
 		convs = convs->next;
 	}
 	
+#if PURPLE_VERSION_CHECK(2, 6, 0)
+	gtk_imhtml_class_register_protocol("mb://", NULL, NULL);
+#else
 	twitgin_ops.notify_uri = saved_notify_uri;
 	purple_notify_set_ui_ops(&twitgin_ops);
 	purple_signal_disconnect(purple_get_core(), "uri-handler", plugin, PURPLE_CALLBACK(twittgin_uri_handler));
+#endif
 
 	purple_signal_disconnect(purple_conversations_get_handle(), "displaying-im-msg", plugin, PURPLE_CALLBACK(twitgin_on_displaying));
 	purple_signal_disconnect(pidgin_conversations_get_handle(), "twitgin-message", plugin, PURPLE_CALLBACK(twitgin_on_tweet));

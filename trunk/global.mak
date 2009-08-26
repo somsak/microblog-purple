@@ -8,11 +8,9 @@
 # It MUST realitve to each subdirectory (microblog, twitgin)
 PIDGIN_TREE_TOP := ../../pidgin-2.5.6
 
-
 # For Linux
 DESTDIR := 
-PREFIX := $(shell pkg-config --variable=prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
-LIBDIR := $(shell pkg-config --variable=libdir $(PIDGIN_NAME) 2> /dev/null || echo $(PREFIX)/lib)
+# Prefix and Libdir is defined below
 
 # Is this WIN32?
 IS_WIN32 = $(shell (uname -a | grep -q -i cygwin) && echo 1 || echo 0)
@@ -59,7 +57,7 @@ LIBS += -lglib-2.0 \
 			$(PIDGIN_TOP)/pidgin$(PLUGIN_SUFFIX)
 			
 PURPLE_LIBS = -L$(GTK_TOP)/lib -L$(PURPLE_TOP) $(LIBS)
-PURPLE_CFLAGS = -g -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSION)\" $(INCLUDE_PATHS)
+PURPLE_CFLAGS = -g -DPURPLE_PLUGINS -DENABLE_NLS -Wall -DMBPURPLE_VERSION=\"$(VERSION)$(SUBVERSION)\" $(INCLUDE_PATHS)
 
 PURPLE_PROTOCOL_PIXMAP_DIR = $(PURPLE_INSTALL_DIR)/pixmaps/pidgin/protocols
 PURPLE_PLUGIN_DIR = $(PURPLE_INSTALL_PLUGINS_DIR)
@@ -85,12 +83,12 @@ endif
 endif
 
 PREFIX := $(shell pkg-config --variable=prefix $(PIDGIN_NAME) 2> /dev/null || echo /usr)
-LIBDIR := $(PREFIX)/lib
+LIBDIR := $(shell pkg-config --variable=libdir $(PIDGIN_NAME) 2> /dev/null || echo $(PREFIX)/lib)
 
 # LINUX and others, use pkg-config
 PURPLE_LIBS = $(shell pkg-config --libs purple)
 PURPLE_DATAROOT_DIR = $(shell pkg-config --variable=datarootdir purple)
-PURPLE_CFLAGS = $(CFLAGS) -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
+PURPLE_CFLAGS = $(CFLAGS) -DPURPLE_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)$(SUBVERSION)\"
 PURPLE_CFLAGS += $(shell pkg-config --cflags purple)
 PURPLE_CFLAGS += $(shell pkg-config --cflags pidgin)
 PURPLE_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
@@ -102,7 +100,7 @@ PURPLE_PLUGIN_DIR := $(DESTDIR)$(LIBDIR)/purple-2
 PURPLE_CACERTS_DIR := $(DESTDIR)$(PURPLE_DATAROOT_DIR)/purple/ca-certs
 
 PIDGIN_LIBS = $(shell pkg-config --libs $(PIDGIN_NAME))
-PIDGIN_CFLAGS = $(CFLAGS) -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)\"
+PIDGIN_CFLAGS = $(CFLAGS) -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)$(SUBVERSION)\"
 PIDGIN_CFLAGS += $(shell pkg-config --cflags $(PIDGIN_NAME))
 PIDGIN_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
 
@@ -110,5 +108,5 @@ LDFLAGS := $(shell (echo $(PIDGIN_CFLAGS) $(PURPLE_CFLAGS)| tr ' ' '\n' | awk '!
 endif
 
 dist: $(DISTFILES)
-	mkdir ../$(PACKAGE)-$(VERSION)/`basename $$PWD`
-	cp -f $(DISTFILES) ../$(PACKAGE)-$(VERSION)/`basename $$PWD`/
+	mkdir ../$(PACKAGE)-$(VERSION)$(SUBVERSION)/`basename $$PWD`
+	cp -f $(DISTFILES) ../$(PACKAGE)-$(VERSION)$(SUBVERSION)/`basename $$PWD`/

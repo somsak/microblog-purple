@@ -1,2 +1,3 @@
 PACKAGE := mbpurple
 VERSION := 0.2.2
+SUBVERSION := svn312
