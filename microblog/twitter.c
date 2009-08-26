@@ -676,9 +676,7 @@ void twitter_login(PurpleAccount *acct)
 
 	// connect to twitgin here
 	purple_debug_info(DBGID, "looking for twitgin\n");
-	if(!twitgin_plugin) {
-		twitgin_plugin = purple_plugins_find_with_id("gtktwitgin");
-	}
+	twitgin_plugin = purple_plugins_find_with_id("gtktwitgin");
 	if(twitgin_plugin) {
 		purple_debug_info(DBGID, "registering twitgin-replying-message signal\n");
 		purple_signal_connect(twitgin_plugin, "twitgin-replying-message", acct, PURPLE_CALLBACK(twitter_on_replying_message), ta);
