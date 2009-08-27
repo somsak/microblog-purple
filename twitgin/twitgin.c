@@ -567,6 +567,7 @@ static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_MS_LINK, _("Enable message status link"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
+	/*
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_AVATAR_SIZE, _("Avatar size"));
 	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
 	purple_plugin_pref_add_choice(ppref, "Disabled", GINT_TO_POINTER(0));
@@ -577,6 +578,7 @@ static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
 	purple_plugin_pref_add_choice(ppref, "32x32", GINT_TO_POINTER(32));
 	purple_plugin_pref_add_choice(ppref, "48x48", GINT_TO_POINTER(48));
 	purple_plugin_pref_frame_add(frame, ppref);
+	*/
 
 	/*
 	ppref = purple_plugin_pref_new_with_label("integer");
