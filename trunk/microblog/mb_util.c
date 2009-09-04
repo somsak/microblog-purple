@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 
 #ifndef G_GNUC_NULL_TERMINATED
 #  if __GNUC__ >= 4
@@ -86,6 +87,13 @@ time_t mb_mktime(char * time_str)
 	int counter = 0,  tmp_counter = 0, i;
 	int cur_timezone = 0, sign = 1;
 	time_t retval;
+	static struct tm las_tm;
+	static struct timeval las_tv;
+	static struct timezone las_tz;
+
+	tzset();
+	gettimeofday(&las_tv,&las_tz);
+	localtime_r(&las_tv.tv_sec, &las_tm);
 	
 	cur = time_str;
 	next = strchr(cur, ' ');
@@ -147,6 +155,7 @@ time_t mb_mktime(char * time_str)
 				}
 				cur_timezone = (int)strtol(cur, NULL, 10); 
 				cur_timezone = sign * (cur_timezone / 100) * 60 * 60 + (cur_timezone % 100) * 60;
+				cur_timezone -= ((las_tm.tm_isdst?1:0) * 3600); // +1H for DST
 				break;
 		}
 		(*next) = oldval;
