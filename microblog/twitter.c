@@ -123,6 +123,7 @@ GList * twitter_statuses(PurpleAccount *acct)
 	GList *types = NULL;
 	PurpleStatusType *status;
 	
+	
 	//Online people have a status message and also a date when it was set	
 	//status = purple_status_type_new_with_attrs(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE, "message", _("Message"), purple_value_new(PURPLE_TYPE_STRING), "message_date", _("Message changed"), purple_value_new(PURPLE_TYPE_STRING), NULL);
 	status = purple_status_type_new_full(PURPLE_STATUS_AVAILABLE, NULL, _("Online"), TRUE, TRUE, FALSE);
@@ -642,6 +643,7 @@ void twitter_login(PurpleAccount *acct)
 	
 	// Create account data
 	ta = mb_account_new(acct);
+
 	purple_debug_info(DBGID, "creating id hash for sentid\n");
 	mb_account_get_idhash(acct, TW_ACCT_SENT_MSG_IDS,ta->sent_id_hash);
 
