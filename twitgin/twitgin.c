@@ -65,8 +65,6 @@ TwitterConfig * _tw_conf = NULL;
 
 static PurplePlugin * twitgin_plugin = NULL;
 
-// static void url_clicked_cb(GtkWidget *w, const char *uri);
-
 static void twitgin_entry_buffer_on_changed(PidginConversation *gtkconv) {
 	GtkTextIter start;
 	GtkTextIter end;
@@ -440,6 +438,7 @@ void twitgin_on_tweet(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 	g_free(fmt_txt);
 }
 
+#if PURPLE_VERSION_CHECK(2, 6, 0)
 static gboolean twitgin_url_clicked_cb(GtkIMHtml * imhtml, GtkIMHtmlLink * link)
 {
 	const gchar * url = gtk_imhtml_link_get_url(link);
@@ -458,6 +457,7 @@ static gboolean twitgin_context_menu(GtkIMHtml * imhtml, GtkIMHtmlLink * link, G
 	// Nothing yet T_T
 	return TRUE;
 }
+#endif
 
 static gboolean plugin_load(PurplePlugin *plugin) 
 {
