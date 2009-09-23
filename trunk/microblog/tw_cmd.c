@@ -103,13 +103,13 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 {
 	const gchar * path;
 	TwitterTimeLineReq * tlr;
-	int count;
+	unsigned long long count;
 	time_t now;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 
 	path = purple_account_get_string(data->ma->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
-	count = 0; //< replies timeline has no count
+	count = 20; //< FIXME: Hardcoded number of count
 	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end reply messages"));
 	tlr->use_since_id = FALSE;
 	time(&now);
