@@ -165,8 +165,8 @@ gboolean plugin_load(PurplePlugin *plugin)
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	_tw_conf[TC_REPLIES_TIMELINE].conf = g_strdup("twitter_replies_timeline");
-	_tw_conf[TC_REPLIES_TIMELINE].def_str = g_strdup("/statuses/replies.xml");
-	option = purple_account_option_string_new(_("Replies timeline path"), tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
+	_tw_conf[TC_REPLIES_TIMELINE].def_str = g_strdup("/statuses/mentions.xml");
+	option = purple_account_option_string_new(_("Mentions timeline path"), tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	// and now for non-option global
