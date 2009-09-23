@@ -2,12 +2,13 @@
 #
 # Make sure that svn is installed.
 SVN = $(shell which svn)
+SUBV = \2
 
 ifneq ($(strip $(SVN)),)
 	SUBV = $(shell svn info 2>&1 | grep Revision | awk '{print "svn" $$2}')
 
 subversion:
-	-@sed -i 's/\(^SUBVERSION :=\).*/\1 $(SUBV)/' version.mak
+	-@sed -i 's/\(^SUBVERSION :=\)(.*)/\1 $(SUBV)/' version.mak
 
 endif
 
