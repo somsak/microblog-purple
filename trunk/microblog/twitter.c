@@ -94,7 +94,7 @@ static TwitterBuddy * twitter_new_buddy()
 	return buddy;
 }
 
-TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, unsigned long long id, unsigned long long count, const char * sys_msg)
+TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int id, int count, const char * sys_msg)
 {
 	TwitterTimeLineReq * tlr = g_new(TwitterTimeLineReq, 1);
 	tlr->path = g_strdup(path);
@@ -465,7 +465,7 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	mb_http_data_set_header(request, "Host", twitter_host);
 	mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
 	if(tlr->count > 0) {
-		purple_debug_info(DBGID, "tlr->count = %llu\n", tlr->count);
+		purple_debug_info(DBGID, "tlr->count = %d\n", tlr->count);
 		mb_http_data_add_param_int(request, "count", tlr->count);
 	}
 	if(tlr->use_since_id && (ta->last_msg_id > 0) ) {

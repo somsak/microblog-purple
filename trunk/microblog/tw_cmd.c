@@ -103,7 +103,7 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 {
 	const gchar * path;
 	TwitterTimeLineReq * tlr;
-	unsigned long long count;
+	int count;
 	time_t now;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);

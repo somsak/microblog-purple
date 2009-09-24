@@ -356,7 +356,8 @@ void mb_http_data_add_param_ull(MbHttpData * data, const gchar * key, unsigned l
 {
 	char tmp[200];
 	
-	snprintf(tmp, sizeof(tmp), "%llu", value);
+	// Use g_snprintf for maximum compatibility
+	g_snprintf(tmp, sizeof(tmp), "%llu", value);
 	mb_http_data_add_param(data, key, tmp);
 }
 

@@ -92,13 +92,13 @@ enum _TweetProxyDataErrorActions {
 typedef struct _TwitterTimeLineReq {
 	gchar * path;
 	gchar * name;
-	unsigned long long timeline_id;
-	unsigned long long count;
+	int timeline_id;
+	int count;
 	gboolean use_since_id;
 	gchar * sys_msg;
 } TwitterTimeLineReq;
 
-extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, unsigned long long count, unsigned long long id, const char * sys_msg);
+extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, int id, const char * sys_msg);
 extern void twitter_free_tlr(TwitterTimeLineReq * tlr);
 
 typedef struct _MbAccount {

@@ -4,6 +4,7 @@
 
 include version.mak
 
+
 SUBDIRS = microblog twitgin certs
 DISTFILES = COPYING global.mak Makefile mbpurple.nsi README.txt version.mak subversion.mak
 
