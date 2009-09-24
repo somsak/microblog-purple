@@ -1,7 +1,7 @@
 # Quick makefile hack to update the sub-version number from the svn release
 #
 # Make sure that svn is installed.
-SVN = $(shell which svn)
+SVN = $(shell which svn 2> /dev/null)
 SUBV = \2
 
 ifneq ($(strip $(SVN)),)
@@ -9,6 +9,8 @@ ifneq ($(strip $(SVN)),)
 
 subversion:
 	-@sed -i 's/\(^SUBVERSION :=\)(.*)/\1 $(SUBV)/' version.mak
+else
+subversion:
 
 endif
 

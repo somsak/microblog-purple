@@ -6,7 +6,7 @@
 
 # PIDGIN_TREE_TOP is only meaningful on Windows, point it to top directory of Pidgin. IT MUST BE A RELATIVE PATH
 # It MUST realitve to each subdirectory (microblog, twitgin)
-PIDGIN_TREE_TOP := ../../pidgin-2.5.6
+PIDGIN_TREE_TOP := ../../pidgin-2.6.2
 
 # For Linux
 DESTDIR := 
