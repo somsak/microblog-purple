@@ -398,6 +398,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	for(it = g_list_first(msg_list); it; it = g_list_next(it)) {
 
 		cur_msg = it->data;
+		purple_debug_info(DBGID, "**twitpocalypse** cur_msg->id = %llu, ma->last_msg_id = %llu\n", cur_msg->id, ma->last_msg_id);
 		if(cur_msg->id > ma->last_msg_id) {
 			ma->last_msg_id = cur_msg->id;
 			mb_account_set_ull(ma->account, TW_ACCT_LAST_MSG_ID, ma->last_msg_id);
