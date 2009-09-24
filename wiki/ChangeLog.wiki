@@ -1,5 +1,15 @@
 #summary Change Log for microblog-purple
 
+= Version 0.2.4 =
+   * Fix unsigned long long incompatibility on some platform.
+
+= Version 0.2.3 =
+   * Fix the serious corruption when connection dropped bug. Now MBPidgin is much more stable
+   * Fix Pidgin 2.6 compatibility
+
+= Version 0.2.2 =
+   * Mainly bug fixes
+
 = Version 0.2.1 =
 
    * Twitter, Identica, and Laconica now serve mainly as protocol only plug-in. You need to enable Twitgin in order to get old fancy output in conversation windows
