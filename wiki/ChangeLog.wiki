@@ -1,7 +1,8 @@
 #summary Change Log for microblog-purple
 
 = Version 0.2.4 =
-   * Fix unsigned long long incompatibility on some platform.
+   * Fix unsigned long long incompatibility on some platform. (Bug #152)
+   * Change replies timeline url to /mentions instead
 
 = Version 0.2.3 =
    * Fix the serious corruption when connection dropped bug. Now MBPidgin is much more stable
