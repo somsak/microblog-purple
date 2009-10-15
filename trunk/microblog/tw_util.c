@@ -210,14 +210,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, const char *
 			// if it's a proper name, extract it
 			i++;
 			j = i;
-			while((src[j] != '\0') && 
-				(isalnum(src[j]) ||
-				 (src[j] == '_') ||
-				 (src[j] == '-')
-				)
-
-			)
-			{
+			while((src[j] != '\0') && (!isspace(src[j]))) {
 				j++;
 			}
 			if(i == j) {
