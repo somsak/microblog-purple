@@ -12,14 +12,9 @@ The plug-in is inspired by [http://code.google.com/p/pidgin-facebookchat/ Facebo
 = Installation =
 == Linux ==
 
-For Ubuntu 8.04 Hardy Heron, we have PPA repository.
+For Ubuntu, please try [https://launchpad.net/~ikuya-fruitsbasket/+archive/ppa/ Awashiro Ikuya's PPA repository]
 
-{{{
-deb http://ppa.launchpad.net/sugree/ubuntu hardy main
-deb-src http://ppa.launchpad.net/sugree/ubuntu hardy main
-}}}
-
-Simply install `pidgin-microblog`.
+After setting-up PPA repository, Simply install `pidgin-microblog`.
 
 {{{
 sudo apt-get install pidgin-microblog
