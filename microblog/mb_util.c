@@ -87,14 +87,8 @@ time_t mb_mktime(char * time_str)
 	int counter = 0,  tmp_counter = 0, i;
 	int cur_timezone = 0, sign = 1;
 	time_t retval;
-	static struct tm las_tm;
-	static struct timeval las_tv;
-	static struct timezone las_tz;
 
-	tzset();
-	gettimeofday(&las_tv,&las_tz);
-	localtime_r(&las_tv.tv_sec, &las_tm);
-	
+	msg_time.tm_isdst = 0;
 	cur = time_str;
 	next = strchr(cur, ' ');
 	while(next) {
@@ -153,9 +147,8 @@ time_t mb_mktime(char * time_str)
 					sign = -1;
 					cur++;
 				}
-				cur_timezone = (int)strtol(cur, NULL, 10); 
+				cur_timezone = (int)strtol(cur, NULL, 10);
 				cur_timezone = sign * (cur_timezone / 100) * 60 * 60 + (cur_timezone % 100) * 60;
-				cur_timezone -= ((las_tm.tm_isdst?1:0) * 3600); // +1H for DST
 				break;
 		}
 		(*next) = oldval;
@@ -165,21 +158,23 @@ time_t mb_mktime(char * time_str)
 	}
 	// what's left is year
 	msg_time.tm_year = strtoul(cur, NULL, 10) - 1900;
-	
+
 #ifdef UTEST
-	printf("msg_time.tm_wday = %d\n", msg_time.tm_wday);
-	printf("msg_time.tm_mday = %d\n", msg_time.tm_mday);
-	printf("msg_time.tm_mon = %d\n", msg_time.tm_mon);
-	printf("msg_time.tm_year = %d\n", msg_time.tm_year);
-	printf("msg_time.tm_hour = %d\n", msg_time.tm_hour);
-	printf("msg_time.tm_min = %d\n", msg_time.tm_min);
-	printf("msg_time.tm_sec = %d\n", msg_time.tm_sec);
-	printf("cur_timezone = %d\n", cur_timezone);
-	printf("finished\n");
-	// Always return GMT time
-	printf("asctime = %s\n", asctime(&msg_time));
+	purple_debug_info(DBGID, "msg_time.tm_wday = %d\n", msg_time.tm_wday);
+	purple_debug_info(DBGID, "msg_time.tm_mday = %d\n", msg_time.tm_mday);
+	purple_debug_info(DBGID, "msg_time.tm_mon = %d\n", msg_time.tm_mon);
+	purple_debug_info(DBGID, "msg_time.tm_year = %d\n", msg_time.tm_year);
+	purple_debug_info(DBGID, "msg_time.tm_hour = %d\n", msg_time.tm_hour);
+	purple_debug_info(DBGID, "msg_time.tm_min = %d\n", msg_time.tm_min);
+	purple_debug_info(DBGID, "msg_time.tm_sec = %d\n", msg_time.tm_sec);
+	purple_debug_info(DBGID, "cur_timezone = %d\n", cur_timezone);
+	purple_debug_info(DBGID, "msg_time.tm_isdst = %d\n", msg_time.tm_isdst);
+	purple_debug_info(DBGID, "finished\n");
 #endif
-	retval = mktime(&msg_time) - cur_timezone;
+	// Always return GMT time (not sure subtracting is right, but that's ultimately
+	// irrelevant for twitter at least, twitter.com always returns +0000)
+	retval = timegm(&msg_time) - cur_timezone;
+	purple_debug_info(DBGID, "final msg_time = %ld\n", retval);
 	return retval;
 }
 
