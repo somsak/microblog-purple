@@ -284,7 +284,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 			xml_str = xmlnode_get_data_unescaped(time_node);
 		}
 		purple_debug_info(DBGID, "msg time = %s\n", xml_str);
-		msg_time_t = mb_mktime(xml_str) - timezone;
+		msg_time_t = mb_mktime(xml_str);
 		if( (*last_msg_time) < msg_time_t) {
 			(*last_msg_time) = msg_time_t;
 		}
