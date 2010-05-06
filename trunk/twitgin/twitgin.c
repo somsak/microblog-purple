@@ -154,8 +154,8 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 	PidginConversation * gtkconv;
 	int proto_id = 0;
 	gchar * src = NULL;
-	const char * decoded_rt;
-	char * unescaped_rt;
+	//const char * decoded_rt;
+	//char * unescaped_rt;
 
 	purple_debug_info(DBGID, "twittgin_uri_handler\n");	
 
@@ -215,6 +215,8 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 
 		// retweet hack !
 		if (!g_ascii_strcasecmp(cmd, "rt")) {
+			/* We obsolete this function to use twitter retweet API instead (06-May-2010)
+			
 			gchar * message, * from, * retweet_message;
 
 			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
@@ -229,6 +231,17 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 			gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
 			g_free(unescaped_rt);
 			g_free(retweet_message);
+			return TRUE;
+			*/ 
+			MbAccount * ta;
+			gchar * msg_id;
+
+			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
+			msg_id = g_hash_table_lookup(params, "id");
+			ta = mb_account_new(acct);
+			twitter_retweet_message(ta, msg_id);
+			purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, g_strdup_printf("message %s is retweeted", msg_id), PURPLE_MESSAGE_SYSTEM, time(NULL));
+
 			return TRUE;
 		}
 
@@ -438,7 +451,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 	gchar sym, old_char, previous_char;
 	int i = 0, j = 0;
 	gboolean from_eq_username = FALSE;
-	const char * embed_rt_txt = NULL;
+	//const char * embed_rt_txt = NULL;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
 	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
 
@@ -566,15 +579,17 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 		}
 
 		// display rt link, if enabled
-		if(purple_prefs_get_bool(TW_PREF_RT_LINK)) {
+		if(purple_prefs_get_bool(TW_PREF_RT_LINK) && !g_ascii_strcasecmp(msg->is_protected, "false")) {
 			// text for retweet url
-			embed_rt_txt = purple_url_encode(msg->msg_txt);
-			purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_rt_txt);
+			//embed_rt_txt = purple_url_encode(msg->msg_txt);
+			//purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_rt_txt);
 
 #if PURPLE_VERSION_CHECK(2, 6, 0)
-			rt_txt = g_strdup_printf(" <a href=\"%s:///rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, conv->name, account, msg->from, embed_rt_txt);
+			//rt_txt = g_strdup_printf(" <a href=\"%s:///rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, conv->name, account, msg->from, embed_rt_txt);
+			rt_txt = g_strdup_printf(" <a href=\"%s:///rt?src=%s&account=%s&id=%llu\">rt<a>", uri_txt, conv->name, account, msg->id);
 #else
-			rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, conv->name, account, msg->from, embed_rt_txt);
+			//rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, conv->name, account, msg->from, embed_rt_txt);
+			rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&id=%llu\">rt<a>", uri_txt, conv->name, account, msg->id);
 #endif
 		}
 	}

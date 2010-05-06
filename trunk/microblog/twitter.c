@@ -247,8 +247,8 @@ char * twitter_decode_error(const char * data)
 GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 {
 	GList * retval = NULL;
-	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url;
-	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL;
+	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url, * user_is_protected;
+	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL, * is_protected;
 	TwitterMsg * cur_msg = NULL;
 	unsigned long long cur_id;
 	time_t msg_time_t;
@@ -307,6 +307,10 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 			if(user_name) {
 				avatar_url = xmlnode_get_data(image_url);
 			}
+			user_is_protected = xmlnode_get_child(user, "protected");
+			if(user_name) {
+				is_protected = xmlnode_get_data(user_is_protected);
+			}
 		}
 
 		if(from && msg_txt) {
@@ -317,6 +321,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
+			cur_msg->is_protected = is_protected;
 			cur_msg->flag = 0;
 			/*
 			if(skip) {
@@ -887,6 +892,52 @@ void twitter_favorite_message(MbAccount * ta, gchar * msg_id)
 	user_name = g_strdup_printf("%s", purple_account_get_username(ta->account));
 	twitter_host = g_strdup_printf("%s", "twitter.com");
 	path = g_strdup_printf("/favorites/create/%s.xml", msg_id);
+
+        use_https = TRUE; 
+        if(use_https) {
+                twitter_port = TW_HTTPS_PORT;
+        } else {
+                twitter_port = TW_HTTP_PORT;
+        }
+
+        conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, NULL, use_https);
+        mb_conn_data_set_retry(conn_data, 0);
+
+        request = conn_data->request;
+        request->type = HTTP_POST;
+        request->port = twitter_port;
+
+	mb_http_data_set_host(request, twitter_host);
+        mb_http_data_set_path(request, path);
+        mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
+        mb_http_data_set_header(request, "Host", twitter_host);
+        mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
+
+        //conn_data->handler_data = tlr;
+
+        mb_conn_process_request(conn_data);
+        g_free(twitter_host);
+        g_free(user_name);
+	g_free(path);
+
+}
+
+/*
+*  Retweet API Handler
+*/
+void twitter_retweet_message(MbAccount * ta, gchar * msg_id)
+{
+
+	// create new connection and call API POST
+        MbConnData * conn_data;
+        MbHttpData * request;
+        gchar * twitter_host, * user_name, * path;
+        gboolean use_https;
+        gint twitter_port;
+
+	user_name = g_strdup_printf("%s", purple_account_get_username(ta->account));
+	twitter_host = g_strdup_printf("%s", "twitter.com");
+	path = g_strdup_printf("/statuses/retweet/%s.xml", msg_id);
 
         use_https = TRUE; 
         if(use_https) {
