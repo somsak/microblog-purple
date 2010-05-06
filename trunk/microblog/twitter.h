@@ -96,6 +96,7 @@ typedef struct _TwitterTimeLineReq {
 	int count;
 	gboolean use_since_id;
 	gchar * sys_msg;
+	gchar * screen_name; // for /get command to fetch other user TL
 } TwitterTimeLineReq;
 
 extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, int id, const char * sys_msg);

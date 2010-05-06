@@ -102,6 +102,7 @@ TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int i
 	tlr->count = count;
 	tlr->timeline_id = id;
 	tlr->use_since_id = TRUE;
+	tlr->screen_name = NULL;
 	if(sys_msg) {
 		tlr->sys_msg = g_strdup(sys_msg);
 	} else {
@@ -476,12 +477,17 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	if(tlr->use_since_id && (ta->last_msg_id > 0) ) {
 		mb_http_data_add_param_ull(request, "since_id", ta->last_msg_id);
 	}
+	if(tlr->screen_name != NULL) {
+		mb_http_data_add_param(request, "screen_name", tlr->screen_name);
+	}
 	conn_data->handler_data = tlr;
 	
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);
 	g_free(user_name);
 }
+
+
 
 //
 // Generate 'fake' buddy list for Twitter
