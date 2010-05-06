@@ -47,6 +47,7 @@ static PurpleCmdRet tw_cmd_tag(PurpleConversation * conv, const gchar * cmd, gch
 static PurpleCmdRet tw_cmd_btag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
 static PurpleCmdRet tw_cmd_untag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
 static PurpleCmdRet tw_cmd_set_tag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data, gint position);
+static PurpleCmdRet tw_cmd_get_user_tweets(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data);
 
 static TwCmdEnum tw_cmd_enum[] = {
 	{"replies", "", PURPLE_CMD_P_PRPL, 0, tw_cmd_replies, NULL,
@@ -61,6 +62,8 @@ static TwCmdEnum tw_cmd_enum[] = {
 		"append everything with a specified tag, unset with /untag"},
 	{"untag", "", PURPLE_CMD_P_PRPL, 0, tw_cmd_untag, NULL,
 		"unset already set tag"},
+	{"get", "w", PURPLE_CMD_P_PRPL, 0, tw_cmd_get_user_tweets, NULL,
+		"get specific user timeline. Use /get <screen_name> to fetch."},
 };
 
 PurpleCmdRet tw_cmd_tag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
@@ -144,7 +147,31 @@ PurpleCmdRet tw_cmd_refresh(PurpleConversation * conv, const gchar * cmd, gchar 
 	return PURPLE_CMD_RET_OK;
 }
 
+PurpleCmdRet tw_cmd_get_user_tweets(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
+{
+	const gchar * path;
+	TwitterTimeLineReq * tlr;
+	int count;
+	time_t now;
 
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+
+	path = purple_account_get_string(data->ma->account, tc_name(TC_USER_TIMELINE), tc_def(TC_USER_TIMELINE));
+	count = 20; //< FIXME: Hardcoded number of count
+
+	// This will spawn another timeline
+	//tlr = twitter_new_tlr(path, tc_def(TC_USER_USER), TL_USER, count, _("end user messages"));
+
+	// This will fetch user tweets into the same timeline
+	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end user messages"));
+	tlr->use_since_id = FALSE;
+	tlr->screen_name = args[0];
+	time(&now);
+	serv_got_im(data->ma->gc, tlr->name, _("getting user messages"), PURPLE_MESSAGE_SYSTEM, now);
+	twitter_fetch_new_messages(data->ma, tlr);
+
+	return PURPLE_CMD_RET_OK;
+}
 
 /*
  * Convenient proxy for calling real function
