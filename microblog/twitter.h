@@ -143,6 +143,7 @@ typedef struct _TwitterMsg {
 	gchar * msg_txt;
 	time_t msg_time;
 	gint flag;
+	gchar * is_protected;
 } TwitterMsg;
 
 typedef TwitterMsg MbMsg;
@@ -214,6 +215,7 @@ extern void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 extern gboolean twitter_fetch_all_new_messages(gpointer data);
 extern void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbAccount * ma);
 extern void twitter_favorite_message(MbAccount * ta, gchar * msg_id);
+extern void twitter_retweet_message(MbAccount * ta, gchar * msg_id);
 
 #ifdef __cplusplus
 }
