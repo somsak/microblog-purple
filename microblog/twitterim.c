@@ -64,6 +64,7 @@
 #endif
 
 #include "twitter.h"
+#include "mb_cache_util.h"
 
 TwitterConfig * _tw_conf = NULL;
 
@@ -82,6 +83,7 @@ static void plugin_init(PurplePlugin *plugin)
                                                  purple_value_new(PURPLE_TYPE_STRING), // gchar * name
                                                  purple_value_new(PURPLE_TYPE_POINTER) // TwitterMsg cur_msg
                                                  );
+	mb_cache_init();
 }
 
 static void plugin_destroy(PurplePlugin * plugin)
@@ -130,7 +132,7 @@ gboolean plugin_load(PurplePlugin *plugin)
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	_tw_conf[TC_HOST].conf = g_strdup("twitter_hostname");
-	_tw_conf[TC_HOST].def_str = g_strdup("twitter.com");
+	_tw_conf[TC_HOST].def_str = g_strdup("api.twitter.com");
 	option = purple_account_option_string_new(_("Hostname"), tc_name(TC_HOST), tc_def(TC_HOST));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
@@ -140,32 +142,32 @@ gboolean plugin_load(PurplePlugin *plugin)
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_STATUS_UPDATE].conf = g_strdup("twitter_status_update");
-	_tw_conf[TC_STATUS_UPDATE].def_str = g_strdup("/statuses/update.xml");
+	_tw_conf[TC_STATUS_UPDATE].def_str = g_strdup("/1/statuses/update.xml");
 	option = purple_account_option_string_new(_("Status update path"), tc_name(TC_STATUS_UPDATE), tc_def(TC_STATUS_UPDATE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_VERIFY_PATH].conf = g_strdup("twitter_verify");
-	_tw_conf[TC_VERIFY_PATH].def_str = g_strdup("/account/verify_credentials.xml");
+	_tw_conf[TC_VERIFY_PATH].def_str = g_strdup("/1/account/verify_credentials.xml");
 	option = purple_account_option_string_new(_("Account verification path"), tc_name(TC_VERIFY_PATH), tc_def(TC_VERIFY_PATH));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_FRIENDS_TIMELINE].conf = g_strdup("twitter_friends_timeline");
-	_tw_conf[TC_FRIENDS_TIMELINE].def_str = g_strdup("/statuses/friends_timeline.xml");
-	option = purple_account_option_string_new(_("Friends timeline path"), tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
+	_tw_conf[TC_FRIENDS_TIMELINE].def_str = g_strdup("/1/statuses/home_timeline.xml");
+	option = purple_account_option_string_new(_("Home timeline path"), tc_name(TC_FRIENDS_TIMELINE), tc_def(TC_FRIENDS_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_USER_TIMELINE].conf = g_strdup("twitter_user_timeline");
-	_tw_conf[TC_USER_TIMELINE].def_str = g_strdup("/statuses/user_timeline.xml");
+	_tw_conf[TC_USER_TIMELINE].def_str = g_strdup("/1/statuses/user_timeline.xml");
 	option = purple_account_option_string_new(_("User timeline path"), tc_name(TC_USER_TIMELINE), tc_def(TC_USER_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 	
 	_tw_conf[TC_PUBLIC_TIMELINE].conf = g_strdup("twitter_public_timeline");
-	_tw_conf[TC_PUBLIC_TIMELINE].def_str = g_strdup("/statuses/public_timeline.xml");
+	_tw_conf[TC_PUBLIC_TIMELINE].def_str = g_strdup("/1/statuses/public_timeline.xml");
 	option = purple_account_option_string_new(_("Public timeline path"), tc_name(TC_PUBLIC_TIMELINE), tc_def(TC_PUBLIC_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	_tw_conf[TC_REPLIES_TIMELINE].conf = g_strdup("twitter_replies_timeline");
-	_tw_conf[TC_REPLIES_TIMELINE].def_str = g_strdup("/statuses/mentions.xml");
+	_tw_conf[TC_REPLIES_TIMELINE].def_str = g_strdup("/1/statuses/mentions.xml");
 	option = purple_account_option_string_new(_("Mentions timeline path"), tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 

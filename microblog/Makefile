@@ -19,12 +19,12 @@ OLDTWITTER_C_SRC = dummy_twitterim.c
 OLDTWITTER_OBJ = $(OLDTWITTER_C_SRC:%.c=%.o)
 
 
-TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c twitterim.c tw_util.c tw_cmd.c
+TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c mb_cache.c twitterim.c tw_util.c tw_cmd.c
 TWITTER_H_SRC = twitter.h mb_util.h mb_http.h mb_net.h tw_cmd.h
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
 TWITTER_OBJ = $(TWITTER_C_SRC:%.c=%.o)
 
-IDENTICA_C_SRC = identica.c mb_util.c mb_http.c mb_net.c twitter.c tw_util.c
+IDENTICA_C_SRC = identica.c mb_util.c mb_http.c mb_net.c mb_cache.c twitter.c tw_util.c
 IDENTICA_H_SRC = $(TWITTER_H_SRC) 
 IDENTICA_IMG = identica16.png identica22.png identica48.png
 IDENTICA_OBJ = $(IDENTICA_C_SRC:%.c=%.o)
@@ -32,7 +32,7 @@ IDENTICA_OBJ = $(IDENTICA_C_SRC:%.c=%.o)
 laconica.o: identica.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -DLACONICA $<
 
-LACONICA_C_SRC = mb_util.c mb_http.c mb_net.c twitter.c tw_util.c
+LACONICA_C_SRC = mb_util.c mb_http.c mb_net.c mb_cache.c twitter.c tw_util.c
 LACONICA_H_SRC = $(TWITTER_H_SRC)
 LACONICA_IMG = laconica16.png laconica22.png laconica48.png
 LACONICA_OBJ = $(LACONICA_C_SRC:%.c=%.o) laconica.o

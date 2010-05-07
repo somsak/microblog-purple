@@ -392,9 +392,9 @@ void twitgin_on_tweet_recv(MbAccount * ta, gchar * name, TwitterMsg * cur_msg) {
 	purple_debug_info(DBGID, "fmted text msg = ##%s##\n", fmt_txt);
 
 	purple_conv_im_write(PURPLE_CONV_IM(conv),
-		cur_msg->from, fmt_txt,
-		PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NICK,
-		cur_msg->msg_time);
+			cur_msg->from, fmt_txt,
+			PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NICK,
+			cur_msg->msg_time);
 
 	g_free(fmt_txt);
 }
