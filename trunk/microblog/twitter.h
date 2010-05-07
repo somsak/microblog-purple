@@ -50,6 +50,8 @@
 #include <sslconn.h>
 #include <prpl.h>
 
+#include "mb_cache.h" //< Cache user's information
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -115,6 +117,7 @@ typedef struct _MbAccount {
 	gchar * tag;
 	gint tag_pos;
 	unsigned long long reply_to_status_id;
+	MbCache * cache;
 } MbAccount;
 
 typedef MbAccount TwitterAccount; //< for the sake of simplicity for now
