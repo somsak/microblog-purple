@@ -1,3 +1,41 @@
+mbpurple (0.2.3-1~ppa2) jaunty; urgency=low
+
+  [ somsaks ]
+  * Fix the duplicate tweets due to overflow problem
+  * Update version
+  * Fix urgent bugs
+  * git-svn-id: https://microblog-purple.googlecode.com/svn/trunk@293
+    c93ce494-aa52-0410-a5ec-afe58518fd76
+  * Add GPL header
+  * Makefile for certs dir
+  * Fix reply bug (occur from my Typo!)
+
+  [ sugree ]
+  * Imported Upstream version 0.2.2
+  * reset permission
+  * debian
+  * updated changelog and removed binary files
+
+  [ somsaks ]
+  * Install certs on all platform
+  * Add zipdist target to Makefile
+  * Add patch for not receiving tweet while 'do not disturb'
+  * Fix unreachable crash bug (issue #132)
+  * Add code to detect rate limit exceed
+  * (Trying to) fix issue #132
+  * Remove unused code
+  * Fix(ing) issue #132
+  * Patch with patch from ake.hepcat
+  * Merge back reply and rt (old style)
+  * Fix mismatch plug-in bug with reply
+  * Increase version
+  * Eclipse tryout
+  * Merge timezone patched from ake.hepcat
+  * Fix 2.6 and 2.5 compatibility
+  * Add subversion.mak to DISTFILES
+
+ -- Sugree Phatanapherom <sugree@gmail.com>  Tue, 22 Sep 2009 18:32:55 +0700
+
 mbpurple (0.2.2-1~ppa1) jaunty; urgency=low
 
   [ somsaks ]
