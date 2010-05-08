@@ -570,7 +570,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 
 	if(uri_txt) {
 		// display favorite link, if enabled
-		if(purple_prefs_get_bool(TW_PREF_FAV_LINK)) {
+		if(msg->id > 0 && purple_prefs_get_bool(TW_PREF_FAV_LINK)) {
 #if PURPLE_VERSION_CHECK(2, 6, 0)
 			fav_txt = g_strdup_printf(" <a href=\"%s:///fav?src=%s&account=%s&id=%llu\">*</a>", uri_txt, conv->name, account, msg->id);
 #else
@@ -579,7 +579,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 		}
 
 		// display rt link, if enabled
-		if(purple_prefs_get_bool(TW_PREF_RT_LINK) && !g_ascii_strcasecmp(msg->is_protected, "false")) {
+		if(msg->id > 0 && purple_prefs_get_bool(TW_PREF_RT_LINK) && !g_ascii_strcasecmp(msg->is_protected, "false")) {
 			// text for retweet url
 			//embed_rt_txt = purple_url_encode(msg->msg_txt);
 			//purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_rt_txt);
