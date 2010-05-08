@@ -64,7 +64,7 @@
 
 
 
-void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host)
+void twitter_get_user_host(const MbAccount * ta, char ** user_name, char ** host)
 {
 	char * at_sign = NULL;
 

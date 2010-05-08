@@ -26,6 +26,26 @@ static void mb_cache_entry_free(gpointer data)
 	g_free(cache_entry->avatar_path);
 }
 
+/**
+ * Build a path to the per-user (friend) cache directory
+ *
+ * @param ma MbAccount for the cache
+ * @param user_name friend's user name
+ */
+static gchar * build_cache_path(const MbAccount * ma, const gchar * user_name)
+{
+	gchar * host = NULL, * user = NULL;
+	gchar * retval;
+
+	// basedir/host/account/username
+	// account may already include host name
+	mb_get_user_host(ma, &user, &host);
+	retval = g_strdup_printf("%s/%s/%s/%s", cache_base_dir, host, user, user_name);
+	g_free(user);
+	g_free(host);
+	return retval;
+}
+
 /*
  * Read in cache data from file, or ignore it if cache already exists
  *
@@ -33,22 +53,35 @@ static void mb_cache_entry_free(gpointer data)
  * @param user_name user name to read cache
  * @return cache entry, or NULL if none exists
  */
-static MbCacheEntry * mb_cache_read_cache(MbAccount * ma, const gchar * user_name)
+static MbCacheEntry * read_cache(MbAccount * ma, const gchar * user_name)
 {
 	MbCacheEntry * cache_entry = NULL;
+	gchar * cache_path = NULL;
+	gchar * cache_avatar_path = NULL;
+	struct stat stat_buf;
+	time_t now;
 
 	cache_entry = (MbCacheEntry *)g_hash_table_lookup(ma->cache->data, user_name);
 	if(!cache_entry) {
 		// Check if cache file exist, then read in the cache
+		cache_path = build_cache_path(ma, user_name);
+		if(stat(cache_path, &stat_buf) == 0) {
+			// insert new cache entry
+			cache_entry = g_new(MbCacheEntry, 1);
+			cache_entry->avatar_img_id = -1;
+			cache_entry->user_name = g_strdup(user_name);
+			cache_avatar_path = g_strdup_printf("%s/avatar.png", cache_path);
+	//		g_hash_table_insert(ma->cache->data, g_strdup(user_name), );
 
-		// insert new cache entry
-		cache_entry = g_new(MbCacheEntry, 1);
-		cache_entry->avatar_img_id = -1;
-		cache_entry->user_name = g_strdup(user_name);
-//		g_hash_table_insert(ma->cache->data, g_strdup(user_name), );
-
-		// And insert this entry
+			g_free(cache_avatar_path);
+			// And insert this entry
+		} else {
+			purple_build_dir(cache_path, 0700);
+		}
 	}
+	if(cache_path != NULL) g_free(cache_path);
+
+	return cache_entry;
 }
 
 /**
@@ -65,12 +98,16 @@ const char * mb_cache_base_dir(void)
 void mb_cache_init(void)
 {
 	// Create base dir for all images
+	struct stat stat_buf;
 	const char * user_dir = purple_user_dir();
 
 	if(strlen(cache_base_dir) == 0) {
 		snprintf(cache_base_dir, PATH_MAX, "%s/mbpurple", user_dir);
 	}
 	// Check if base dir exists, and create if not
+	if(stat(cache_base_dir, &stat_buf) != 0) {
+		purple_build_dir(cache_base_dir, 0700);
+	}
 }
 
 /**

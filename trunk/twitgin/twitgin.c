@@ -579,7 +579,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 		}
 
 		// display rt link, if enabled
-		if(msg->id > 0 && purple_prefs_get_bool(TW_PREF_RT_LINK) && !g_ascii_strcasecmp(msg->is_protected, "false")) {
+		if(msg->id > 0 && purple_prefs_get_bool(TW_PREF_RT_LINK) && !msg->is_protected) {
 			// text for retweet url
 			//embed_rt_txt = purple_url_encode(msg->msg_txt);
 			//purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_rt_txt);
