@@ -250,7 +250,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 {
 	GList * retval = NULL;
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url, * user_is_protected;
-	gchar * from, * msg_txt, * avatar_url, *xml_str = NULL, * is_protected;
+	gchar * from, * msg_txt, * avatar_url = NULL, *xml_str = NULL, * is_protected = NULL;
 	TwitterMsg * cur_msg = NULL;
 	unsigned long long cur_id;
 	time_t msg_time_t;
@@ -306,11 +306,11 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 				from = xmlnode_get_data(user_name);
 			}
 			image_url = xmlnode_get_child(user, "profile_image_url");
-			if(user_name) {
+			if(image_url) {
 				avatar_url = xmlnode_get_data(image_url);
 			}
 			user_is_protected = xmlnode_get_child(user, "protected");
-			if(user_name) {
+			if(user_is_protected) {
 				is_protected = xmlnode_get_data(user_is_protected);
 			}
 		}
@@ -323,7 +323,12 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 			cur_msg->from = from; //< actually we don't need this for now
 			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
-			cur_msg->is_protected = is_protected;
+			if(is_protected && (strcmp(is_protected, "false") == 0) ) {
+				cur_msg->is_protected = FALSE;
+				g_free(is_protected);
+			} else {
+				cur_msg->is_protected = TRUE;
+			}
 			cur_msg->flag = 0;
 			/*
 			if(skip) {

@@ -147,7 +147,7 @@ typedef struct _TwitterMsg {
 	gchar * msg_txt;
 	time_t msg_time;
 	gint flag;
-	gchar * is_protected;
+	gboolean is_protected;
 } TwitterMsg;
 
 typedef TwitterMsg MbMsg;
@@ -214,7 +214,10 @@ extern void twitter_login(PurpleAccount *acct);
 extern void twitter_close(PurpleConnection *gc);
 extern int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message, PurpleMessageFlags flags);
 extern void twitter_buddy_free(PurpleBuddy * buddy);
-extern void twitter_get_user_host(MbAccount * ta, char ** user_name, char ** host);
+
+extern void twitter_get_user_host(const MbAccount * ta, char ** user_name, char ** host);
+#define mb_get_user_host(a, b, c) twitter_get_user_host(a, b, c)
+
 extern void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 extern gboolean twitter_fetch_all_new_messages(gpointer data);
 extern void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbAccount * ma);
