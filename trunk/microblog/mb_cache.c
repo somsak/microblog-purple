@@ -137,16 +137,20 @@ void mb_cache_free(MbCache * mb_cache)
 	g_free(mb_cache);
 }
 
-// Insert data to the cache
-void mb_cache_insert(MbAccount * ma, MbMsg * msg)
+/**
+ * Insert data to cache
+ *
+ * Insert entry into current cache, thus allocate an image id for the image
+ * Since the protocol plug-in can not use and GTK/GDK function
+ * The task in reading the image data and make it ready will be responsibility
+ * of TwitGin.
+ *
+ * @param ma MbAccount holding the cache
+ * @param entry newly allocated MbCacheEntry
+ */
+void mb_cache_insert(MbAccount * ma, MbCacheEntry * entry)
 {
-	// Currently we only cache Avatar
-	if (msg->avatar_url) {
-		// Read in cache content
-//		mb_cache_read_cache(ma->cache, ma, msg->from);
-		// fetch URL, with limit number of simultaneous fetch
-		// Check if the avatar_url is newer than cache, if so then fetch it
-	}
+
 }
 
 // There will be no cache removal for now, since all cache must available almost all the time

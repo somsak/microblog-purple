@@ -27,15 +27,11 @@ extern MbCache * mb_cache_new(void);
 // Destroy cache
 extern void mb_cache_free(MbCache * mb_cache);
 
-// Remove Value related to an account when the account is destroy
-extern void mb_cache_destroy_account(MbCache * Mb_cache, MbAccount * ma);
-
 // Insert data to the cache
-extern void mb_cache_insert(MbCache * Mb_cache, MbAccount * ma, MbMsg * msg);
+extern void mb_cache_insert(MbAccount * ma, MbCacheEntry * entry);
 
 // There will be no cache removal for now, since all cache must available almost all the time
-
-extern const MbCacheEntry * mb_cache_get(MbCache *mb_cache, MbAccount * ma, const gchar * user_name);
+extern const MbCacheEntry * mb_cache_get(const MbAccount * ma, const gchar * user_name);
 
 #ifdef __cplusplus
 }
