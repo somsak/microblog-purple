@@ -102,9 +102,9 @@ PURPLE_CACERTS_DIR := $(DESTDIR)$(PURPLE_DATAROOT_DIR)/purple/ca-certs
 PIDGIN_LIBS = $(shell pkg-config --libs $(PIDGIN_NAME))
 PIDGIN_CFLAGS = $(CFLAGS) -DPIDGIN_PLUGINS -DENABLE_NLS -DMBPURPLE_VERSION=\"$(VERSION)$(SUBVERSION)\"
 PIDGIN_CFLAGS += $(shell pkg-config --cflags $(PIDGIN_NAME))
-PIDGIN_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC 
+PIDGIN_CFLAGS += -Wall -pthread -I. -g -O2 -pipe -fPIC -DPIC
 
-LDFLAGS := $(shell (echo $(PIDGIN_CFLAGS) $(PURPLE_CFLAGS)| tr ' ' '\n' | awk '!a[$$0]++' | tr '\n' ' '))
+LDFLAGS := $(shell (echo $(PIDGIN_CFLAGS) $(PURPLE_CFLAGS) $(OAUTH_CFLAGS) | tr ' ' '\n' | awk '!a[$$0]++' | tr '\n' ' '))
 endif
 
 dist: $(DISTFILES)

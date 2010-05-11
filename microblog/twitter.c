@@ -81,6 +81,32 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 
 PurplePlugin * twitgin_plugin = NULL;
 
+/**
+ * Convenient function to initialize new connection and set necessary value
+ */
+static MbConnData * twitter_init_connection(MbAccount * ma, const gchar * host, gint port, gint type,
+		const char * path, const gchar * user_name, const gchar * password,
+		MbHandlerFunc handler, gboolean use_https)
+{
+	MbConnData * conn_data = NULL;
+
+	conn_data = mb_conn_data_new(ma, host, port, handler, use_https);
+	mb_conn_data_set_retry(conn_data, 0);
+
+	conn_data->request;
+	conn_data->request->type = type;
+	conn_data->request->port = port;
+
+	mb_http_data_set_host(conn_data->request, host);
+	mb_http_data_set_path(conn_data->request, path);
+	// XXX: Use global here -> twitter_fixed_headers
+	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
+	mb_http_data_set_header(conn_data->request, "Host", host);
+	mb_http_data_set_basicauth(conn_data->request, user_name, password);
+
+	return conn_data;
+}
+
 static TwitterBuddy * twitter_new_buddy()
 {
 	TwitterBuddy * buddy = g_new(TwitterBuddy, 1);
@@ -449,7 +475,6 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 {
 	MbConnData * conn_data;
-	MbHttpData * request;
 	gchar * twitter_host, * user_name;
 	gboolean use_https;
 	gint twitter_port;
@@ -464,27 +489,18 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 		twitter_port = TW_HTTP_PORT;
 	}
 	
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_fetch_new_messages_handler, use_https);
-	mb_conn_data_set_retry(conn_data, 0);
-	
-	request = conn_data->request;
-	request->type = HTTP_GET;
-	request->port = twitter_port;
+	conn_data = twitter_init_connection(ta, twitter_host, twitter_port, HTTP_GET, tlr->path,
+			user_name, purple_account_get_password(ta->account),twitter_fetch_new_messages_handler, use_https);
 
-	mb_http_data_set_host(request, twitter_host);
-	mb_http_data_set_path(request, tlr->path);
-	mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
-	mb_http_data_set_header(request, "Host", twitter_host);
-	mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
 	if(tlr->count > 0) {
 		purple_debug_info(DBGID, "tlr->count = %d\n", tlr->count);
-		mb_http_data_add_param_int(request, "count", tlr->count);
+		mb_http_data_add_param_int(conn_data->request, "count", tlr->count);
 	}
 	if(tlr->use_since_id && (ta->last_msg_id > 0) ) {
-		mb_http_data_add_param_ull(request, "since_id", ta->last_msg_id);
+		mb_http_data_add_param_ull(conn_data->request, "since_id", ta->last_msg_id);
 	}
 	if(tlr->screen_name != NULL) {
-		mb_http_data_add_param(request, "screen_name", tlr->screen_name);
+		mb_http_data_add_param(conn_data->request, "screen_name", tlr->screen_name);
 	}
 	conn_data->handler_data = tlr;
 	
@@ -684,17 +700,9 @@ void twitter_login(PurpleAccount *acct)
 	}
 	purple_debug_info(DBGID, "path = %s\n", path);
 	
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_verify_authen, use_https);
-	mb_conn_data_set_retry(conn_data, purple_account_get_int(acct, tc_name(TC_GLOBAL_RETRY), tc_def_int(TC_GLOBAL_RETRY)));
-	
-	conn_data->request->type = HTTP_GET;
-	mb_http_data_set_host(conn_data->request, twitter_host);
-	mb_http_data_set_path(conn_data->request, path);
-	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
-	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
-	mb_http_data_set_basicauth(conn_data->request, user_name, purple_account_get_password(ta->account));
+	conn_data = twitter_init_connection(ta, twitter_host, twitter_port, HTTP_GET, path,
+			user_name, purple_account_get_password(ta->account),twitter_verify_authen, use_https);
 
-	//purple_proxy_connect(NULL, ta->account, twitter_host, twitter_port, test_connect_cb, NULL);
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);
 	g_free(user_name);
@@ -819,15 +827,8 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	} else {
 		twitter_port = TW_HTTP_PORT;
 	}
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, twitter_send_im_handler, use_https);
-	mb_conn_data_set_retry(conn_data, 0);
-	conn_data->request->type = HTTP_POST;
-	mb_http_data_set_host(conn_data->request, twitter_host);
-	mb_http_data_set_path(conn_data->request, path);
-	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
-	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
-	mb_http_data_set_header(conn_data->request, "Host", twitter_host);
-	mb_http_data_set_basicauth(conn_data->request, 	user_name,purple_account_get_password(ta->account));
+	conn_data = twitter_init_connection(ta, twitter_host, twitter_port, HTTP_POST, path,
+			user_name, purple_account_get_password(ta->account),twitter_send_im_handler, use_https);
 
 	if(ta->reply_to_status_id > 0) {
 		int i;
@@ -901,41 +902,29 @@ void twitter_favorite_message(MbAccount * ta, gchar * msg_id)
 {
 
 	// create new connection and call API POST
-        MbConnData * conn_data;
-        MbHttpData * request;
-        gchar * twitter_host, * user_name, * path;
-        gboolean use_https;
-        gint twitter_port;
+	MbConnData * conn_data;
+	MbHttpData * request;
+	gchar * twitter_host, * user_name, * path;
+	gboolean use_https;
+	gint twitter_port;
 
 	user_name = g_strdup_printf("%s", purple_account_get_username(ta->account));
 	twitter_host = g_strdup_printf("%s", "twitter.com");
 	path = g_strdup_printf("/favorites/create/%s.xml", msg_id);
 
-        use_https = TRUE; 
-        if(use_https) {
-                twitter_port = TW_HTTPS_PORT;
-        } else {
-                twitter_port = TW_HTTP_PORT;
-        }
+	use_https = TRUE;
+	if(use_https) {
+		twitter_port = TW_HTTPS_PORT;
+	} else {
+		twitter_port = TW_HTTP_PORT;
+	}
 
-        conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, NULL, use_https);
-        mb_conn_data_set_retry(conn_data, 0);
+	conn_data = twitter_init_connection(ta, twitter_host, twitter_port, HTTP_POST, path,
+			user_name, purple_account_get_password(ta->account), NULL, use_https);
 
-        request = conn_data->request;
-        request->type = HTTP_POST;
-        request->port = twitter_port;
-
-	mb_http_data_set_host(request, twitter_host);
-        mb_http_data_set_path(request, path);
-        mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
-        mb_http_data_set_header(request, "Host", twitter_host);
-        mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
-
-        //conn_data->handler_data = tlr;
-
-        mb_conn_process_request(conn_data);
-        g_free(twitter_host);
-        g_free(user_name);
+	mb_conn_process_request(conn_data);
+	g_free(twitter_host);
+	g_free(user_name);
 	g_free(path);
 
 }
@@ -948,7 +937,6 @@ void twitter_retweet_message(MbAccount * ta, gchar * msg_id)
 
 	// create new connection and call API POST
 	MbConnData * conn_data;
-	MbHttpData * request;
 	gchar * twitter_host, * user_name, * path;
 	gboolean use_https;
 	gint twitter_port;
@@ -964,20 +952,8 @@ void twitter_retweet_message(MbAccount * ta, gchar * msg_id)
 			twitter_port = TW_HTTP_PORT;
 	}
 
-	conn_data = mb_conn_data_new(ta, twitter_host, twitter_port, NULL, use_https);
-	mb_conn_data_set_retry(conn_data, 0);
-
-	request = conn_data->request;
-	request->type = HTTP_POST;
-	request->port = twitter_port;
-
-	mb_http_data_set_host(request, twitter_host);
-	mb_http_data_set_path(request, path);
-	mb_http_data_set_fixed_headers(request, twitter_fixed_headers);
-	mb_http_data_set_header(request, "Host", twitter_host);
-	mb_http_data_set_basicauth(request, user_name, purple_account_get_password(ta->account));
-
-	//conn_data->handler_data = tlr;
+	conn_data = twitter_init_connection(ta, twitter_host, twitter_port, HTTP_POST, path,
+			user_name, purple_account_get_password(ta->account), NULL, use_https);
 
 	mb_conn_process_request(conn_data);
 	g_free(twitter_host);

@@ -19,10 +19,11 @@ extern "C" {
 
 typedef struct {
 	gchar * user_name; //< owner of this cache entry
-	time_t last_update;
-	time_t last_use;
-	int avatar_img_id;
-	gchar * avatar_path;
+	time_t last_update; //< Last cache data update
+	time_t last_use; //< Last use of this data
+	int avatar_img_id; //< imgstore id
+	gchar * avatar_path; //< path name storing this avatar
+	gpointer avatar_data; //< pointer to image buffer, will be freed by imgstore
 } MbCacheEntry;
 
 typedef struct {
