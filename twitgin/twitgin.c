@@ -61,10 +61,8 @@
 #define DBGID "twitgin"
 #define PURPLE_MESSAGE_TWITGIN 0x1000
 
-// Dummy tw_conf to resolve external symbol link
-TwitterConfig * _tw_conf = NULL;
-
 static PurplePlugin * twitgin_plugin = NULL;
+MbConfig * _mb_conf = NULL;
 
 gchar * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConversation * conv);
 
@@ -150,6 +148,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 	const char * cmd = cmd_arg;
 	char *acct_id = g_hash_table_lookup(params, "account");	
 	PurpleAccount *acct = NULL;
+	MbAccount * ma;
 	PurpleConversation * conv = NULL;
 	PidginConversation * gtkconv;
 	int proto_id = 0;
@@ -160,6 +159,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 	purple_debug_info(DBGID, "twittgin_uri_handler\n");	
 
 	// do not need to test, because the conversation window must be open before one can click
+	// XXX: We need better function to search for the account!
 	if (g_ascii_strcasecmp(proto, "tw") == 0) {
 		proto_id = TWITTER_PROTO;
 		acct = purple_accounts_find(acct_id, "prpl-mbpurple-twitter"); 
@@ -187,6 +187,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 
 	if ( acct && (proto_id > 0) ) {
 		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
+		ma = (MbAccount *)acct->gc->proto_data;
 
 		/* tw:rep?to=sender */
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
@@ -233,13 +234,11 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 			g_free(retweet_message);
 			return TRUE;
 			*/ 
-			MbAccount * ta;
 			gchar * msg_id;
 
 			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
 			msg_id = g_hash_table_lookup(params, "id");
-			ta = mb_account_new(acct);
-			twitter_retweet_message(ta, msg_id);
+			twitter_retweet_message(ma, msg_id);
 			purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, g_strdup_printf("message %s is retweeted", msg_id), PURPLE_MESSAGE_SYSTEM, time(NULL));
 
 			return TRUE;
@@ -247,13 +246,11 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 
 		// favorite hack !
 		if (!g_ascii_strcasecmp(cmd, "fav")) {
-			MbAccount * ta;
 			gchar * msg_id;
 
 			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
 			msg_id = g_hash_table_lookup(params, "id");
-			ta = mb_account_new(acct);
-			twitter_favorite_message(ta, msg_id);
+			twitter_favorite_message(ma, msg_id);
 			purple_conv_im_write(PURPLE_CONV_IM(conv), NULL, g_strdup_printf("message %s is favorited", msg_id), PURPLE_MESSAGE_SYSTEM, time(NULL));
 
 			return TRUE;

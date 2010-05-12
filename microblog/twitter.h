@@ -104,6 +104,49 @@ typedef struct _TwitterTimeLineReq {
 extern TwitterTimeLineReq * twitter_new_tlr(const char * path, const char * name, int count, int id, const char * sys_msg);
 extern void twitter_free_tlr(TwitterTimeLineReq * tlr);
 
+/*
+ * Twitter Configuration
+ */
+enum _TweetConfig {
+	TC_HIDE_SELF = 0,
+	TC_PLUGIN,
+	TC_PRIVACY,
+	TC_MSG_REFRESH_RATE,
+	TC_INITIAL_TWEET,
+	TC_GLOBAL_RETRY,
+	TC_HOST,
+	TC_USE_HTTPS,
+	TC_STATUS_UPDATE,
+	TC_VERIFY_PATH,
+	TC_FRIENDS_TIMELINE,
+	TC_FRIENDS_USER,
+	TC_PUBLIC_TIMELINE,
+	TC_PUBLIC_USER,
+	TC_USER_TIMELINE,
+	TC_USER_USER,
+	TC_USER_GROUP,
+	TC_REPLIES_TIMELINE,
+	TC_REPLIES_USER,
+	TC_AUTH_TYPE,
+	TC_MAX,
+};
+
+
+typedef struct _MbConfig {
+	gchar * conf; //< configuration name
+	gchar * def_str; //< default value to be used
+	gint def_int;
+	gboolean def_bool;
+} MbConfig;
+
+extern MbConfig * _mb_conf;
+
+/* Alias for easier usage of these values */
+#define mc_name(name) ma->mb_conf[name].conf
+#define mc_def(name) ma->mb_conf[name].def_str
+#define mc_def_int(name) ma->mb_conf[name].def_int
+#define mc_def_bool(name) ma->mb_conf[name].def_bool
+
 typedef struct _MbAccount {
 	PurpleAccount *account;
 	PurpleConnection *gc;
@@ -118,9 +161,9 @@ typedef struct _MbAccount {
 	gint tag_pos;
 	unsigned long long reply_to_status_id;
 	MbCache * cache;
+	gint auth_type;
+	MbConfig * mb_conf;
 } MbAccount;
-
-typedef MbAccount TwitterAccount; //< for the sake of simplicity for now
 
 enum tag_position {
 	MB_TAG_NONE = 0,
@@ -128,8 +171,17 @@ enum tag_position {
 	MB_TAG_POSTFIX = 2,
 };
 
+enum auth_types {
+	MB_OAUTH = 0,
+	MB_XAUTH = 1,
+	MB_HTTP_BASICAUTH = 2,
+	MB_AUTH_MAX,
+};
+
+extern const char * mb_auth_types_str[];
+
 typedef struct _TwitterBuddy {
-	TwitterAccount *ta;
+	MbAccount *ma;
 	PurpleBuddy *buddy;
 	gint uid;
 	gchar *name;
@@ -156,48 +208,6 @@ extern PurplePluginProtocolInfo twitter_prpl_info;
 extern const char * _TweetTimeLineNames[];
 extern const char * _TweetTimeLinePaths[];
 extern const char * _TweetTimeLineConfigs[];
-
-/*
- * Twitter Configuration
- */
-enum _TweetConfig {
-	TC_HIDE_SELF = 0,
-	TC_PLUGIN,
-	TC_PRIVACY,
-	TC_MSG_REFRESH_RATE,
-	TC_INITIAL_TWEET,
-	TC_GLOBAL_RETRY,
-	TC_HOST,
-	TC_USE_HTTPS,
-	TC_STATUS_UPDATE,
-	TC_VERIFY_PATH,
-	TC_FRIENDS_TIMELINE,
-	TC_FRIENDS_USER,
-	TC_PUBLIC_TIMELINE,
-	TC_PUBLIC_USER,
-	TC_USER_TIMELINE,
-	TC_USER_USER,
-	TC_USER_GROUP,
-	TC_REPLIES_TIMELINE,
-	TC_REPLIES_USER,
-	TC_MAX,
-};
-
-
-typedef struct _TwitterConfig {
-	gchar * conf; //< configuration name
-	gchar * def_str; //< default value to be used
-	gint def_int; 
-	gboolean def_bool;
-} TwitterConfig;
-
-extern TwitterConfig * _tw_conf;
-
-/* Alias for easier usage of these values */
-#define tc_name(name) _tw_conf[name].conf
-#define tc_def(name) _tw_conf[name].def_str
-#define tc_def_int(name) _tw_conf[name].def_int
-#define tc_def_bool(name) _tw_conf[name].def_bool
 
 /* Microblog function */
 
