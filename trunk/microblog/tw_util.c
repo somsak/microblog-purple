@@ -64,16 +64,16 @@
 
 
 
-void twitter_get_user_host(const MbAccount * ta, char ** user_name, char ** host)
+void twitter_get_user_host(const MbAccount * ma, char ** user_name, char ** host)
 {
 	char * at_sign = NULL;
 
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
-	(*user_name) = g_strdup(purple_account_get_username(ta->account));
+	(*user_name) = g_strdup(purple_account_get_username(ma->account));
 	purple_debug_info(DBGID, "username = ##%s##\n", (*user_name));
 	if( (at_sign = strrchr(*user_name, '@')) == NULL) {
 		if(host != NULL) {
-			(*host) = g_strdup(purple_account_get_string(ta->account, tc_name(TC_HOST), tc_def(TC_HOST)));
+			(*host) = g_strdup(purple_account_get_string(ma->account, mc_name(TC_HOST), mc_def(TC_HOST)));
 			purple_debug_info(DBGID, "host (config) = %s\n", (*host));
 		}
 	} else {

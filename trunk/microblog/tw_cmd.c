@@ -91,12 +91,14 @@ PurpleCmdRet tw_cmd_set_tag(PurpleConversation * conv, const gchar * cmd, gchar 
 
 PurpleCmdRet tw_cmd_untag(PurpleConversation * conv, const gchar * cmd, gchar ** args, gchar ** error, TwCmdArg * data)
 {
-	if(data->ma->tag) {
-		g_free(data->ma->tag);
-		data->ma->tag = NULL;
-		data->ma->tag_pos = MB_TAG_NONE;
+	MbAccount * ma = data->ma;
+
+	if(ma->tag) {
+		g_free(ma->tag);
+		ma->tag = NULL;
+		ma->tag_pos = MB_TAG_NONE;
 	} else {
-		serv_got_im(data->ma->gc, tc_def(TC_FRIENDS_USER), _("no tag is being set"), PURPLE_MESSAGE_SYSTEM, time(NULL));
+		serv_got_im(ma->gc, mc_def(TC_FRIENDS_USER), _("no tag is being set"), PURPLE_MESSAGE_SYSTEM, time(NULL));
 	}
 
 	return PURPLE_CMD_RET_OK;
@@ -108,16 +110,17 @@ PurpleCmdRet tw_cmd_replies(PurpleConversation * conv, const gchar * cmd, gchar 
 	TwitterTimeLineReq * tlr;
 	int count;
 	time_t now;
+	MbAccount * ma = data->ma;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 
-	path = purple_account_get_string(data->ma->account, tc_name(TC_REPLIES_TIMELINE), tc_def(TC_REPLIES_TIMELINE));
+	path = purple_account_get_string(ma->account, mc_name(TC_REPLIES_TIMELINE), mc_def(TC_REPLIES_TIMELINE));
 	count = 20; //< FIXME: Hardcoded number of count
-	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end reply messages"));
+	tlr = twitter_new_tlr(path, mc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end reply messages"));
 	tlr->use_since_id = FALSE;
 	time(&now);
-	serv_got_im(data->ma->gc, tlr->name, _("getting reply messages"), PURPLE_MESSAGE_SYSTEM, now);
-	twitter_fetch_new_messages(data->ma, tlr);
+	serv_got_im(ma->gc, tlr->name, _("getting reply messages"), PURPLE_MESSAGE_SYSTEM, now);
+	twitter_fetch_new_messages(ma, tlr);
 
 	return PURPLE_CMD_RET_OK;
 }
@@ -126,15 +129,16 @@ PurpleCmdRet tw_cmd_refresh_rate(PurpleConversation * conv, const gchar * cmd, g
 {
 	char * end_ptr = NULL;
 	int new_rate = -1;
+	MbAccount * ma = data->ma;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	new_rate = (int)strtol(args[0], &end_ptr, 10);
 	if( (*end_ptr) == '\0' ) {
 		if(new_rate > 10) {
-			purple_account_set_int(data->ma->account, tc_name(TC_MSG_REFRESH_RATE), new_rate);
+			purple_account_set_int(ma->account, mc_name(TC_MSG_REFRESH_RATE), new_rate);
 			return PURPLE_CMD_RET_OK;
 		} else {
-			serv_got_im(data->ma->gc, tc_def(TC_FRIENDS_USER), _("new rate is too low, must be > 10 seconds"), PURPLE_MESSAGE_SYSTEM, time(NULL));
+			serv_got_im(ma->gc, mc_def(TC_FRIENDS_USER), _("new rate is too low, must be > 10 seconds"), PURPLE_MESSAGE_SYSTEM, time(NULL));
 			return PURPLE_CMD_RET_FAILED;
 		}
 	}
@@ -153,22 +157,23 @@ PurpleCmdRet tw_cmd_get_user_tweets(PurpleConversation * conv, const gchar * cmd
 	TwitterTimeLineReq * tlr;
 	int count;
 	time_t now;
+	MbAccount * ma = data->ma;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 
-	path = purple_account_get_string(data->ma->account, tc_name(TC_USER_TIMELINE), tc_def(TC_USER_TIMELINE));
+	path = purple_account_get_string(ma->account, mc_name(TC_USER_TIMELINE), mc_def(TC_USER_TIMELINE));
 	count = 20; //< FIXME: Hardcoded number of count
 
 	// This will spawn another timeline
-	//tlr = twitter_new_tlr(path, tc_def(TC_USER_USER), TL_USER, count, _("end user messages"));
+	//tlr = twitter_new_tlr(path, mc_def(TC_USER_USER), TL_USER, count, _("end user messages"));
 
 	// This will fetch user tweets into the same timeline
-	tlr = twitter_new_tlr(path, tc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end user messages"));
+	tlr = twitter_new_tlr(path, mc_def(TC_REPLIES_USER), TL_REPLIES, count, _("end user messages"));
 	tlr->use_since_id = FALSE;
 	tlr->screen_name = args[0];
 	time(&now);
-	serv_got_im(data->ma->gc, tlr->name, _("getting user messages"), PURPLE_MESSAGE_SYSTEM, now);
-	twitter_fetch_new_messages(data->ma, tlr);
+	serv_got_im(ma->gc, tlr->name, _("getting user messages"), PURPLE_MESSAGE_SYSTEM, now);
+	twitter_fetch_new_messages(ma, tlr);
 
 	return PURPLE_CMD_RET_OK;
 }
