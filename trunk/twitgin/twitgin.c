@@ -531,7 +531,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 			// if it's a proper name, extract it
 			i++;
 			j = i;
-			while((src[j] != '\0') && (!isspace(src[j]))) {
+			while((src[j] != '\0') && (!isspace(src[j]) && !strchr("!@#$%^&*()-=+[]{};:'\"<>?,./`~", src[j]))) {
 				j++;
 			}
 			if(i == j) {
