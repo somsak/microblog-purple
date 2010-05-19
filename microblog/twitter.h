@@ -51,6 +51,7 @@
 #include <prpl.h>
 
 #include "mb_cache.h" //< Cache user's information
+#include "mb_oauth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -128,6 +129,16 @@ enum _TweetConfig {
 	TC_REPLIES_TIMELINE,
 	TC_REPLIES_USER,
 	TC_AUTH_TYPE,
+
+	// OAuth stuff
+	TC_OAUTH_DONE,
+	TC_XAUTH_DONE,
+	TC_CONSUMER_KEY,
+	TC_CONSUMER_SECRET,
+	TC_REQUEST_TOKEN_URL,
+	TC_ACCESS_TOKEN_URL,
+	TC_AUTHORIZE_URL,
+
 	TC_MAX,
 };
 
@@ -163,6 +174,7 @@ typedef struct _MbAccount {
 	MbCache * cache;
 	gint auth_type;
 	MbConfig * mb_conf;
+	MbOauth oauth;
 } MbAccount;
 
 enum tag_position {

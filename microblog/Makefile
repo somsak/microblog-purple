@@ -19,12 +19,12 @@ OLDTWITTER_C_SRC = dummy_twitterim.c
 OLDTWITTER_OBJ = $(OLDTWITTER_C_SRC:%.c=%.o)
 
 
-TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c mb_cache.c twitterim.c tw_util.c tw_cmd.c
-TWITTER_H_SRC = twitter.h mb_util.h mb_http.h mb_net.h tw_cmd.h
+TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c mb_cache.c twitterim.c tw_util.c tw_cmd.c mb_oauth.c
+TWITTER_H_SRC = twitter.h mb_util.h mb_http.h mb_net.h tw_cmd.h mb_cache.h mb_oauth.h
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
 TWITTER_OBJ = $(TWITTER_C_SRC:%.c=%.o)
 
-IDENTICA_C_SRC = identica.c mb_util.c mb_http.c mb_net.c mb_cache.c twitter.c tw_util.c
+IDENTICA_C_SRC = identica.c mb_util.c mb_http.c mb_net.c mb_cache.c twitter.c tw_util.c mb_oauth.c
 IDENTICA_H_SRC = $(TWITTER_H_SRC) 
 IDENTICA_IMG = identica16.png identica22.png identica48.png
 IDENTICA_OBJ = $(IDENTICA_C_SRC:%.c=%.o)
@@ -94,9 +94,11 @@ mbchprpl$(EXE_SUFFIX): mbchprpl.o
 xml_tester$(EXE_SUFFIX): xml_tester.c
 	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@ 
 
-mb_http.o: mb_http.c mb_http.h
-mb_net.o: mb_net.c mb_net.h mb_http.h
-mb_util.o: mb_util.c
-twitter.o: twitter.c mb_net.h mb_http.h twitter.h mb_util.h
-twitterim.o: twitter.o
-identica.o: twitter.o
+mb_http.o: mb_http.c mb_http.h twitter.h Makefile
+mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h Makefile
+mb_util.o: mb_util.c twitter.h Makefile
+twitter.o: twitter.c mb_net.h mb_http.h twitter.h mb_util.h mb_cache.h mb_oauth.h Makefile
+mb_cache.o: mb_cache.c twitter.h
+mb_oauth.o: mb_oauth.c mb_oauth.h twitter.h
+twitterim.o: twitter.o mb_http.o mb_net.o mb_util.o mb_cache.o mb_oauth.o Makefile
+identica.o: twitter.o Makefile
