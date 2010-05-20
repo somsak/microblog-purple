@@ -51,7 +51,7 @@ static const char fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 
 static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gchar * path, MbHandlerFunc handler, gchar ** full_url);
 static gchar * mb_oauth_gen_nonce(void);
-static gchar * mb_oauth_sign_signature(const gchar * data, const gchar * key);
+static gchar * mb_oauth_sign_hmac_sha1(const gchar * data, const gchar * key);
 static gchar * mb_oauth_gen_sigbase(const gchar * url, int type, GList * params);
 static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data);
 
@@ -174,7 +174,7 @@ static gchar * mb_oauth_gen_nonce(void) {
  * @param key key (secret)
  * @return string represent signature (must be freed by caller)
  */
-static gchar * mb_oauth_sign_signature(const gchar * data, const gchar * key) {
+static gchar * mb_oauth_sign_hmac_sha1(const gchar * data, const gchar * key) {
 	PurpleCipherContext * context = NULL;
 	size_t out_len;
 	guchar digest[1024];
@@ -281,11 +281,7 @@ void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type
 
 	secret = g_strdup_printf("%s&%s", ma->oauth.c_secret, ma->oauth.request_secret ? ma->oauth.request_secret : "");
 
-	signature = mb_oauth_sign_signature("GET&http%3A%2F%2Fapi.twitter.com%2Foauth%2Frequest_token&oauth_consumer_key%3DPCWAdQpyyR12ezp2fVwEhw%26oauth_nonce%3DF_2urGzJ0q8Alzgbllio%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D1274351275%26oauth_version%3D1.0", "EveLmCXJIg2R7BTCpm6OWV8YyX49nI0pxnYXh7JMvDg&");
-	purple_debug_info(DBGID, "XXXXXXXXXXXX signature = %s\n", signature);
-	g_free(signature);
-
-	signature = mb_oauth_sign_signature(sig_base, secret);
+	signature = mb_oauth_sign_hmac_sha1(sig_base, secret);
 	g_free(secret);
 	g_free(sig_base);
 	purple_debug_info(DBGID, "signed signature = %s\n", signature);
