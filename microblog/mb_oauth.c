@@ -48,6 +48,7 @@ static const char fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 "Connection: Close\r\n" \
 "Pragma: no-cache\r\n";
 
+
 static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gchar * path, MbHandlerFunc handler, gchar ** full_url);
 static gchar * mb_oauth_gen_nonce(void);
 static gchar * mb_oauth_sign_signature(const gchar * data, const gchar * key);
@@ -163,6 +164,7 @@ static gchar * mb_oauth_gen_nonce(void) {
 	}
 	nc[i]='\0';
 	return (nc);
+//	return g_strdup("F_2urGzJ0q8Alzgbllio");
 }
 
 /**
@@ -178,6 +180,7 @@ static gchar * mb_oauth_sign_signature(const gchar * data, const gchar * key) {
 	guchar digest[1024];
 	gchar * retval = NULL;
 
+	purple_debug_info(DBGID, "signing data \"%s\"\n with key \"%s\"\n", data, key);
 	if( (context = purple_cipher_context_new_by_name("hmac", NULL)) == NULL) {
 		purple_debug_info(DBGID, "couldn't find HMAC cipher, upgrade Pidgin?\n");
 		return NULL;
@@ -186,9 +189,10 @@ static gchar * mb_oauth_sign_signature(const gchar * data, const gchar * key) {
 	purple_cipher_context_set_key(context, (guchar *)key);
 	purple_cipher_context_append(context, (guchar *)data, strlen(data));
 
-	if(purple_cipher_context_digest(context, 20, digest, &out_len)) {
-		purple_debug_info(DBGID, "got digest = %s, out_len = %d\n", digest, out_len);
+	if(purple_cipher_context_digest(context, sizeof(digest), digest, &out_len)) {
+		//purple_debug_info(DBGID, "got digest = %s, out_len = %d\n", digest, (int)out_len);
 		retval = purple_base64_encode(digest, out_len);
+		purple_debug_info(DBGID, "got digest = %s, out_len = %d\n", retval, (int)out_len);
 	} else {
 		purple_debug_info(DBGID, "couldn't digest signature\n");
 	}
@@ -198,8 +202,11 @@ static gchar * mb_oauth_sign_signature(const gchar * data, const gchar * key) {
 	return retval;
 }
 
-static int _string_compare(gconstpointer a, gconstpointer b) {
-	return strcmp((const char *)a, (const char *)b);
+static int _string_compare_key(gconstpointer a, gconstpointer b) {
+	const MbHttpParam * param_a = (MbHttpParam *)a;
+	const MbHttpParam * param_b = (MbHttpParam *)b;
+
+	return strcmp(param_a->key, param_b->key);
 }
 
 /**
@@ -211,10 +218,10 @@ static int _string_compare(gconstpointer a, gconstpointer b) {
  * @param params list of PurpleKeyValuePair
  */
 static gchar * mb_oauth_gen_sigbase(const gchar * url, int type, GList * params) {
-	gchar * type_str = NULL, * param_str = NULL, * retval = NULL;
+	gchar * type_str = NULL, * param_str = NULL, * retval = NULL, *encoded_url, *encoded_param;
 	MbHttpParam * param;
 	GList * it;
-	GString * param_string = g_string_new(url);
+	GString * param_string = g_string_new(NULL);
 	int len;
 
 	// Type
@@ -225,8 +232,6 @@ static gchar * mb_oauth_gen_sigbase(const gchar * url, int type, GList * params)
 	}
 
 	// Concatenate all parameter
-	g_string_append_c(param_string, '/');
-    params = g_list_sort(params, _string_compare);
     for(it = g_list_first(params); it; it = g_list_next(it)) {
 		param = (MbHttpParam *)it->data;
     	g_string_append_printf(param_string, "%s=%s&", param->key, param->value);
@@ -239,7 +244,11 @@ static gchar * mb_oauth_gen_sigbase(const gchar * url, int type, GList * params)
     }
     purple_debug_info(DBGID, "final merged param string = %s\n", param_str);
 
-    retval = g_strdup_printf("%s&%s", type_str, purple_url_encode(param_str));
+    encoded_url = g_strdup(purple_url_encode(url));
+    encoded_param = g_strdup(purple_url_encode(param_str));
+    retval = g_strdup_printf("%s&%s&%s", type_str, encoded_url, encoded_param);
+    g_free(encoded_url);
+    g_free(encoded_param);
 
     g_free(param_str);
 
@@ -262,13 +271,20 @@ void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type
 
 	mb_http_data_add_param(conn_data->request, "oauth_signature_method", "HMAC-SHA1");
 	mb_http_data_add_param_ull(conn_data->request, "oauth_timestamp", time(NULL));
+//	mb_http_data_add_param_ull(conn_data->request, "oauth_timestamp", 1274351275);
 	mb_http_data_add_param(conn_data->request, "oauth_version", "1.0");
+	conn_data->request->params = g_list_sort(conn_data->request->params, _string_compare_key);
 
 	// Create signature
 	sig_base = mb_oauth_gen_sigbase(full_url, type, conn_data->request->params);
 	purple_debug_info(DBGID, "got signature base = %s\n", sig_base);
 
 	secret = g_strdup_printf("%s&%s", ma->oauth.c_secret, ma->oauth.request_secret ? ma->oauth.request_secret : "");
+
+	signature = mb_oauth_sign_signature("GET&http%3A%2F%2Fapi.twitter.com%2Foauth%2Frequest_token&oauth_consumer_key%3DPCWAdQpyyR12ezp2fVwEhw%26oauth_nonce%3DF_2urGzJ0q8Alzgbllio%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D1274351275%26oauth_version%3D1.0", "EveLmCXJIg2R7BTCpm6OWV8YyX49nI0pxnYXh7JMvDg&");
+	purple_debug_info(DBGID, "XXXXXXXXXXXX signature = %s\n", signature);
+	g_free(signature);
+
 	signature = mb_oauth_sign_signature(sig_base, secret);
 	g_free(secret);
 	g_free(sig_base);
