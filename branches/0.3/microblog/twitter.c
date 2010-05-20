@@ -726,7 +726,7 @@ void twitter_request_authorize(MbAccount * ma, gpointer data)
 
 	// XXX: Implement later
 	path = purple_account_get_string(ma->account, mc_name(TC_ACCESS_TOKEN_URL), mc_def(TC_ACCESS_TOKEN_URL));
-	mb_oauth_requst_access(ma, path, twitter_verify_account, data);
+	mb_oauth_request_access(ma, path, HTTP_POST, twitter_verify_account, data);
 }
 
 /**
@@ -747,7 +747,7 @@ void twitter_request_access(MbAccount * ma)
 			if(!oauth_done) {
 				mb_oauth_init(ma, mc_def(TC_CONSUMER_KEY), mc_def(TC_CONSUMER_SECRET));
 				path = purple_account_get_string(ma->account, mc_name(TC_REQUEST_TOKEN_URL), mc_def(TC_REQUEST_TOKEN_URL));
-				mb_oauth_requst_token(ma, path, twitter_request_authorize, NULL);
+				mb_oauth_request_token(ma, path, HTTP_GET, twitter_request_authorize, NULL);
 			} else {
 				twitter_verify_account(ma, NULL);
 			}

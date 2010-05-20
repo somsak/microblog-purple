@@ -41,8 +41,8 @@ typedef struct _MbOauth {
 } MbOauth;
 
 void mb_oauth_init(struct _MbAccount * ma, const gchar * c_key, const gchar * c_secret);
-void mb_oauth_requst_token(struct _MbAccount * ma, const gchar * url, int type, MbOauthUserInput func, gpointer data);
-void mb_oauth_requst_access(struct _MbAccount * ma, const gchar * url, int type, MbOauthResponse func, gpointer data);
+void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type, MbOauthUserInput func, gpointer data);
+void mb_oauth_request_access(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data);
 void mb_oauth_free(struct _MbAccount * ma);
 
 #ifdef __cplusplus
