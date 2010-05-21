@@ -22,9 +22,10 @@ extern "C" {
 
 
 struct _MbAccount;
+struct _MbConnData;
 
-typedef void (* MbOauthUserInput)(struct _MbAccount * ma, gpointer data);
-typedef void (* MbOauthResponse)(struct _MbAccount * ma, gpointer data);
+typedef gint (* MbOauthUserInput)(struct _MbAccount * ma, struct _MbConnData * data, gpointer user_data);
+typedef gint (* MbOauthResponse)(struct _MbAccount * ma, struct _MbConnData * data, gpointer user_data);
 
 typedef struct _MbOauth {
 	gchar * c_key; //< Consumer key

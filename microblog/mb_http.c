@@ -337,7 +337,8 @@ static gint mb_http_data_param_key_pred(gconstpointer a, gconstpointer key)
 void mb_http_data_add_param(MbHttpData * data, const gchar * key, const gchar * value)
 {
 	MbHttpParam * p = mb_http_param_new();
-	
+
+	purple_debug_info(MB_HTTPID, "adding parameter %s = %s\n", key, value);
 	p->key = g_strdup(purple_url_encode(key));
 	p->value = g_strdup(purple_url_encode(value));
 	data->params = g_list_append(data->params, p);
@@ -413,10 +414,75 @@ static void mb_http_data_header_assemble(gpointer key, gpointer value, gpointer 
 	data->cur_packet += len;
 }
 
-void mb_http_data_prepare_write(MbHttpData * data)
+static int _string_compare_key(gconstpointer a, gconstpointer b) {
+	const MbHttpParam * param_a = (MbHttpParam *)a;
+	const MbHttpParam * param_b = (MbHttpParam *)b;
+
+	return strcmp(param_a->key, param_b->key);
+}
+
+void mb_http_data_sort_param(MbHttpData * data) {
+	data->params = g_list_sort(data->params, _string_compare_key);
+}
+
+int mb_http_data_encode_param(MbHttpData *data, char * buf, int len)
 {
 	GList * it;
 	MbHttpParam * p;
+	int cur_len = 0, ret_len;
+	char * cur_buf = buf;
+
+	if(data->params) {
+		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
+			p = it->data;
+			purple_debug_info(MB_HTTPID, "%s: key = %s, value = %s\n", __FUNCTION__, p->key, p->value);
+			ret_len = snprintf(cur_buf, len - cur_len, "%s=%s&", p->key, p->value);
+			cur_len += ret_len;
+			if(cur_len >= len) {
+				return cur_len;
+			}
+			cur_buf += ret_len;
+		}
+		cur_buf--;
+		(*cur_buf) = '\0';
+	}
+	purple_debug_info(MB_HTTPID, "final param is %s\n", buf);
+	return (cur_len - 1);
+}
+
+void mb_http_data_decode_param_from_content(MbHttpData *data) {
+	GString * content = NULL;
+	gchar * cur = NULL, * amp = NULL, * equal = NULL;
+	gchar * key, * val;
+
+	if(data->content_len > 0) {
+		content = data->content;
+		cur = content->str;
+		while( (cur - content->str) < data->content_len) {
+			amp = strchr(cur, '&');
+			if(amp) {
+				(*amp) = '\0';
+			}
+			equal = strchr(cur, '=');
+			if(equal) {
+				(*equal) = '\0';
+				key = cur;
+				val = (equal + 1);
+				// treat every parameter as string
+				mb_http_data_add_param(data, key, val);
+				(*equal) = '=';
+			}
+			if(amp) {
+				(*amp) = '&';
+			}
+			cur = (amp + 1);
+		}
+	}
+
+}
+
+void mb_http_data_prepare_write(MbHttpData * data)
+{
 	gchar * cur_packet;
 	gint packet_len, len;
 
@@ -442,13 +508,8 @@ void mb_http_data_prepare_write(MbHttpData * data)
 	if(data->params) {
 		(*cur_packet) = '?';
 		cur_packet++;
-		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
-			p = it->data;
-			purple_debug_info(MB_HTTPID, "%s: key = %s, value = %s\n", __FUNCTION__, p->key, p->value);
-			len = sprintf(cur_packet, "%s=%s&", p->key, p->value);
-			cur_packet += len;
-		}
-		cur_packet--;
+		len = mb_http_data_encode_param(data, cur_packet,  packet_len - (cur_packet - data->packet));
+		cur_packet += len;
 	}
 	(*cur_packet) = ' ';
 	len = sprintf(cur_packet, " HTTP/1.1\r\n");
