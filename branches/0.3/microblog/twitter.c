@@ -86,10 +86,10 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 PurplePlugin * twitgin_plugin = NULL;
 
 static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const char * path, MbHandlerFunc handler);
-gint twitter_verify_authen(MbConnData * conn_data, gpointer data);
 void twitter_request_access(MbAccount * ma);
-void twitter_request_authorize(MbAccount * ma, gpointer data);
 void twitter_verify_account(MbAccount * ma, gpointer data);
+gint twitter_verify_authen(MbConnData * conn_data, gpointer data);
+gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data);
 
 /**
  * Convenient function to initialize new connection and set necessary value
@@ -112,7 +112,7 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 	password = purple_account_get_password(ma->account);
 
 	conn_data = mb_conn_data_new(ma, host, port, handler, use_https);
-	mb_conn_data_set_retry(conn_data, 0);
+	mb_conn_data_set_retry(conn_data, 3);
 
 	conn_data->request->type = type;
 	conn_data->request->port = port;
@@ -437,9 +437,9 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 
 				error_str = twitter_decode_error(response->content->str);
 				if(ma->gc != NULL) {
-					purple_connection_set_state(ma->gc, PURPLE_DISCONNECTED);
+//					purple_connection_set_state(ma->gc, PURPLE_DISCONNECTED);
 					ma->state = PURPLE_DISCONNECTED;
-					purple_connection_error(ma->gc, error_str);
+					purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error_str);
 				}
 				g_free(error_str);
 			}
@@ -720,13 +720,31 @@ void twitter_login(PurpleAccount *acct)
 /*
  * Redirect user to authorization page and wait for user input
  */
-void twitter_request_authorize(MbAccount * ma, gpointer data)
+gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data)
 {
-	const gchar * path = NULL;
+	const gchar * request_access_path = NULL;
+	gchar * error_msg = NULL;
 
-	// XXX: Implement later
-	path = purple_account_get_string(ma->account, mc_name(TC_ACCESS_TOKEN_URL), mc_def(TC_ACCESS_TOKEN_URL));
-	mb_oauth_request_access(ma, path, HTTP_POST, twitter_verify_account, data);
+
+	if(data->response->status != HTTP_OK) {
+		// error
+//		purple_connection_set_state(ma->gc, PURPLE_DISCONNECTED);
+		ma->state = PURPLE_DISCONNECTED;
+		if(data->response->content_len > 0) {
+			error_msg = g_strdup(data->response->content->str);
+		} else {
+			error_msg = g_strdup("Unknown error");
+		}
+		purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_INVALID_SETTINGS, error_msg);
+		g_free(error_msg);
+		return -1;
+	}
+	// process the successfully acquire token
+	request_access_path = purple_account_get_string(ma->account, mc_name(TC_ACCESS_TOKEN_URL), mc_def(TC_ACCESS_TOKEN_URL));
+
+
+//	mb_oauth_request_access(ma, path, HTTP_POST, twitter_verify_account, data);
+	return 0;
 }
 
 /**
@@ -804,9 +822,9 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
 		return 0;
 	} else {
 		// XXX: Crash at the line below
-		purple_connection_set_state(conn_data->ma->gc, PURPLE_DISCONNECTED);
+//		purple_connection_set_state(conn_data->ma->gc, PURPLE_DISCONNECTED);
 		conn_data->ma->state = PURPLE_DISCONNECTED;
-		purple_connection_error(ma->gc, _("Authentication error"));
+		purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Authentication failed");
 		return -1;
 	}
 }

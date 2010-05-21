@@ -211,7 +211,7 @@ gboolean plugin_load(PurplePlugin *plugin)
 
 	// OAuth stuff
 	_mb_conf[TC_CONSUMER_KEY].def_str = g_strdup("PCWAdQpyyR12ezp2fVwEhw");
-	_mb_conf[TC_CONSUMER_SECRET].def_str = g_strdup("EveLmCXJIg2R7BTCpm6OWV8YyX49nI0pxnYXh7JMvDg");
+	_mb_conf[TC_CONSUMER_SECRET].def_str = g_strdup("EveLmCXJIg2R7BTCpm6OWV8YyX49nI0pxnYXh7JMvDgXXXXXXXX");
 
 	_mb_conf[TC_REQUEST_TOKEN_URL].conf = g_strdup("twitter_oauth_request_token_url");
 	_mb_conf[TC_REQUEST_TOKEN_URL].def_str = g_strdup("/oauth/request_token");

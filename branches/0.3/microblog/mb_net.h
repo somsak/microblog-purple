@@ -38,8 +38,10 @@ typedef struct _MbConnData {
 	gchar * error_message;
 	MbHttpData * request;
 	MbHttpData * response;
+	// XXX: Retry and max retry should be remove very soon. There is actually no retry anymore.
 	gint retry;
 	gint max_retry;
+
 	MbHandlerFunc handler;
 	gpointer handler_data;
 	gboolean is_ssl;

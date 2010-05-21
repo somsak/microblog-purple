@@ -52,7 +52,7 @@ static const char fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gchar * path, MbHandlerFunc handler, gchar ** full_url);
 static gchar * mb_oauth_gen_nonce(void);
 static gchar * mb_oauth_sign_hmac_sha1(const gchar * data, const gchar * key);
-static gchar * mb_oauth_gen_sigbase(const gchar * url, int type, GList * params);
+static gchar * mb_oauth_gen_sigbase(MbHttpData * data, const gchar * url, int type);
 static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data);
 
 void mb_oauth_init(struct _MbAccount * ma, const gchar * c_key, const gchar * c_secret)
@@ -123,7 +123,7 @@ static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gch
 	}
 
 	conn_data = mb_conn_data_new(ma, host, port, handler, use_https);
-	mb_conn_data_set_retry(conn_data, 2);
+	mb_conn_data_set_retry(conn_data, 3);
 
 	conn_data->request->type = type;
 	conn_data->request->port = port;
@@ -158,7 +158,7 @@ static gchar * mb_oauth_gen_nonce(void) {
 	int i, len;
 
 	len = 15 + floor(rand()*16.0/(double)RAND_MAX);
-	nc = g_new(char, len+1);
+	nc = g_malloc(len+1);
 	for(i=0;i<len; i++) {
 		nc[i] = chars[ rand() % max ];
 	}
@@ -177,7 +177,7 @@ static gchar * mb_oauth_gen_nonce(void) {
 static gchar * mb_oauth_sign_hmac_sha1(const gchar * data, const gchar * key) {
 	PurpleCipherContext * context = NULL;
 	size_t out_len;
-	guchar digest[1024];
+	guchar digest[128];
 	gchar * retval = NULL;
 
 	purple_debug_info(DBGID, "signing data \"%s\"\n with key \"%s\"\n", data, key);
@@ -202,13 +202,6 @@ static gchar * mb_oauth_sign_hmac_sha1(const gchar * data, const gchar * key) {
 	return retval;
 }
 
-static int _string_compare_key(gconstpointer a, gconstpointer b) {
-	const MbHttpParam * param_a = (MbHttpParam *)a;
-	const MbHttpParam * param_b = (MbHttpParam *)b;
-
-	return strcmp(param_a->key, param_b->key);
-}
-
 /**
  * Generate signature base text
  *
@@ -217,12 +210,8 @@ static int _string_compare_key(gconstpointer a, gconstpointer b) {
  * @param type HTTP_GET or HTTP_POST
  * @param params list of PurpleKeyValuePair
  */
-static gchar * mb_oauth_gen_sigbase(const gchar * url, int type, GList * params) {
+static gchar * mb_oauth_gen_sigbase(MbHttpData * data, const gchar * url, int type) {
 	gchar * type_str = NULL, * param_str = NULL, * retval = NULL, *encoded_url, *encoded_param;
-	MbHttpParam * param;
-	GList * it;
-	GString * param_string = g_string_new(NULL);
-	int len;
 
 	// Type
 	if(type == HTTP_GET) {
@@ -232,30 +221,22 @@ static gchar * mb_oauth_gen_sigbase(const gchar * url, int type, GList * params)
 	}
 
 	// Concatenate all parameter
-    for(it = g_list_first(params); it; it = g_list_next(it)) {
-		param = (MbHttpParam *)it->data;
-    	g_string_append_printf(param_string, "%s=%s&", param->key, param->value);
-    }
-    purple_debug_info(DBGID, "merged param string = %s\n", param_string->str);
-    len = param_string->len;
-    param_str = g_string_free(param_string, FALSE);
-    if( (len >= 1) && (param_str[len - 1] == '&')) {
-    	param_str[len - 1] = '\0';
-    }
+	param_str = g_malloc(data->params_len + 1);
+	mb_http_data_encode_param(data, param_str, data->params_len);
     purple_debug_info(DBGID, "final merged param string = %s\n", param_str);
 
     encoded_url = g_strdup(purple_url_encode(url));
     encoded_param = g_strdup(purple_url_encode(param_str));
+    g_free(param_str);
+
     retval = g_strdup_printf("%s&%s&%s", type_str, encoded_url, encoded_param);
     g_free(encoded_url);
     g_free(encoded_param);
 
-    g_free(param_str);
-
     return retval;
 }
 
-void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type, MbOauthUserInput func, gpointer data) {
+static void _do_oauth(struct _MbAccount * ma, const gchar * path, int type, MbOauthUserInput func, gpointer data) {
 	MbConnData * conn_data = NULL;
 	gchar * secret = NULL, * sig_base = NULL, * signature = NULL, * nonce = NULL;
 	gchar * full_url = NULL;
@@ -271,12 +252,11 @@ void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type
 
 	mb_http_data_add_param(conn_data->request, "oauth_signature_method", "HMAC-SHA1");
 	mb_http_data_add_param_ull(conn_data->request, "oauth_timestamp", time(NULL));
-//	mb_http_data_add_param_ull(conn_data->request, "oauth_timestamp", 1274351275);
 	mb_http_data_add_param(conn_data->request, "oauth_version", "1.0");
-	conn_data->request->params = g_list_sort(conn_data->request->params, _string_compare_key);
+	mb_http_data_sort_param(conn_data->request);
 
 	// Create signature
-	sig_base = mb_oauth_gen_sigbase(full_url, type, conn_data->request->params);
+	sig_base = mb_oauth_gen_sigbase(conn_data->request, full_url, type);
 	purple_debug_info(DBGID, "got signature base = %s\n", sig_base);
 
 	secret = g_strdup_printf("%s&%s", ma->oauth.c_secret, ma->oauth.request_secret ? ma->oauth.request_secret : "");
@@ -300,17 +280,47 @@ void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type
 
 static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data) {
 	MbAccount * ma = (MbAccount *)data;
+	GList * it;
+	MbHttpParam * param = NULL;
+	gint retval = 0;
 
 	purple_debug_info(DBGID, "got response %s\n", conn_data->response->content->str);
+
+	if(conn_data->response->status == HTTP_OK) {
+		purple_debug_info(DBGID, "going to decode the received message\n");
+		// Decode the parameter first
+		mb_http_data_decode_param_from_content(conn_data->response);
+		purple_debug_info(DBGID, "message decoded\n");
+
+		// fill-in all necessary parameter
+		for(it = g_list_first(conn_data->response->params); it; it = g_list_next(conn_data->response->params)) {
+			param = (MbHttpParam *)it->data;
+			if(strcmp(param->key, "oauth_token") == 0) {
+				if(ma->oauth.request_token != NULL) {
+					g_free(ma->oauth.request_token);
+				}
+				ma->oauth.request_token = g_strdup(param->value);
+			} else if(strcmp(param->key, "oauth_token_secret") == 0) {
+				if(ma->oauth.request_secret != NULL) {
+					g_free(ma->oauth.request_secret);
+				}
+				ma->oauth.request_secret = g_strdup(param->value);
+			}
+		}
+	}
 	// now call the user-defined function to get PIN or whatever we need to request for access token
 	// will not call request_access by ourself, let the func do the job, since the caller should know the URL
 	if(ma && ma->oauth.input_func) {
-		ma->oauth.input_func(ma, data);
+		retval = ma->oauth.input_func(ma, conn_data, data);
 	}
-
-	return 0;
+	purple_debug_info(DBGID, "return value = %d\n", retval);
+	return retval;
 }
 
-void mb_oauth_request_access(struct _MbAccount * ma, const gchar * url, int type, MbOauthResponse func, gpointer data) {
+void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type, MbOauthUserInput func, gpointer data) {
+	_do_oauth(ma, path, type, func, data);
+}
 
+void mb_oauth_request_access(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data) {
+	_do_oauth(ma, path, type, func, data);
 }

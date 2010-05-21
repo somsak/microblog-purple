@@ -53,6 +53,8 @@
 #include <debug.h>
 #include "mb_net.h"
 
+// Caller of request retry function
+static gboolean mb_conn_retry_request(gpointer data);
 // Fetch URL callback
 static void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data, const gchar * url_text, gsize len, const gchar * error_message);
  
@@ -101,10 +103,10 @@ void mb_conn_data_free(MbConnData * conn_data)
 	}
 
 	purple_debug_info(MB_NET, "freeing HTTP data->response\n");
-	mb_http_data_free(conn_data->response);
+	if(conn_data->response)	mb_http_data_free(conn_data->response);
 
 	purple_debug_info(MB_NET, "freeing HTTP data->request\n");
-	mb_http_data_free(conn_data->request);
+	if(conn_data->request)	mb_http_data_free(conn_data->request);
 
 	purple_debug_info(MB_NET, "unregistering conn_data from MbAccount\n");
 	if(conn_data->ma->conn_data_list) {
@@ -154,10 +156,10 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 	conn_data->fetch_url_data = NULL;
 
 	if(error_message != NULL) {
+		mb_conn_data_free(conn_data);
 		if(ma->gc != NULL) {
 			purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, error_message);
 		}
-		mb_conn_data_free(conn_data);
 	} else {
 		mb_http_data_post_read(conn_data->response, url_text, len);
 		if(conn_data->handler) {
@@ -166,6 +168,11 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 			purple_debug_info(MB_NET, "going to call handler\n");
 			retval = conn_data->handler(conn_data, conn_data->handler_data);
 			purple_debug_info(MB_NET, "handler returned, retval = %d\n", retval);
+			mb_conn_data_free(conn_data);
+			// XXX: All retry shouldn't be done
+			// Because, the purple_connection_error will kick in the account freeing process
+			// Which will cause all data to be invalid
+			/*
 			if(retval == 0) {
 				// Everything's good. Free data structure and go-on with usual works
 				purple_debug_info(MB_NET, "everything's ok, freeing data\n");
@@ -174,16 +181,26 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 				// Something's wrong. Requeue the whole process
 				conn_data->retry++;
 				if(conn_data->retry <= conn_data->max_retry) {
-					purple_debug_info(MB_NET, "handler return -1, retry %d\n", conn_data->retry);
+					purple_debug_info(MB_NET, "handler return -1, conn_data %p, retry %d, max_retry = %d\n", conn_data, conn_data->retry, conn_data->max_retry);
 					mb_http_data_truncate(conn_data->response);
-					mb_conn_process_request(conn_data);
+					// retry again in 1 second
+					purple_timeout_add_seconds(1, mb_conn_retry_request, conn_data);
 				} else {
 					purple_debug_info(MB_NET, "retry exceed %d > %d\n", conn_data->retry, conn_data->max_retry);
 					mb_conn_data_free(conn_data);
 				}
 			} 
+			*/
 		}
 	}
+}
+
+static gboolean mb_conn_retry_request(gpointer data)
+{
+	MbConnData * conn_data = (MbConnData *)data;
+
+	mb_conn_process_request(conn_data);
+	return FALSE;
 }
 
 void mb_conn_process_request(MbConnData * data)
@@ -198,7 +215,6 @@ void mb_conn_process_request(MbConnData * data)
 
 	// we manage user_agent by ourself so ignore this completely
 	mb_http_data_prepare_write(data->request);
-	data->retry = 0;
 	data->fetch_url_data = purple_util_fetch_url_request(url, TRUE, "", TRUE, data->request->packet, TRUE, mb_conn_fetch_url_cb, (gpointer)data);
 	g_free(url);
 }
