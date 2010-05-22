@@ -728,9 +728,11 @@ gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_
 {
 	const gchar * request_access_path = NULL;
 	gchar * error_msg = NULL;
+	gchar * user_name, * host, *param = NULL, * full_url;
+	gboolean use_https = FALSE;
 
 
-	if(data->response->status != HTTP_OK) {
+	if( (data->response->status != HTTP_OK) || (!ma->oauth.request_token && !ma->oauth.request_secret)) {
 		// error
 		if(data->response->content_len > 0) {
 			error_msg = g_strdup(data->response->content->str);
@@ -741,9 +743,20 @@ gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_
 		g_free(error_msg);
 		return -1;
 	}
-	// process the successfully acquire token
-	request_access_path = purple_account_get_string(ma->account, mc_name(TC_ACCESS_TOKEN_URL), mc_def(TC_ACCESS_TOKEN_URL));
 
+	// process the successfully acquire token
+	request_access_path = purple_account_get_string(ma->account, mc_name(TC_AUTHORIZE_URL), mc_def(TC_AUTHORIZE_URL));
+	use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
+	twitter_get_user_host(ma, &user_name, &host);
+	param = g_strdup_printf("oauth_token=%s", ma->oauth.request_token);
+	full_url = mb_url_unparse(host, 0, request_access_path, param, use_https);
+	g_free(user_name);
+	g_free(host);
+	g_free(param);
+
+	// Open the web browser and redirect user to the authorization page
+	purple_notify_uri((void *)mc_def(TC_PLUGIN), full_url);
+	g_free(full_url);
 
 //	mb_oauth_request_access(ma, path, HTTP_POST, twitter_verify_account, data);
 	return 0;
