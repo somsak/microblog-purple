@@ -88,7 +88,7 @@ PurplePlugin * twitgin_plugin = NULL;
 static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const char * path, MbHandlerFunc handler);
 void twitter_request_access(MbAccount * ma);
 void twitter_verify_account(MbAccount * ma, gpointer data);
-gint twitter_verify_authen(MbConnData * conn_data, gpointer data);
+gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * error);
 gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data);
 
 /**
@@ -405,7 +405,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 	return retval;
 }
 
-gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
+gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data, const char * error)
 {
 	MbAccount * ma = conn_data->ma;
 	const gchar * username;
@@ -420,6 +420,11 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
 	
+	if(error) {
+		// we don't want to handle network error
+		return 0;
+	}
+
 	username = (const gchar *)purple_account_get_username(ma->account);
 	
 	if(response->status == HTTP_MOVED_TEMPORARILY) {
@@ -437,9 +442,8 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 
 				error_str = twitter_decode_error(response->content->str);
 				if(ma->gc != NULL) {
-//					purple_connection_set_state(ma->gc, PURPLE_DISCONNECTED);
-					ma->state = PURPLE_DISCONNECTED;
-					purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error_str);
+					// XXX: Do we need to use conn_error here? Since we will return 0 below...
+					mb_conn_error(conn_data, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error_str);
 				}
 				g_free(error_str);
 			}
@@ -728,14 +732,12 @@ gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_
 
 	if(data->response->status != HTTP_OK) {
 		// error
-//		purple_connection_set_state(ma->gc, PURPLE_DISCONNECTED);
-		ma->state = PURPLE_DISCONNECTED;
 		if(data->response->content_len > 0) {
 			error_msg = g_strdup(data->response->content->str);
 		} else {
 			error_msg = g_strdup("Unknown error");
 		}
-		purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_INVALID_SETTINGS, error_msg);
+		mb_conn_error(data, PURPLE_CONNECTION_ERROR_INVALID_SETTINGS, error_msg);
 		g_free(error_msg);
 		return -1;
 	}
@@ -805,7 +807,7 @@ void twitter_verify_account(MbAccount * ma, gpointer data)
  * @param conn_data connection data in progress
  * @param data MbAccount in action
  */
-gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
+gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * error)
 {
 	MbAccount * ma = conn_data->ma;
 	MbHttpData * response = conn_data->response;
@@ -822,9 +824,7 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
 		return 0;
 	} else {
 		// XXX: Crash at the line below
-//		purple_connection_set_state(conn_data->ma->gc, PURPLE_DISCONNECTED);
-		conn_data->ma->state = PURPLE_DISCONNECTED;
-		purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Authentication failed");
+		mb_conn_error(conn_data, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Authentication error");
 		return -1;
 	}
 }
@@ -849,14 +849,19 @@ void twitter_close(PurpleConnection *gc)
 	gc->proto_data = NULL;
 }
 
-gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
+gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char * error)
 {
 	MbAccount * ma = conn_data->ma;
 	MbHttpData * response = conn_data->response;
 	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
 	
-	purple_debug_info(DBGID, "send_im_handler\n");
+	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
+
+	if(error) {
+		// don't need to handle network error
+		return -1;
+	}
 	
 	if(response->status != 200) {
 		purple_debug_info(DBGID, "http error\n");

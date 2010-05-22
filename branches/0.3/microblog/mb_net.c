@@ -150,6 +150,7 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 {
 	MbConnData * conn_data = (MbConnData *)user_data;
 	MbAccount * ma = conn_data->ma;
+	gint retval;
 
 	purple_debug_info(MB_NET, "%s: url_data = %p\n", __FUNCTION__, url_data);
 	// in whatever situation, url_data should be handled only by libpurple
@@ -157,22 +158,20 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 
 	if(error_message != NULL) {
 		mb_conn_data_free(conn_data);
+		if(conn_data->handler) {
+			retval = conn_data->handler(conn_data, conn_data->handler_data, error_message);
+		}
 		if(ma->gc != NULL) {
 			purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, error_message);
 		}
 	} else {
 		mb_http_data_post_read(conn_data->response, url_text, len);
 		if(conn_data->handler) {
-			gint retval;
 
 			purple_debug_info(MB_NET, "going to call handler\n");
-			retval = conn_data->handler(conn_data, conn_data->handler_data);
+			retval = conn_data->handler(conn_data, conn_data->handler_data, NULL);
 			purple_debug_info(MB_NET, "handler returned, retval = %d\n", retval);
-			mb_conn_data_free(conn_data);
-			// XXX: All retry shouldn't be done
-			// Because, the purple_connection_error will kick in the account freeing process
-			// Which will cause all data to be invalid
-			/*
+
 			if(retval == 0) {
 				// Everything's good. Free data structure and go-on with usual works
 				purple_debug_info(MB_NET, "everything's ok, freeing data\n");
@@ -190,7 +189,6 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 					mb_conn_data_free(conn_data);
 				}
 			} 
-			*/
 		}
 	}
 }
@@ -217,4 +215,12 @@ void mb_conn_process_request(MbConnData * data)
 	mb_http_data_prepare_write(data->request);
 	data->fetch_url_data = purple_util_fetch_url_request(url, TRUE, "", TRUE, data->request->packet, TRUE, mb_conn_fetch_url_cb, (gpointer)data);
 	g_free(url);
+}
+
+void mb_conn_error(MbConnData * data, PurpleConnectionError error, const char * description)
+{
+	if(data->retry >= data->max_retry) {
+		data->ma->state = PURPLE_DISCONNECTED;
+		purple_connection_error_reason(data->ma->gc, error, description);
+	}
 }

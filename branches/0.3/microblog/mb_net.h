@@ -28,7 +28,7 @@ enum mb_error_action {
 // -1 - Requeue the whole process again
 struct _MbConnData;
 
-typedef gint (*MbHandlerFunc)(struct _MbConnData * , gpointer );
+typedef gint (*MbHandlerFunc)(struct _MbConnData * , gpointer , const char * error);
 typedef void (*MbHandlerDataFreeFunc)(gpointer);
 
 typedef struct _MbConnData {
@@ -38,7 +38,6 @@ typedef struct _MbConnData {
 	gchar * error_message;
 	MbHttpData * request;
 	MbHttpData * response;
-	// XXX: Retry and max retry should be remove very soon. There is actually no retry anymore.
 	gint retry;
 	gint max_retry;
 
@@ -66,9 +65,29 @@ extern MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint po
 */
 extern void mb_conn_data_free(MbConnData * conn_data);
 
-extern void mb_conn_data_set_error(MbConnData * data, const gchar * msg, gint action);
+/**
+ * Set maximum number of retry
+ *
+ * @param data MbConnData in action
+ * @param retry number of desired retry
+ */
 extern void mb_conn_data_set_retry(MbConnData * data, gint retry);
+
+/**
+ * Process the initialize MbConnData
+ *
+ * @param data MbConnData to process
+ */
 extern void mb_conn_process_request(MbConnData * data);
+
+/**
+ * Call purple_connection_error_reason if this connection was retried more than data->max_retry already
+ *
+ * @param data MbConnData in action
+ * @param error error reason
+ * @param description text description
+ */
+extern void mb_conn_error(MbConnData * data, PurpleConnectionError error, const char * description);
 
 #ifdef __cplusplus
 }
