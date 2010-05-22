@@ -53,7 +53,7 @@ static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gch
 static gchar * mb_oauth_gen_nonce(void);
 static gchar * mb_oauth_sign_hmac_sha1(const gchar * data, const gchar * key);
 static gchar * mb_oauth_gen_sigbase(MbHttpData * data, const gchar * url, int type);
-static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data);
+static gint mb_oauth_request_token_handler(MbConnData * conn_data, gpointer data, const char * error);
 
 void mb_oauth_init(struct _MbAccount * ma, const gchar * c_key, const gchar * c_secret)
 {
@@ -236,12 +236,12 @@ static gchar * mb_oauth_gen_sigbase(MbHttpData * data, const gchar * url, int ty
     return retval;
 }
 
-static void _do_oauth(struct _MbAccount * ma, const gchar * path, int type, MbOauthUserInput func, gpointer data) {
+static void _do_oauth(struct _MbAccount * ma, const gchar * path, int type, MbOauthUserInput func, gpointer data, MbHandlerFunc handler) {
 	MbConnData * conn_data = NULL;
 	gchar * secret = NULL, * sig_base = NULL, * signature = NULL, * nonce = NULL;
 	gchar * full_url = NULL;
 
-	conn_data = mb_oauth_init_connection(ma, type, path, mb_oauth_request_token_cb, &full_url);
+	conn_data = mb_oauth_init_connection(ma, type, path, handler, &full_url);
 
 	// Attach OAuth data
 	mb_http_data_add_param(conn_data->request, "oauth_consumer_key", ma->oauth.c_key);
@@ -278,7 +278,7 @@ static void _do_oauth(struct _MbAccount * ma, const gchar * path, int type, MbOa
 	mb_conn_process_request(conn_data);
 }
 
-static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data) {
+static gint mb_oauth_request_token_handler(MbConnData * conn_data, gpointer data, const char * error) {
 	MbAccount * ma = (MbAccount *)data;
 	GList * it;
 	MbHttpParam * param = NULL;
@@ -286,6 +286,9 @@ static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data) {
 
 	purple_debug_info(DBGID, "got response %s\n", conn_data->response->content->str);
 
+	if(error) {
+		return -1;
+	}
 	if(conn_data->response->status == HTTP_OK) {
 		purple_debug_info(DBGID, "going to decode the received message\n");
 		// Decode the parameter first
@@ -293,21 +296,26 @@ static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data) {
 		purple_debug_info(DBGID, "message decoded\n");
 
 		// fill-in all necessary parameter
-		for(it = g_list_first(conn_data->response->params); it; it = g_list_next(conn_data->response->params)) {
+		if(ma->oauth.request_token != NULL) {
+			g_free(ma->oauth.request_token);
+		}
+		if(ma->oauth.request_secret != NULL) {
+			g_free(ma->oauth.request_secret);
+		}
+		ma->oauth.request_token = ma->oauth.request_secret = NULL;
+		for(it = g_list_first(conn_data->response->params); it; it = g_list_next(it)) {
 			param = (MbHttpParam *)it->data;
 			if(strcmp(param->key, "oauth_token") == 0) {
-				if(ma->oauth.request_token != NULL) {
-					g_free(ma->oauth.request_token);
-				}
 				ma->oauth.request_token = g_strdup(param->value);
 			} else if(strcmp(param->key, "oauth_token_secret") == 0) {
-				if(ma->oauth.request_secret != NULL) {
-					g_free(ma->oauth.request_secret);
-				}
 				ma->oauth.request_secret = g_strdup(param->value);
 			}
+			if(ma->oauth.request_token && ma->oauth.request_secret) {
+				break;
+			}
 		}
-	}
+	} // no else, leave the error detection to callback function below
+
 	// now call the user-defined function to get PIN or whatever we need to request for access token
 	// will not call request_access by ourself, let the func do the job, since the caller should know the URL
 	if(ma && ma->oauth.input_func) {
@@ -318,9 +326,9 @@ static gint mb_oauth_request_token_cb(MbConnData * conn_data, gpointer data) {
 }
 
 void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type, MbOauthUserInput func, gpointer data) {
-	_do_oauth(ma, path, type, func, data);
+	_do_oauth(ma, path, type, func, data, mb_oauth_request_token_handler);
 }
 
 void mb_oauth_request_access(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data) {
-	_do_oauth(ma, path, type, func, data);
+	_do_oauth(ma, path, type, func, data, NULL);
 }

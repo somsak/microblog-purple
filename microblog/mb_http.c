@@ -452,30 +452,31 @@ int mb_http_data_encode_param(MbHttpData *data, char * buf, int len)
 
 void mb_http_data_decode_param_from_content(MbHttpData *data) {
 	GString * content = NULL;
-	gchar * cur = NULL, * amp = NULL, * equal = NULL;
+	gchar * cur = NULL, * start = NULL, * amp = NULL, * equal = NULL;
 	gchar * key, * val;
 
 	if(data->content_len > 0) {
 		content = data->content;
-		cur = content->str;
+		start = cur = content->str;
 		while( (cur - content->str) < data->content_len) {
-			amp = strchr(cur, '&');
-			if(amp) {
+			// Look for &
+			if( (*cur) == '&') {
+				amp = cur;
 				(*amp) = '\0';
-			}
-			equal = strchr(cur, '=');
-			if(equal) {
-				(*equal) = '\0';
-				key = cur;
-				val = (equal + 1);
-				// treat every parameter as string
-				mb_http_data_add_param(data, key, val);
-				(*equal) = '=';
-			}
-			if(amp) {
+				if(equal) {
+					(*equal) = '\0';
+					key = start;
+					val = (equal + 1);
+					// treat every parameter as string
+					mb_http_data_add_param(data, key, val);
+					(*equal) = '=';
+				}
 				(*amp) = '&';
+				start = amp + 1;
+			} else if ( (*cur) == '=') {
+				equal = cur;
 			}
-			cur = (amp + 1);
+			cur++;
 		}
 	}
 
