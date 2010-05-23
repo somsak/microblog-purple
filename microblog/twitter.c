@@ -87,9 +87,12 @@ PurplePlugin * twitgin_plugin = NULL;
 
 static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const char * path, MbHandlerFunc handler);
 void twitter_request_access(MbAccount * ma);
+gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data);
+void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin);
+gint twitter_verify_account_call(MbAccount * ma, MbConnData * data, gpointer user_data);
 void twitter_verify_account(MbAccount * ma, gpointer data);
 gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * error);
-gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data);
+
 
 /**
  * Convenient function to initialize new connection and set necessary value
@@ -721,47 +724,6 @@ void twitter_login(PurpleAccount *acct)
 	}
 }
 
-/*
- * Redirect user to authorization page and wait for user input
- */
-gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data)
-{
-	const gchar * request_access_path = NULL;
-	gchar * error_msg = NULL;
-	gchar * user_name, * host, *param = NULL, * full_url;
-	gboolean use_https = FALSE;
-
-
-	if( (data->response->status != HTTP_OK) || (!ma->oauth.request_token && !ma->oauth.request_secret)) {
-		// error
-		if(data->response->content_len > 0) {
-			error_msg = g_strdup(data->response->content->str);
-		} else {
-			error_msg = g_strdup("Unknown error");
-		}
-		mb_conn_error(data, PURPLE_CONNECTION_ERROR_INVALID_SETTINGS, error_msg);
-		g_free(error_msg);
-		return -1;
-	}
-
-	// process the successfully acquire token
-	request_access_path = purple_account_get_string(ma->account, mc_name(TC_AUTHORIZE_URL), mc_def(TC_AUTHORIZE_URL));
-	use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
-	twitter_get_user_host(ma, &user_name, &host);
-	param = g_strdup_printf("oauth_token=%s", ma->oauth.request_token);
-	full_url = mb_url_unparse(host, 0, request_access_path, param, use_https);
-	g_free(user_name);
-	g_free(host);
-	g_free(param);
-
-	// Open the web browser and redirect user to the authorization page
-	purple_notify_uri((void *)mc_def(TC_PLUGIN), full_url);
-	g_free(full_url);
-
-//	mb_oauth_request_access(ma, path, HTTP_POST, twitter_verify_account, data);
-	return 0;
-}
-
 /**
  * Request for access token, if needed
  *
@@ -793,6 +755,78 @@ void twitter_request_access(MbAccount * ma)
 			twitter_verify_account(ma, NULL);
 			break;
 	}
+}
+
+/*
+ * Redirect user to authorization page and wait for user input
+ */
+gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data)
+{
+	const gchar * request_access_path = NULL;
+	gchar * error_msg = NULL;
+	gchar * user_name, * host, *param = NULL, * full_url;
+	gboolean use_https = FALSE;
+
+
+	if( (data->response->status != HTTP_OK) || (!ma->oauth.oauth_token && !ma->oauth.oauth_secret)) {
+		// error
+		if(data->response->content_len > 0) {
+			error_msg = g_strdup(data->response->content->str);
+		} else {
+			error_msg = g_strdup("Unknown error");
+		}
+		mb_conn_error(data, PURPLE_CONNECTION_ERROR_INVALID_SETTINGS, error_msg);
+		g_free(error_msg);
+		return -1;
+	}
+
+	// process the successfully acquire token
+	request_access_path = purple_account_get_string(ma->account, mc_name(TC_AUTHORIZE_URL), mc_def(TC_AUTHORIZE_URL));
+	use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
+	twitter_get_user_host(ma, &user_name, &host);
+	param = g_strdup_printf("oauth_token=%s", ma->oauth.oauth_token);
+	full_url = mb_url_unparse(host, 0, request_access_path, param, use_https);
+
+	g_free(param);
+
+	// Open the web browser and redirect user to the authorization page
+	purple_notify_uri((void *)ma->gc, full_url);
+	g_free(full_url);
+
+	// and wait for user's input for PIN
+	purple_request_input((void *)ma->gc, _("Input your PIN"), _("Please allow " TW_AGENT_SOURCE "to access your account"),
+			_("Please copy the PIN number from the web page"), "", FALSE, FALSE, NULL,
+			_("OK"), G_CALLBACK(twitter_request_authorize_ok_cb),
+			_("Cancel"), NULL, //< We will not handle cancel, user's will have to re-authorize again
+			ma->account, NULL, NULL, ma);
+
+	g_free(user_name);
+	g_free(host);
+
+	// Continue in PIN callback
+	return 0;
+}
+
+void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin)
+{
+	const gchar * access_token_path = NULL;
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	purple_debug_info(DBGID, "got PIN %s\n", pin);
+
+	// Set the PIN
+	mb_oauth_set_pin(ma, pin);
+
+	access_token_path = purple_account_get_string(ma->account, mc_name(TC_ACCESS_TOKEN_URL), mc_def(TC_ACCESS_TOKEN_URL));
+	mb_oauth_request_access(ma, access_token_path, HTTP_POST, twitter_verify_account_call, NULL);
+}
+
+/**
+ * Wrapper to call twitter verify account from OAuth realm
+ */
+gint twitter_verify_account_call(MbAccount * ma, MbConnData * data, gpointer user_data) {
+	twitter_verify_account(ma, NULL);
+
+	return 0;
 }
 
 /**
