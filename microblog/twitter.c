@@ -102,7 +102,7 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 	MbConnData * conn_data = NULL;
 	gboolean use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
 	gint port;
-	gchar * user_name = NULL, * host = NULL;
+	gchar * user_name = NULL, * host = NULL, * full_url = NULL;
 	const char * password;
 
 	if(use_https) {
@@ -125,10 +125,15 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 	// XXX: Use global here -> twitter_fixed_headers
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Host", host);
+
+
 	switch(ma->auth_type) {
 		case MB_OAUTH :
 		case MB_XAUTH :
 			// attach oauth header with this connection
+			full_url = mb_url_unparse(host, 0, path, NULL, use_https);
+			mb_oauth_set_http_data(&ma->oauth, conn_data->request, full_url, type);
+			g_free(full_url);
 			break;
 		default :
 			// basic auth is default
@@ -581,6 +586,7 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 	MbAccount * ma = NULL;
 	const char * auth_type;
 	int i;
+	const gchar * oauth_token = NULL, * oauth_secret = NULL;
 	
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 	ma = g_new(MbAccount, 1);
@@ -621,6 +627,12 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 
 	// Oauth stuff
 	mb_oauth_init(ma, mc_def(TC_CONSUMER_KEY), mc_def(TC_CONSUMER_SECRET));
+	oauth_token = purple_account_get_string(ma->account, mc_name(TC_OAUTH_TOKEN), mc_def(TC_OAUTH_TOKEN));
+	oauth_secret = purple_account_get_string(ma->account, mc_name(TC_OAUTH_SECRET), mc_def(TC_OAUTH_SECRET));
+
+	if(oauth_token && oauth_secret) {
+		mb_oauth_set_token(ma, oauth_token, oauth_secret);
+	}
 
 	acct->gc->proto_data = ma;
 	return ma;

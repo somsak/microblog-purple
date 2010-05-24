@@ -45,7 +45,7 @@ void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type
 void mb_oauth_request_access(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data);
 void mb_oauth_free(struct _MbAccount * ma);
 
-void mb_oauth_set_http_data(struct _MbAccount * ma, struct _MbHttpData * http_data);
+void mb_oauth_set_http_data(MbOauth * oauth, struct _MbHttpData * http_data, const gchar * full_url, int type);
 
 #ifdef __cplusplus
 }
