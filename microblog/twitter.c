@@ -97,6 +97,7 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * e
 /**
  * Convenient function to initialize new connection and set necessary value
  */
+//
 static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const char * path, MbHandlerFunc handler)
 {
 	MbConnData * conn_data = NULL;

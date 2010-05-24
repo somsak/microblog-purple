@@ -339,7 +339,7 @@ void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type
 void mb_oauth_request_access(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data) {
 	_do_oauth(ma, path, type, func, data, mb_oauth_request_token_handler);
 }
-
+//
 void mb_oauth_set_http_data(MbOauth * oauth, struct _MbHttpData * http_data, const gchar * full_url, int type) {
 	gchar * nonce = NULL, * sig_base = NULL, * secret = NULL, * signature = NULL;
 
