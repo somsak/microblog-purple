@@ -495,6 +495,7 @@ void mb_http_data_prepare_write(MbHttpData * data)
 	if(data->content) {
 		packet_len += data->content->len;
 	}
+	if(data->packet) g_free(data->packet);
 	data->packet = g_malloc0(packet_len + 1);
 	cur_packet = data->packet;
 	

@@ -383,3 +383,30 @@ void mb_oauth_set_http_data(MbOauth * oauth, struct _MbHttpData * http_data, con
 	g_free(signature);
 
 }
+
+void mb_oauth_reset_nonce(MbOauth * oauth, struct _MbHttpData * http_data, const gchar * full_url, int type) {
+	gchar * nonce, * secret, * sig_base, * signature;
+
+	mb_http_data_rm_param(http_data, "oauth_nonce");
+
+	nonce = mb_oauth_gen_nonce();
+	mb_http_data_add_param(http_data, "oauth_nonce", nonce);
+	g_free(nonce);
+
+	mb_http_data_rm_param(http_data, "oauth-signature");
+
+	// Re-Create signature
+	sig_base = mb_oauth_gen_sigbase(http_data, full_url, type);
+	purple_debug_info(DBGID, "got signature base = %s\n", sig_base);
+
+	secret = g_strdup_printf("%s&%s", oauth->c_secret, oauth->oauth_secret ? oauth->oauth_secret : "");
+
+	signature = mb_oauth_sign_hmac_sha1(sig_base, secret);
+	g_free(secret);
+	g_free(sig_base);
+	purple_debug_info(DBGID, "signed signature = %s\n", signature);
+
+	// Attach to parameter
+	mb_http_data_add_param(http_data, "oauth_signature", signature);
+	g_free(signature);
+}

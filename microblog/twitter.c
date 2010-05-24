@@ -155,13 +155,12 @@ static gint twitter_oauth_prepare(MbConnData * conn_data, gpointer data, const c
 
 	// error is always NULL here
 	full_url = mb_conn_url_unparse(conn_data);
-	mb_oauth_set_http_data(&ma->oauth, conn_data->request, full_url, conn_data->request->type);
+	if(conn_data->retry <= 0) {
+		mb_oauth_set_http_data(&ma->oauth, conn_data->request, full_url, conn_data->request->type);
+	} else {
+		mb_oauth_reset_nonce(&ma->oauth, conn_data->request, full_url, conn_data->request->type);
+	}
 	g_free(full_url);
-
-	// No need to re-process the request, so set it back to NULL
-	conn_data->prepare_handler = NULL;
-	conn_data->prepare_handler_data = NULL;
-
 	return 0;
 }
 
