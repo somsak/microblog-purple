@@ -86,6 +86,7 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 PurplePlugin * twitgin_plugin = NULL;
 
 static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const char * path, MbHandlerFunc handler);
+static gint twitter_oauth_prepare(MbConnData * conn_data, gpointer data, const char * error);
 void twitter_request_access(MbAccount * ma);
 gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data);
 void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin);
@@ -103,7 +104,7 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 	MbConnData * conn_data = NULL;
 	gboolean use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
 	gint port;
-	gchar * user_name = NULL, * host = NULL, * full_url = NULL;
+	gchar * user_name = NULL, * host = NULL;
 	const char * password;
 
 	if(use_https) {
@@ -132,9 +133,10 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 		case MB_OAUTH :
 		case MB_XAUTH :
 			// attach oauth header with this connection
-			full_url = mb_url_unparse(host, 0, path, NULL, use_https);
-			mb_oauth_set_http_data(&ma->oauth, conn_data->request, full_url, type);
-			g_free(full_url);
+			if(ma->oauth.oauth_token && ma->oauth.oauth_secret) {
+				conn_data->prepare_handler = twitter_oauth_prepare;
+				conn_data->prepare_handler_data = ma;
+			}
 			break;
 		default :
 			// basic auth is default
@@ -145,6 +147,22 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 	if(host) g_free(host);
 
 	return conn_data;
+}
+
+static gint twitter_oauth_prepare(MbConnData * conn_data, gpointer data, const char * error) {
+	MbAccount * ma = (MbAccount *)data;
+	gchar * full_url;
+
+	// error is always NULL here
+	full_url = mb_conn_url_unparse(conn_data);
+	mb_oauth_set_http_data(&ma->oauth, conn_data->request, full_url, conn_data->request->type);
+	g_free(full_url);
+
+	// No need to re-process the request, so set it back to NULL
+	conn_data->prepare_handler = NULL;
+	conn_data->prepare_handler_data = NULL;
+
+	return 0;
 }
 
 static TwitterBuddy * twitter_new_buddy()
@@ -838,11 +856,18 @@ void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin)
  * Wrapper to call twitter verify account from OAuth realm
  */
 gint twitter_oauth_request_finish(MbAccount * ma, MbConnData * data, gpointer user_data) {
-	if(ma->oauth.oauth_token && ma->oauth.oauth_secret) {
+	if((data->response->status == HTTP_OK) && ma->oauth.oauth_token && ma->oauth.oauth_secret) {
+		if(ma->oauth.pin) {
+			g_free(ma->oauth.pin);
+			ma->oauth.pin = NULL;
+		}
 		purple_account_set_string(ma->account, mc_name(TC_OAUTH_TOKEN), ma->oauth.oauth_token);
 		purple_account_set_string(ma->account, mc_name(TC_OAUTH_SECRET), ma->oauth.oauth_secret);
 		twitter_verify_account(ma, NULL);
 	} else {
+		if(ma->oauth.oauth_token) g_free(ma->oauth.oauth_token);
+		if(ma->oauth.oauth_secret) g_free(ma->oauth.oauth_secret);
+		ma->oauth.oauth_token = ma->oauth.oauth_secret = NULL;
 		purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Invalid server response");
 	}
 
@@ -879,6 +904,9 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * e
 	MbAccount * ma = conn_data->ma;
 	MbHttpData * response = conn_data->response;
 
+	if(response->content_len > 0) {
+		purple_debug_info(DBGID, "response = %s\n", response->content->str);
+	}
 	if(response->status == HTTP_OK) {
 		gint interval = purple_account_get_int(conn_data->ma->account, mc_name(TC_MSG_REFRESH_RATE), mc_def_int(TC_MSG_REFRESH_RATE));
 
