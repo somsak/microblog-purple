@@ -270,45 +270,11 @@ static gchar * mb_oauth_gen_sigbase(MbHttpData * data, const gchar * url, int ty
 
 static void _do_oauth(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data, MbHandlerFunc handler) {
 	MbConnData * conn_data = NULL;
-	gchar * secret = NULL, * sig_base = NULL, * signature = NULL, * nonce = NULL;
 	gchar * full_url = NULL;
 
 	conn_data = mb_oauth_init_connection(ma, type, path, handler, &full_url);
 
-	// Attach OAuth data
-	mb_http_data_add_param(conn_data->request, "oauth_consumer_key", ma->oauth.c_key);
-
-	nonce = mb_oauth_gen_nonce();
-	mb_http_data_add_param(conn_data->request, "oauth_nonce", nonce);
-	g_free(nonce);
-
-	mb_http_data_add_param(conn_data->request, "oauth_signature_method", "HMAC-SHA1");
-	mb_http_data_add_param_ull(conn_data->request, "oauth_timestamp", time(NULL));
-	mb_http_data_add_param(conn_data->request, "oauth_version", "1.0");
-	mb_http_data_sort_param(conn_data->request);
-
-	if(ma->oauth.oauth_token) {
-		mb_http_data_add_param(conn_data->request, "oauth_token", ma->oauth.oauth_token);
-	}
-
-	if(ma->oauth.pin){
-		mb_http_data_add_param(conn_data->request, "oauth_verifier", ma->oauth.pin);
-	}
-
-	// Create signature
-	sig_base = mb_oauth_gen_sigbase(conn_data->request, full_url, type);
-	purple_debug_info(DBGID, "got signature base = %s\n", sig_base);
-
-	secret = g_strdup_printf("%s&%s", ma->oauth.c_secret, ma->oauth.oauth_secret ? ma->oauth.oauth_secret : "");
-
-	signature = mb_oauth_sign_hmac_sha1(sig_base, secret);
-	g_free(secret);
-	g_free(sig_base);
-	purple_debug_info(DBGID, "signed signature = %s\n", signature);
-
-	// Attach to parameter
-	mb_http_data_add_param(conn_data->request, "oauth_signature", signature);
-	g_free(signature);
+	mb_oauth_set_http_data(&ma->oauth, conn_data->request, full_url, type);
 
 	// Set the call back function
 	ma->oauth.response_func = func;
@@ -372,4 +338,41 @@ void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type
 
 void mb_oauth_request_access(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data) {
 	_do_oauth(ma, path, type, func, data, mb_oauth_request_token_handler);
+}
+
+void mb_oauth_set_http_data(MbOauth * oauth, struct _MbHttpData * http_data, const gchar * full_url, int type) {
+	gchar * nonce = NULL, * sig_base = NULL, * secret = NULL, * signature = NULL;
+
+	// Attach OAuth data
+	mb_http_data_add_param(http_data, "oauth_consumer_key", oauth->c_key);
+
+	nonce = mb_oauth_gen_nonce();
+	mb_http_data_add_param(http_data, "oauth_nonce", nonce);
+	g_free(nonce);
+
+	mb_http_data_add_param(http_data, "oauth_signature_method", "HMAC-SHA1");
+	mb_http_data_add_param_ull(http_data, "oauth_timestamp", time(NULL));
+	mb_http_data_add_param(http_data, "oauth_version", "1.0");
+
+	if(oauth->oauth_token && oauth->oauth_secret) {
+		mb_http_data_add_param(http_data, "oauth_token", oauth->oauth_token);
+	}
+
+	mb_http_data_sort_param(http_data);
+
+	// Create signature
+	sig_base = mb_oauth_gen_sigbase(http_data, full_url, type);
+	purple_debug_info(DBGID, "got signature base = %s\n", sig_base);
+
+	secret = g_strdup_printf("%s&%s", oauth->c_secret, oauth->oauth_secret ? oauth->oauth_secret : "");
+
+	signature = mb_oauth_sign_hmac_sha1(sig_base, secret);
+	g_free(secret);
+	g_free(sig_base);
+	purple_debug_info(DBGID, "signed signature = %s\n", signature);
+
+	// Attach to parameter
+	mb_http_data_add_param(http_data, "oauth_signature", signature);
+	g_free(signature);
+
 }
