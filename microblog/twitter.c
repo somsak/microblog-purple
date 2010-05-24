@@ -89,7 +89,7 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 void twitter_request_access(MbAccount * ma);
 gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data);
 void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin);
-gint twitter_verify_account_call(MbAccount * ma, MbConnData * data, gpointer user_data);
+gint twitter_oauth_request_finish(MbAccount * ma, MbConnData * data, gpointer user_data);
 void twitter_verify_account(MbAccount * ma, gpointer data);
 gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * error);
 
@@ -731,15 +731,16 @@ void twitter_login(PurpleAccount *acct)
  */
 void twitter_request_access(MbAccount * ma)
 {
-	gboolean oauth_done = FALSE;
 	const gchar * path = NULL;
+	const gchar * oauth_token = NULL, * oauth_secret = NULL;
 
 	// check if oauth or xauth is already done
 	switch(ma->auth_type) {
 		case MB_OAUTH :
 			// If oauth access request is not done yet, do it now
-			oauth_done = purple_account_get_bool(ma->account, mc_name(TC_OAUTH_DONE), mc_def_bool(TC_OAUTH_DONE));
-			if(!oauth_done) {
+			oauth_token = purple_account_get_string(ma->account, mc_name(TC_OAUTH_TOKEN), mc_def(TC_OAUTH_TOKEN));
+			oauth_secret = purple_account_get_string(ma->account, mc_name(TC_OAUTH_SECRET), mc_def(TC_OAUTH_SECRET));
+			if(!oauth_token || !oauth_secret) {
 				mb_oauth_init(ma, mc_def(TC_CONSUMER_KEY), mc_def(TC_CONSUMER_SECRET));
 				path = purple_account_get_string(ma->account, mc_name(TC_REQUEST_TOKEN_URL), mc_def(TC_REQUEST_TOKEN_URL));
 				mb_oauth_request_token(ma, path, HTTP_GET, twitter_request_authorize, NULL);
@@ -794,7 +795,7 @@ gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_
 	g_free(full_url);
 
 	// and wait for user's input for PIN
-	purple_request_input((void *)ma->gc, _("Input your PIN"), _("Please allow " TW_AGENT_SOURCE "to access your account"),
+	purple_request_input((void *)ma->gc, _("Input your PIN"), _("Please allow " TW_AGENT_SOURCE " to access your account"),
 			_("Please copy the PIN number from the web page"), "", FALSE, FALSE, NULL,
 			_("OK"), G_CALLBACK(twitter_request_authorize_ok_cb),
 			_("Cancel"), NULL, //< We will not handle cancel, user's will have to re-authorize again
@@ -817,14 +818,20 @@ void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin)
 	mb_oauth_set_pin(ma, pin);
 
 	access_token_path = purple_account_get_string(ma->account, mc_name(TC_ACCESS_TOKEN_URL), mc_def(TC_ACCESS_TOKEN_URL));
-	mb_oauth_request_access(ma, access_token_path, HTTP_POST, twitter_verify_account_call, NULL);
+	mb_oauth_request_access(ma, access_token_path, HTTP_POST, twitter_oauth_request_finish, NULL);
 }
 
 /**
  * Wrapper to call twitter verify account from OAuth realm
  */
-gint twitter_verify_account_call(MbAccount * ma, MbConnData * data, gpointer user_data) {
-	twitter_verify_account(ma, NULL);
+gint twitter_oauth_request_finish(MbAccount * ma, MbConnData * data, gpointer user_data) {
+	if(ma->oauth.oauth_token && ma->oauth.oauth_secret) {
+		purple_account_set_string(ma->account, mc_name(TC_OAUTH_TOKEN), ma->oauth.oauth_token);
+		purple_account_set_string(ma->account, mc_name(TC_OAUTH_SECRET), ma->oauth.oauth_secret);
+		twitter_verify_account(ma, NULL);
+	} else {
+		purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Invalid server response");
+	}
 
 	return 0;
 }

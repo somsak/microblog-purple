@@ -358,7 +358,7 @@ static gint mb_oauth_request_token_handler(MbConnData * conn_data, gpointer data
 	} // no else, leave the error detection to callback function below
 
 	// now call the user-defined function to get PIN or whatever we need to request for access token
-	// will not call request_access by ourself, let the func do the job, since the caller should know the URL
+	// Let the func do the job, since the caller should know the URL
 	if(ma && ma->oauth.response_func) {
 		retval = ma->oauth.response_func(ma, conn_data, data);
 	}

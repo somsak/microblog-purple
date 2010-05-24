@@ -23,6 +23,7 @@ extern "C" {
 
 struct _MbAccount;
 struct _MbConnData;
+struct _MbHttpData;
 
 typedef gint (* MbOauthResponse)(struct _MbAccount * ma, struct _MbConnData * data, gpointer user_data);
 
@@ -43,6 +44,8 @@ void mb_oauth_set_pin(struct _MbAccount * ma, const gchar * pin);
 void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data);
 void mb_oauth_request_access(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data);
 void mb_oauth_free(struct _MbAccount * ma);
+
+void mb_oauth_set_http_data(struct _MbAccount * ma, struct _MbHttpData * http_data);
 
 #ifdef __cplusplus
 }
