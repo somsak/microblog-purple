@@ -67,6 +67,8 @@ MbConnData * mb_conn_data_new(MbAccount * ma, const gchar * host, gint port, MbH
 	conn_data->host = g_strdup(host);
 	conn_data->port = port;
 	conn_data->ma = ma;
+	conn_data->prepare_handler = NULL;
+	conn_data->prepare_handler_data = NULL;
 	conn_data->handler = handler;
 	conn_data->handler_data = NULL;
 	conn_data->retry = 0;
@@ -137,10 +139,11 @@ gchar * mb_conn_url_unparse(MbConnData * data)
 	}
 
 	// parameter is ignored here since we handle header ourself
-	return g_strdup_printf("%s%s%s/%s", 
+	return g_strdup_printf("%s%s%s%s%s",
 			data->is_ssl ? "https://" : "http://",
 			data->host,
 			port_str,
+			(data->request->path[0] == '/') ? "" : "/",
 			data->request->path
 		);
 }
@@ -209,6 +212,9 @@ void mb_conn_process_request(MbConnData * data)
 
 	purple_debug_info(MB_NET, "connecting to %s on port %hd\n", data->host, data->port);
 
+	if(data->prepare_handler) {
+		data->prepare_handler(data, data->prepare_handler_data, NULL);
+	}
 	url = mb_conn_url_unparse(data);
 
 	// we manage user_agent by ourself so ignore this completely

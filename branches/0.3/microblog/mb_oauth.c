@@ -333,6 +333,9 @@ static gint mb_oauth_request_token_handler(MbConnData * conn_data, gpointer data
 }
 
 void mb_oauth_request_token(struct _MbAccount * ma, const gchar * path, int type, MbOauthResponse func, gpointer data) {
+	if(ma->oauth.oauth_token) g_free(ma->oauth.oauth_token);
+	if(ma->oauth.oauth_secret) g_free(ma->oauth.oauth_secret);
+	ma->oauth.oauth_token = ma->oauth.oauth_secret = NULL;
 	_do_oauth(ma, path, type, func, data, mb_oauth_request_token_handler);
 }
 
@@ -356,6 +359,10 @@ void mb_oauth_set_http_data(MbOauth * oauth, struct _MbHttpData * http_data, con
 
 	if(oauth->oauth_token && oauth->oauth_secret) {
 		mb_http_data_add_param(http_data, "oauth_token", oauth->oauth_token);
+	}
+
+	if(oauth->pin) {
+		mb_http_data_add_param(http_data, "oauth_verifier", oauth->pin);
 	}
 
 	mb_http_data_sort_param(http_data);

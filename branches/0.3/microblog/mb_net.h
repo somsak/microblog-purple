@@ -41,8 +41,16 @@ typedef struct _MbConnData {
 	gint retry;
 	gint max_retry;
 
+	// Packet preparer, created for OAuth
+	// We will not set prepare_handler back to NULL, so it will be called again when connection is retried
+	// The 3rd argument pass will always be NULL (since no connection has been made yet
+	MbHandlerFunc prepare_handler;
+	gpointer prepare_handler_data;
+
+	// Connection handler
 	MbHandlerFunc handler;
 	gpointer handler_data;
+
 	gboolean is_ssl;
 	PurpleUtilFetchUrlData * fetch_url_data;
 } MbConnData;
@@ -88,6 +96,14 @@ extern void mb_conn_process_request(MbConnData * data);
  * @param description text description
  */
 extern void mb_conn_error(MbConnData * data, PurpleConnectionError error, const char * description);
+
+/**
+ * Create full URL from MbConnData
+ *
+ * @param data MbConnData in action
+ * @return full URL, need to be freed after use
+ */
+extern gchar * mb_conn_url_unparse(MbConnData * data);
 
 #ifdef __cplusplus
 }
