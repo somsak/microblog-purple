@@ -248,9 +248,11 @@ gboolean twitter_skip_fetching_messages(PurpleAccount * acct)
 		purple_debug_info(DBGID, "Unavailable, skipping fetching due privacy mode\n");
 		return TRUE;
 	}
-	else {
-		return FALSE;
+	if(!purple_privacy_check(acct, mc_def(TC_FRIENDS_USER))) {
+		purple_debug_info(DBGID, "Privacy block, skipping fetching due privacy mode\n");
+		return TRUE;
 	}
+	return FALSE;
 }
 
 // Function to fetch first batch of new message
