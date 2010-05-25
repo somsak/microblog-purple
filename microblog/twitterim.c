@@ -196,12 +196,39 @@ gboolean plugin_load(PurplePlugin *plugin)
 	option = purple_account_option_string_new(_("Mentions timeline path"), _mb_conf[TC_REPLIES_TIMELINE].conf, _mb_conf[TC_REPLIES_TIMELINE].def_str);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
+	// critical options with no setting page
+	_mb_conf[TC_OAUTH_TOKEN].conf = g_strdup("twitter_oauth_token");
+	_mb_conf[TC_OAUTH_TOKEN].def_str = NULL;
+	_mb_conf[TC_OAUTH_SECRET].conf = g_strdup("twitter_oauth_secret");
+	_mb_conf[TC_OAUTH_SECRET].def_str = NULL;
+	_mb_conf[TC_XAUTH_DONE].conf = g_strdup("twitter_xauth_done");
+	_mb_conf[TC_XAUTH_DONE].def_bool = FALSE;
+
 	// and now for non-option global
 	_mb_conf[TC_FRIENDS_USER].def_str = g_strdup("twitter.com");
 	_mb_conf[TC_REPLIES_USER].def_str = g_strdup("twitter.com");
 	_mb_conf[TC_PUBLIC_USER].def_str = g_strdup("twpublic");
 	_mb_conf[TC_USER_USER].def_str = g_strdup("twuser");
 	_mb_conf[TC_USER_GROUP].def_str = g_strdup("Twitter");
+
+	// OAuth stuff
+	_mb_conf[TC_CONSUMER_KEY].def_str = g_strdup("PCWAdQpyyR12ezp2fVwEhw");
+	_mb_conf[TC_CONSUMER_SECRET].def_str = g_strdup("EveLmCXJIg2R7BTCpm6OWV8YyX49nI0pxnYXh7JMvDg");
+
+	_mb_conf[TC_REQUEST_TOKEN_URL].conf = g_strdup("twitter_oauth_request_token_url");
+	_mb_conf[TC_REQUEST_TOKEN_URL].def_str = g_strdup("/oauth/request_token");
+	option = purple_account_option_string_new(_("OAuth request token path"), _mb_conf[TC_REQUEST_TOKEN_URL].conf, _mb_conf[TC_REQUEST_TOKEN_URL].def_str);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	_mb_conf[TC_ACCESS_TOKEN_URL].conf = g_strdup("twitter_oauth_access_token_url");
+	_mb_conf[TC_ACCESS_TOKEN_URL].def_str = g_strdup("/oauth/access_token");
+	option = purple_account_option_string_new(_("OAuth access token path"), _mb_conf[TC_ACCESS_TOKEN_URL].conf, _mb_conf[TC_ACCESS_TOKEN_URL].def_str);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
+
+	_mb_conf[TC_AUTHORIZE_URL].conf = g_strdup("twitter_oauth_authorize_token_url");
+	_mb_conf[TC_AUTHORIZE_URL].def_str = g_strdup("/oauth/authorize");
+	option = purple_account_option_string_new(_("OAuth authorize path"), _mb_conf[TC_AUTHORIZE_URL].conf, _mb_conf[TC_AUTHORIZE_URL].def_str);
+	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
 	// command support
 	tw_cmd = tw_cmd_init(info->id);
@@ -217,6 +244,13 @@ gboolean plugin_unload(PurplePlugin *plugin)
 
 	tw_cmd_finalize(tw_cmd);
 	tw_cmd = NULL;
+
+	g_free(_mb_conf[TC_CONSUMER_KEY].def_str);
+	g_free(_mb_conf[TC_CONSUMER_SECRET].def_str);
+	g_free(_mb_conf[TC_REQUEST_TOKEN_URL].def_str);
+	g_free(_mb_conf[TC_ACCESS_TOKEN_URL].def_str);
+	g_free(_mb_conf[TC_AUTHORIZE_URL].def_str);
+
 	g_free(_mb_conf[TC_HOST].def_str);
 	g_free(_mb_conf[TC_STATUS_UPDATE].def_str);
 	g_free(_mb_conf[TC_VERIFY_PATH].def_str);
@@ -227,6 +261,9 @@ gboolean plugin_unload(PurplePlugin *plugin)
 	g_free(_mb_conf[TC_PUBLIC_USER].def_str);
 	g_free(_mb_conf[TC_USER_USER].def_str);
 	g_free(_mb_conf[TC_USER_GROUP].def_str);
+
+	g_free(_mb_conf[TC_AUTH_TYPE].def_str);
+
 	for(i = 0; i < TC_MAX; i++) {
 		if(_mb_conf[i].conf) {
 			g_free(_mb_conf[i].conf);

@@ -262,9 +262,22 @@ void mb_account_get_idhash(PurpleAccount * account, const char * name, GHashTabl
 	}
 }
 
+gchar * mb_url_unparse(const char * host, int port, const char * path, const char * params, gboolean use_https) {
+	gchar * proto = "http://";
+	if(use_https) {
+		proto = "https://";
+	}
+	if(port == 0) {
+		return g_strdup_printf("%s%s%s%s%s", proto, host, path, params ? "?" : "", params ? params : "");
+	} else {
+		return g_strdup_printf("%s%s:%d%s%s%s", proto, host, port, path, params ? "?" : "", params ? params : "");
+	}
+}
+
 #ifdef UTEST
 int main(int argc, char * argv[])
 {
+	/*
 	time_t msg_time;
 	char * twitter_time = strdup("Wed Jul 23 10:59:53 +0000 2008");
 	char * cur, * next, *tmp_cur, *tmp_next, oldval;
@@ -278,6 +291,9 @@ int main(int argc, char * argv[])
 	free(twitter_time);
 	
 	//printf("Converted time = %s\n", asctime(&msg_time));
+
+	 */
+	printf("%s", mb_url_unparse("twitter.com", 0, "/oauth/authorize", "a=b&c=d", TRUE));
 }
 
 #endif

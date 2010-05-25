@@ -28,7 +28,7 @@ enum mb_error_action {
 // -1 - Requeue the whole process again
 struct _MbConnData;
 
-typedef gint (*MbHandlerFunc)(struct _MbConnData * , gpointer );
+typedef gint (*MbHandlerFunc)(struct _MbConnData * , gpointer , const char * error);
 typedef void (*MbHandlerDataFreeFunc)(gpointer);
 
 typedef struct _MbConnData {
@@ -40,8 +40,17 @@ typedef struct _MbConnData {
 	MbHttpData * response;
 	gint retry;
 	gint max_retry;
+
+	// Packet preparer, created for OAuth
+	// We will not set prepare_handler back to NULL, so it will be called again when connection is retried
+	// The 3rd argument pass will always be NULL (since no connection has been made yet
+	MbHandlerFunc prepare_handler;
+	gpointer prepare_handler_data;
+
+	// Connection handler
 	MbHandlerFunc handler;
 	gpointer handler_data;
+
 	gboolean is_ssl;
 	PurpleUtilFetchUrlData * fetch_url_data;
 } MbConnData;
@@ -64,9 +73,37 @@ extern MbConnData * mb_conn_data_new(MbAccount * ta, const gchar * host, gint po
 */
 extern void mb_conn_data_free(MbConnData * conn_data);
 
-extern void mb_conn_data_set_error(MbConnData * data, const gchar * msg, gint action);
+/**
+ * Set maximum number of retry
+ *
+ * @param data MbConnData in action
+ * @param retry number of desired retry
+ */
 extern void mb_conn_data_set_retry(MbConnData * data, gint retry);
+
+/**
+ * Process the initialize MbConnData
+ *
+ * @param data MbConnData to process
+ */
 extern void mb_conn_process_request(MbConnData * data);
+
+/**
+ * Call purple_connection_error_reason if this connection was retried more than data->max_retry already
+ *
+ * @param data MbConnData in action
+ * @param error error reason
+ * @param description text description
+ */
+extern void mb_conn_error(MbConnData * data, PurpleConnectionError error, const char * description);
+
+/**
+ * Create full URL from MbConnData
+ *
+ * @param data MbConnData in action
+ * @return full URL, need to be freed after use
+ */
+extern gchar * mb_conn_url_unparse(MbConnData * data);
 
 #ifdef __cplusplus
 }

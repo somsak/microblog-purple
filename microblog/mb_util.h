@@ -16,6 +16,7 @@ extern void mb_account_set_ull(PurpleAccount * account, const char * name, unsig
 extern unsigned long long mb_account_get_ull(PurpleAccount * account, const char * name, unsigned long long default_value);
 extern void mb_account_set_idhash(PurpleAccount * account, const char * name, GHashTable * id_hash);
 extern void mb_account_get_idhash(PurpleAccount * account, const char * name, GHashTable * id_hash);
+extern gchar * mb_url_unparse(const char * host, int port, const char * path, const char * params, gboolean use_https);
 
 #ifdef __cplusplus
 }

@@ -75,8 +75,6 @@ const char * mb_auth_types_str[] = {
 		"mb_http_basicauth",
 };
 
-//static const char twitter_host[] = "twitter.com";
-static gint twitter_port = 443;
 static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 "Accept: */*\r\n" \
 "X-Twitter-Client: " TW_AGENT_SOURCE "\r\n" \
@@ -87,21 +85,27 @@ static const char twitter_fixed_headers[] = "User-Agent:" TW_AGENT "\r\n" \
 
 PurplePlugin * twitgin_plugin = NULL;
 
-static MbConnData * twitter_init_connection(MbAccount * ma, const gchar * host, gint type,
-		const char * path, const gchar * user_name, const gchar * password,
-		MbHandlerFunc handler);
-void twitter_verify_account(MbAccount * ma);
+static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const char * path, MbHandlerFunc handler);
+static gint twitter_oauth_prepare(MbConnData * conn_data, gpointer data, const char * error);
+void twitter_request_access(MbAccount * ma);
+gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data);
+void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin);
+gint twitter_oauth_request_finish(MbAccount * ma, MbConnData * data, gpointer user_data);
+void twitter_verify_account(MbAccount * ma, gpointer data);
+gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * error);
+
 
 /**
  * Convenient function to initialize new connection and set necessary value
  */
-static MbConnData * twitter_init_connection(MbAccount * ma, const gchar * host, gint type,
-		const char * path, const gchar * user_name, const gchar * password,
-		MbHandlerFunc handler)
+//
+static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const char * path, MbHandlerFunc handler)
 {
 	MbConnData * conn_data = NULL;
 	gboolean use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
 	gint port;
+	gchar * user_name = NULL, * host = NULL;
+	const char * password;
 
 	if(use_https) {
 		port = TW_HTTPS_PORT;
@@ -109,8 +113,11 @@ static MbConnData * twitter_init_connection(MbAccount * ma, const gchar * host, 
 		port = TW_HTTP_PORT;
 	}
 
+	twitter_get_user_host(ma, &user_name, &host);
+	password = purple_account_get_password(ma->account);
+
 	conn_data = mb_conn_data_new(ma, host, port, handler, use_https);
-	mb_conn_data_set_retry(conn_data, 0);
+	mb_conn_data_set_retry(conn_data, 3);
 
 	conn_data->request->type = type;
 	conn_data->request->port = port;
@@ -120,9 +127,41 @@ static MbConnData * twitter_init_connection(MbAccount * ma, const gchar * host, 
 	// XXX: Use global here -> twitter_fixed_headers
 	mb_http_data_set_fixed_headers(conn_data->request, twitter_fixed_headers);
 	mb_http_data_set_header(conn_data->request, "Host", host);
-	mb_http_data_set_basicauth(conn_data->request, user_name, password);
+
+
+	switch(ma->auth_type) {
+		case MB_OAUTH :
+		case MB_XAUTH :
+			// attach oauth header with this connection
+			if(ma->oauth.oauth_token && ma->oauth.oauth_secret) {
+				conn_data->prepare_handler = twitter_oauth_prepare;
+				conn_data->prepare_handler_data = ma;
+			}
+			break;
+		default :
+			// basic auth is default
+			mb_http_data_set_basicauth(conn_data->request, user_name, password);
+			break;
+	}
+	if(user_name) g_free(user_name);
+	if(host) g_free(host);
 
 	return conn_data;
+}
+
+static gint twitter_oauth_prepare(MbConnData * conn_data, gpointer data, const char * error) {
+	MbAccount * ma = (MbAccount *)data;
+	gchar * full_url;
+
+	// error is always NULL here
+	full_url = mb_conn_url_unparse(conn_data);
+	if(conn_data->retry <= 0) {
+		mb_oauth_set_http_data(&ma->oauth, conn_data->request, full_url, conn_data->request->type);
+	} else {
+		mb_oauth_reset_nonce(&ma->oauth, conn_data->request, full_url, conn_data->request->type);
+	}
+	g_free(full_url);
+	return 0;
 }
 
 static TwitterBuddy * twitter_new_buddy()
@@ -392,7 +431,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 	return retval;
 }
 
-gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
+gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data, const char * error)
 {
 	MbAccount * ma = conn_data->ma;
 	const gchar * username;
@@ -407,6 +446,11 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	purple_debug_info(DBGID, "received result from %s\n", tlr->path);
 	
+	if(error) {
+		// we don't want to handle network error
+		return 0;
+	}
+
 	username = (const gchar *)purple_account_get_username(ma->account);
 	
 	if(response->status == HTTP_MOVED_TEMPORARILY) {
@@ -424,9 +468,8 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 
 				error_str = twitter_decode_error(response->content->str);
 				if(ma->gc != NULL) {
-					purple_connection_set_state(ma->gc, PURPLE_DISCONNECTED);
-					ma->state = PURPLE_DISCONNECTED;
-					purple_connection_error(ma->gc, error_str);
+					// XXX: Do we need to use conn_error here? Since we will return 0 below...
+					mb_conn_error(conn_data, PURPLE_CONNECTION_ERROR_OTHER_ERROR, error_str);
 				}
 				g_free(error_str);
 			}
@@ -491,24 +534,20 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data)
 //
 // Check for new message periodically
 //
-void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
+void twitter_fetch_new_messages(MbAccount * ma, TwitterTimeLineReq * tlr)
 {
 	MbConnData * conn_data;
-	gchar * twitter_host, * user_name;
 	
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
-
-	twitter_get_user_host(ta, &user_name, &twitter_host);
 	
-	conn_data = twitter_init_connection(ta, twitter_host, HTTP_GET, tlr->path,
-			user_name, purple_account_get_password(ta->account),twitter_fetch_new_messages_handler);
+	conn_data = twitter_init_connection(ma, HTTP_GET, tlr->path, twitter_fetch_new_messages_handler);
 
 	if(tlr->count > 0) {
 		purple_debug_info(DBGID, "tlr->count = %d\n", tlr->count);
 		mb_http_data_add_param_int(conn_data->request, "count", tlr->count);
 	}
-	if(tlr->use_since_id && (ta->last_msg_id > 0) ) {
-		mb_http_data_add_param_ull(conn_data->request, "since_id", ta->last_msg_id);
+	if(tlr->use_since_id && (ma->last_msg_id > 0) ) {
+		mb_http_data_add_param_ull(conn_data->request, "since_id", ma->last_msg_id);
 	}
 	if(tlr->screen_name != NULL) {
 		mb_http_data_add_param(conn_data->request, "screen_name", tlr->screen_name);
@@ -516,8 +555,6 @@ void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr)
 	conn_data->handler_data = tlr;
 	
 	mb_conn_process_request(conn_data);
-	g_free(twitter_host);
-	g_free(user_name);
 }
 
 
@@ -562,35 +599,12 @@ void twitter_get_buddy_list(MbAccount * ma)
 	// We'll deal with public and users timeline later
 }
 
-gint twitter_verify_authen(MbConnData * conn_data, gpointer data)
-{
-	MbAccount * ma = conn_data->ma;
-	MbHttpData * response = conn_data->response;
-	
-	if(response->status == HTTP_OK) {
-		gint interval = purple_account_get_int(conn_data->ma->account, mc_name(TC_MSG_REFRESH_RATE), mc_def_int(TC_MSG_REFRESH_RATE));
-		
-		purple_connection_set_state(conn_data->ma->gc, PURPLE_CONNECTED);
-		conn_data->ma->state = PURPLE_CONNECTED;
-		twitter_get_buddy_list(conn_data->ma);
-		purple_debug_info(DBGID, "refresh interval = %d\n", interval);
-		conn_data->ma->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, conn_data->ma);
-		twitter_fetch_first_new_messages(conn_data->ma);
-		return 0;
-	} else {
-		// XXX: Crash at the line below
-		purple_connection_set_state(conn_data->ma->gc, PURPLE_DISCONNECTED);
-		conn_data->ma->state = PURPLE_DISCONNECTED;
-		purple_connection_error(ma->gc, _("Authentication error"));
-		return -1;
-	}
-}
-
 MbAccount * mb_account_new(PurpleAccount * acct)
 {
 	MbAccount * ma = NULL;
 	const char * auth_type;
 	int i;
+	const gchar * oauth_token = NULL, * oauth_secret = NULL;
 	
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 	ma = g_new(MbAccount, 1);
@@ -627,6 +641,15 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 		// if there's no configuration, then it means the protocol didn't support it
 		// fall back to http basic authentication
 		ma->auth_type = MB_HTTP_BASICAUTH;
+	}
+
+	// Oauth stuff
+	mb_oauth_init(ma, mc_def(TC_CONSUMER_KEY), mc_def(TC_CONSUMER_SECRET));
+	oauth_token = purple_account_get_string(ma->account, mc_name(TC_OAUTH_TOKEN), mc_def(TC_OAUTH_TOKEN));
+	oauth_secret = purple_account_get_string(ma->account, mc_name(TC_OAUTH_SECRET), mc_def(TC_OAUTH_SECRET));
+
+	if(oauth_token && oauth_secret) {
+		mb_oauth_set_token(ma, oauth_token, oauth_secret);
 	}
 
 	acct->gc->proto_data = ma;
@@ -672,6 +695,8 @@ void mb_account_free(MbAccount * ma)
 	ma->mb_conf = NULL;
 	ma->cache = NULL;
 	
+	mb_oauth_free(ma);
+
 	if(ma->tag) {
 		g_free(ma->tag);
 		ma->tag = NULL;
@@ -718,7 +743,7 @@ void twitter_login(PurpleAccount *acct)
 	purple_debug_info(DBGID, "creating id hash for sentid\n");
 	mb_account_get_idhash(acct, TW_ACCT_SENT_MSG_IDS,ma->sent_id_hash);
 
-	twitter_verify_account(ma);
+	twitter_request_access(ma);
 
 	// connect to twitgin here
 	purple_debug_info(DBGID, "looking for twitgin\n");
@@ -730,28 +755,172 @@ void twitter_login(PurpleAccount *acct)
 }
 
 /**
- * Verify the account with services
+ * Request for access token, if needed
+ *
+ * @param ma MbAccount in action
  */
-void twitter_verify_account(MbAccount * ma)
+void twitter_request_access(MbAccount * ma)
+{
+	const gchar * path = NULL;
+	const gchar * oauth_token = NULL, * oauth_secret = NULL;
+
+	// check if oauth or xauth is already done
+	switch(ma->auth_type) {
+		case MB_OAUTH :
+			// If oauth access request is not done yet, do it now
+			oauth_token = purple_account_get_string(ma->account, mc_name(TC_OAUTH_TOKEN), mc_def(TC_OAUTH_TOKEN));
+			oauth_secret = purple_account_get_string(ma->account, mc_name(TC_OAUTH_SECRET), mc_def(TC_OAUTH_SECRET));
+			if(!oauth_token || !oauth_secret) {
+				mb_oauth_init(ma, mc_def(TC_CONSUMER_KEY), mc_def(TC_CONSUMER_SECRET));
+				path = purple_account_get_string(ma->account, mc_name(TC_REQUEST_TOKEN_URL), mc_def(TC_REQUEST_TOKEN_URL));
+				mb_oauth_request_token(ma, path, HTTP_GET, twitter_request_authorize, NULL);
+			} else {
+				twitter_verify_account(ma, NULL);
+			}
+			break;
+		case MB_XAUTH :
+			// support this later
+			break;
+		default :
+			// default is basic auth, which require no request access
+			twitter_verify_account(ma, NULL);
+			break;
+	}
+}
+
+/*
+ * Redirect user to authorization page and wait for user input
+ */
+gint twitter_request_authorize(MbAccount * ma, MbConnData * data, gpointer user_data)
+{
+	const gchar * request_access_path = NULL;
+	gchar * error_msg = NULL;
+	gchar * user_name, * host, *param = NULL, * full_url;
+	gboolean use_https = FALSE;
+
+
+	if( (data->response->status != HTTP_OK) || (!ma->oauth.oauth_token && !ma->oauth.oauth_secret)) {
+		// error
+		if(data->response->content_len > 0) {
+			error_msg = g_strdup(data->response->content->str);
+		} else {
+			error_msg = g_strdup("Unknown error");
+		}
+		mb_conn_error(data, PURPLE_CONNECTION_ERROR_INVALID_SETTINGS, error_msg);
+		g_free(error_msg);
+		return -1;
+	}
+
+	// process the successfully acquire token
+	request_access_path = purple_account_get_string(ma->account, mc_name(TC_AUTHORIZE_URL), mc_def(TC_AUTHORIZE_URL));
+	use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
+	twitter_get_user_host(ma, &user_name, &host);
+	param = g_strdup_printf("oauth_token=%s", ma->oauth.oauth_token);
+	full_url = mb_url_unparse(host, 0, request_access_path, param, use_https);
+
+	g_free(param);
+
+	// Open the web browser and redirect user to the authorization page
+	purple_notify_uri((void *)ma->gc, full_url);
+	g_free(full_url);
+
+	// and wait for user's input for PIN
+	purple_request_input((void *)ma->gc, _("Input your PIN"), _("Please allow " TW_AGENT_SOURCE " to access your account"),
+			_("Please copy the PIN number from the web page"), "", FALSE, FALSE, NULL,
+			_("OK"), G_CALLBACK(twitter_request_authorize_ok_cb),
+			_("Cancel"), NULL, //< We will not handle cancel, user's will have to re-authorize again
+			ma->account, NULL, NULL, ma);
+
+	g_free(user_name);
+	g_free(host);
+
+	// Continue in PIN callback
+	return 0;
+}
+
+void twitter_request_authorize_ok_cb(MbAccount * ma, const char * pin)
+{
+	const gchar * access_token_path = NULL;
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
+	purple_debug_info(DBGID, "got PIN %s\n", pin);
+
+	// Set the PIN
+	mb_oauth_set_pin(ma, pin);
+
+	access_token_path = purple_account_get_string(ma->account, mc_name(TC_ACCESS_TOKEN_URL), mc_def(TC_ACCESS_TOKEN_URL));
+	mb_oauth_request_access(ma, access_token_path, HTTP_POST, twitter_oauth_request_finish, NULL);
+}
+
+/**
+ * Wrapper to call twitter verify account from OAuth realm
+ */
+gint twitter_oauth_request_finish(MbAccount * ma, MbConnData * data, gpointer user_data) {
+	if((data->response->status == HTTP_OK) && ma->oauth.oauth_token && ma->oauth.oauth_secret) {
+		if(ma->oauth.pin) {
+			g_free(ma->oauth.pin);
+			ma->oauth.pin = NULL;
+		}
+		purple_account_set_string(ma->account, mc_name(TC_OAUTH_TOKEN), ma->oauth.oauth_token);
+		purple_account_set_string(ma->account, mc_name(TC_OAUTH_SECRET), ma->oauth.oauth_secret);
+		twitter_verify_account(ma, NULL);
+	} else {
+		if(ma->oauth.oauth_token) g_free(ma->oauth.oauth_token);
+		if(ma->oauth.oauth_secret) g_free(ma->oauth.oauth_secret);
+		ma->oauth.oauth_token = ma->oauth.oauth_secret = NULL;
+		purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Invalid server response");
+	}
+
+	return 0;
+}
+
+/**
+ * Verify the account with services
+ *
+ * @param ma MbAccount in action
+ */
+void twitter_verify_account(MbAccount * ma, gpointer data)
 {
 	MbConnData * conn_data = NULL;
-	gchar * twitter_host = NULL;
-	gchar * path = NULL, * user_name = NULL;
+	gchar * path = NULL;
 
-	purple_debug_info(DBGID, "getting user/host\n");
-	twitter_get_user_host(ma, &user_name, &twitter_host);
-
-	purple_debug_info(DBGID, "user_name = %s\n", user_name);
 	path = g_strdup(purple_account_get_string(ma->account, mc_name(TC_VERIFY_PATH), mc_def(TC_VERIFY_PATH)));
 	purple_debug_info(DBGID, "path = %s\n", path);
-	
-	conn_data = twitter_init_connection(ma, twitter_host, HTTP_GET, path,
-			user_name, purple_account_get_password(ma->account),twitter_verify_authen);
+
+	conn_data = twitter_init_connection(ma, HTTP_GET, path, twitter_verify_authen);
 
 	mb_conn_process_request(conn_data);
-	g_free(twitter_host);
-	g_free(user_name);
 	g_free(path);
+}
+
+/**
+ * Call back for account validity verification
+ *
+ * @param conn_data connection data in progress
+ * @param data MbAccount in action
+ */
+gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * error)
+{
+	MbAccount * ma = conn_data->ma;
+	MbHttpData * response = conn_data->response;
+
+	if(response->content_len > 0) {
+		purple_debug_info(DBGID, "response = %s\n", response->content->str);
+	}
+	if(response->status == HTTP_OK) {
+		gint interval = purple_account_get_int(conn_data->ma->account, mc_name(TC_MSG_REFRESH_RATE), mc_def_int(TC_MSG_REFRESH_RATE));
+
+		purple_connection_set_state(conn_data->ma->gc, PURPLE_CONNECTED);
+		conn_data->ma->state = PURPLE_CONNECTED;
+		twitter_get_buddy_list(conn_data->ma);
+		purple_debug_info(DBGID, "refresh interval = %d\n", interval);
+		conn_data->ma->timeline_timer = purple_timeout_add_seconds(interval, (GSourceFunc)twitter_fetch_all_new_messages, conn_data->ma);
+		twitter_fetch_first_new_messages(conn_data->ma);
+		return 0;
+	} else {
+		// XXX: Crash at the line below
+		mb_conn_error(conn_data, PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED, "Authentication error");
+		return -1;
+	}
 }
 
 void twitter_close(PurpleConnection *gc)
@@ -774,17 +943,25 @@ void twitter_close(PurpleConnection *gc)
 	gc->proto_data = NULL;
 }
 
-gint twitter_send_im_handler(MbConnData * conn_data, gpointer data)
+gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char * error)
 {
 	MbAccount * ma = conn_data->ma;
 	MbHttpData * response = conn_data->response;
 	gchar * id_str = NULL;
 	xmlnode * top, *id_node;
 	
-	purple_debug_info(DBGID, "send_im_handler\n");
+	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
+
+	if(error) {
+		// don't need to handle network error
+		return -1;
+	}
 	
 	if(response->status != 200) {
 		purple_debug_info(DBGID, "http error\n");
+		if(response->content_len > 0) {
+			purple_debug_info(DBGID, "response = %s\n", response->content->str);
+		}
 		//purple_debug_info(DBGID, "http data = #%s#\n", response->content->str);
 		return -1;
 	}
@@ -828,14 +1005,14 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 {
 	MbAccount * ma = gc->proto_data;
 	MbConnData * conn_data = NULL;
-	gchar * post_data = NULL, * tmp_msg_txt = NULL, * user_name = NULL;
-	gint msg_len, len;
-	gchar * twitter_host, * path;
+	gchar * tmp_msg_txt = NULL;
+	gint msg_len;
+	gchar * path;
 	
 	purple_debug_info(DBGID, "send_im\n");
 
 	// prepare message to send
-	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
+	tmp_msg_txt = g_strdup(g_strchomp(purple_markup_strip_html(message)));
 	if(ma->tag) {
 		gchar * new_msg_txt;
 
@@ -852,10 +1029,8 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	purple_debug_info(DBGID, "sending message %s\n", tmp_msg_txt);
 	
 	// connection
-	twitter_get_user_host(ma, &user_name, &twitter_host);
 	path = g_strdup(purple_account_get_string(ma->account, mc_name(TC_STATUS_UPDATE), mc_def(TC_STATUS_UPDATE)));
-	conn_data = twitter_init_connection(ma, twitter_host, HTTP_POST, path,
-			user_name, purple_account_get_password(ma->account),twitter_send_im_handler);
+	conn_data = twitter_init_connection(ma, HTTP_POST, path, twitter_send_im_handler);
 
 	if(ma->reply_to_status_id > 0) {
 		int i;
@@ -880,17 +1055,21 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 		}
 	}
 	
-	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
+//	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
+	mb_http_data_set_content_type(conn_data->request, "application/x-www-form-urlencoded");
 
+	mb_http_data_add_param(conn_data->request, "status", tmp_msg_txt);
+	mb_http_data_add_param(conn_data->request, "source", TW_AGENT_SOURCE);
+
+	/*
 	post_data = g_malloc(TW_MAXBUFF);
 	len = snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
 	mb_http_data_set_content(conn_data->request, post_data, len);
+	*/
+	//	g_free(post_data);
 	
 	mb_conn_process_request(conn_data);
-	g_free(twitter_host);
-	g_free(user_name);
 	g_free(path);
-	g_free(post_data);
 	g_free(tmp_msg_txt);
 	
 	return msg_len;
@@ -932,17 +1111,13 @@ void twitter_favorite_message(MbAccount * ma, gchar * msg_id)
 
 	// create new connection and call API POST
 	MbConnData * conn_data;
-	gchar * twitter_host, * user_name, * path;
+	gchar * path;
 
-	twitter_get_user_host(ma, &user_name, &twitter_host);
 	path = g_strdup_printf("/favorites/create/%s.xml", msg_id);
 
-	conn_data = twitter_init_connection(ma, twitter_host, HTTP_POST, path,
-			user_name, purple_account_get_password(ma->account), NULL);
+	conn_data = twitter_init_connection(ma, HTTP_POST, path, NULL);
 
 	mb_conn_process_request(conn_data);
-	g_free(twitter_host);
-	g_free(user_name);
 	g_free(path);
 
 }
@@ -955,16 +1130,12 @@ void twitter_retweet_message(MbAccount * ma, gchar * msg_id)
 
 	// create new connection and call API POST
 	MbConnData * conn_data;
-	gchar * twitter_host, * user_name, * path;
+	gchar * path;
 
-	twitter_get_user_host(ma, &user_name, &twitter_host);
 	path = g_strdup_printf("/statuses/retweet/%s.xml", msg_id);
 
-	conn_data = twitter_init_connection(ma, twitter_host, HTTP_POST, path,
-			user_name, purple_account_get_password(ma->account), NULL);
+	conn_data = twitter_init_connection(ma, HTTP_POST, path, NULL);
 	mb_conn_process_request(conn_data);
-	g_free(twitter_host);
-	g_free(user_name);
 	g_free(path);
 
 }
