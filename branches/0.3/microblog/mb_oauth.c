@@ -81,7 +81,7 @@ void mb_oauth_set_token(struct _MbAccount * ma, const gchar * oauth_token, const
 
 void mb_oauth_set_pin(struct _MbAccount * ma, const gchar * pin) {
 
-	gchar * tmp, *new, * p, * q;
+	gchar * tmp, *new;
 
 	if(ma->oauth.pin) g_free(ma->oauth.pin);
 
@@ -90,32 +90,8 @@ void mb_oauth_set_pin(struct _MbAccount * ma, const gchar * pin) {
 	}
 
 	tmp = g_strdup(pin);
-
-	/*
-	p = tmp;
-	q = &tmp[strlen(tmp)];
-
-	// Trim leading blanks
-	while (*p != '\0' && g_ascii_isspace(*p)) {
-		p += 1;
-	}
-
-	// Trim trailing blanks
-	while (q > p && g_ascii_isspace(*(q - 1))) {
-		q -= 1;
-	}
-	*/
 	new = g_strstrip(tmp);
-	ma->oauth.pin = g_strdup(g_strstrip(tmp));
-	/*
-	// Don't bother with null strings
-	if (p == q) {
-		ma->oauth.pin = NULL;
-	} else {
-		(*q) = '\0';
-		ma->oauth.pin = g_strdup(p);
-	}
-	*/
+	ma->oauth.pin = g_strdup(new);
 	g_free(tmp);
 }
 
