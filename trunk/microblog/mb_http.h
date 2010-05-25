@@ -75,8 +75,9 @@ typedef struct _MbHttpData {
 	// param part
 	GList * params;
 	gint params_len;
-	
+
 	// content
+	gchar * content_type;
 	GString * content;
 	// Chunked, in case of Transfer-Encoding: chunked
 	GString * chunked_content;
@@ -252,7 +253,30 @@ extern void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gin
 */
 extern void mb_http_data_add_param_ull(MbHttpData * data, const gchar * key, unsigned long long value);
 
+/**
+ * Sort parameter list in alphabetical order
+ *
+ * @param data MbHttpData in action
+ */
+extern void mb_http_data_sort_param(MbHttpData * data);
 
+/**
+ * Encode CGI parameter from a list of params
+ *
+ * Caller should check for the possible length of param from param_len and allocate buf accordingly
+ *
+ * @param data MbHttpData in action
+ * @param buf buffer
+ * @param len maximum length of buffer
+ */
+extern int mb_http_data_encode_param(MbHttpData *data, char * buf, int len);
+
+/**
+ * Decode CGI parameter into a list of params, stored into data->params
+ *
+ * @param data MbHttpData in action
+ */
+extern void mb_http_data_decode_param_from_content(MbHttpData *data);
 
 /*
 	Look for value of specified parameter
@@ -290,6 +314,11 @@ extern void mb_http_data_prepare_write(MbHttpData * data);
    	Parse red to MbHttpData
  */
 extern void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len);
+
+/**
+ * Set content type header
+ */
+extern void mb_http_data_set_content_type(MbHttpData * data, const gchar * type);
 
 #ifdef __cplusplus
 }

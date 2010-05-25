@@ -53,6 +53,8 @@
 #include <debug.h>
 #include "mb_net.h"
 
+// Caller of request retry function
+static gboolean mb_conn_retry_request(gpointer data);
 // Fetch URL callback
 static void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data, const gchar * url_text, gsize len, const gchar * error_message);
  
@@ -65,6 +67,8 @@ MbConnData * mb_conn_data_new(MbAccount * ma, const gchar * host, gint port, MbH
 	conn_data->host = g_strdup(host);
 	conn_data->port = port;
 	conn_data->ma = ma;
+	conn_data->prepare_handler = NULL;
+	conn_data->prepare_handler_data = NULL;
 	conn_data->handler = handler;
 	conn_data->handler_data = NULL;
 	conn_data->retry = 0;
@@ -101,10 +105,10 @@ void mb_conn_data_free(MbConnData * conn_data)
 	}
 
 	purple_debug_info(MB_NET, "freeing HTTP data->response\n");
-	mb_http_data_free(conn_data->response);
+	if(conn_data->response)	mb_http_data_free(conn_data->response);
 
 	purple_debug_info(MB_NET, "freeing HTTP data->request\n");
-	mb_http_data_free(conn_data->request);
+	if(conn_data->request)	mb_http_data_free(conn_data->request);
 
 	purple_debug_info(MB_NET, "unregistering conn_data from MbAccount\n");
 	if(conn_data->ma->conn_data_list) {
@@ -135,10 +139,11 @@ gchar * mb_conn_url_unparse(MbConnData * data)
 	}
 
 	// parameter is ignored here since we handle header ourself
-	return g_strdup_printf("%s%s%s/%s", 
+	return g_strdup_printf("%s%s%s%s%s",
 			data->is_ssl ? "https://" : "http://",
 			data->host,
 			port_str,
+			(data->request->path[0] == '/') ? "" : "/",
 			data->request->path
 		);
 }
@@ -148,24 +153,28 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 {
 	MbConnData * conn_data = (MbConnData *)user_data;
 	MbAccount * ma = conn_data->ma;
+	gint retval;
 
 	purple_debug_info(MB_NET, "%s: url_data = %p\n", __FUNCTION__, url_data);
 	// in whatever situation, url_data should be handled only by libpurple
 	conn_data->fetch_url_data = NULL;
 
 	if(error_message != NULL) {
+		mb_conn_data_free(conn_data);
+		if(conn_data->handler) {
+			retval = conn_data->handler(conn_data, conn_data->handler_data, error_message);
+		}
 		if(ma->gc != NULL) {
 			purple_connection_error_reason(ma->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR, error_message);
 		}
-		mb_conn_data_free(conn_data);
 	} else {
 		mb_http_data_post_read(conn_data->response, url_text, len);
 		if(conn_data->handler) {
-			gint retval;
 
 			purple_debug_info(MB_NET, "going to call handler\n");
-			retval = conn_data->handler(conn_data, conn_data->handler_data);
+			retval = conn_data->handler(conn_data, conn_data->handler_data, NULL);
 			purple_debug_info(MB_NET, "handler returned, retval = %d\n", retval);
+
 			if(retval == 0) {
 				// Everything's good. Free data structure and go-on with usual works
 				purple_debug_info(MB_NET, "everything's ok, freeing data\n");
@@ -174,9 +183,10 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 				// Something's wrong. Requeue the whole process
 				conn_data->retry++;
 				if(conn_data->retry <= conn_data->max_retry) {
-					purple_debug_info(MB_NET, "handler return -1, retry %d\n", conn_data->retry);
+					purple_debug_info(MB_NET, "handler return -1, conn_data %p, retry %d, max_retry = %d\n", conn_data, conn_data->retry, conn_data->max_retry);
 					mb_http_data_truncate(conn_data->response);
-					mb_conn_process_request(conn_data);
+					// retry again in 1 second
+					purple_timeout_add_seconds(1, mb_conn_retry_request, conn_data);
 				} else {
 					purple_debug_info(MB_NET, "retry exceed %d > %d\n", conn_data->retry, conn_data->max_retry);
 					mb_conn_data_free(conn_data);
@@ -184,6 +194,14 @@ void mb_conn_fetch_url_cb(PurpleUtilFetchUrlData * url_data, gpointer user_data,
 			} 
 		}
 	}
+}
+
+static gboolean mb_conn_retry_request(gpointer data)
+{
+	MbConnData * conn_data = (MbConnData *)data;
+
+	mb_conn_process_request(conn_data);
+	return FALSE;
 }
 
 void mb_conn_process_request(MbConnData * data)
@@ -194,11 +212,21 @@ void mb_conn_process_request(MbConnData * data)
 
 	purple_debug_info(MB_NET, "connecting to %s on port %hd\n", data->host, data->port);
 
+	if(data->prepare_handler) {
+		data->prepare_handler(data, data->prepare_handler_data, NULL);
+	}
 	url = mb_conn_url_unparse(data);
 
 	// we manage user_agent by ourself so ignore this completely
 	mb_http_data_prepare_write(data->request);
-	data->retry = 0;
 	data->fetch_url_data = purple_util_fetch_url_request(url, TRUE, "", TRUE, data->request->packet, TRUE, mb_conn_fetch_url_cb, (gpointer)data);
 	g_free(url);
+}
+
+void mb_conn_error(MbConnData * data, PurpleConnectionError error, const char * description)
+{
+	if(data->retry >= data->max_retry) {
+		data->ma->state = PURPLE_DISCONNECTED;
+		purple_connection_error_reason(data->ma->gc, error, description);
+	}
 }
