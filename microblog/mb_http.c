@@ -92,9 +92,12 @@ MbHttpData * mb_http_data_new(void)
 	data->fixed_headers = NULL;
 	data->params = NULL;
 	data->params_len = 0;
+
+	data->content_type = NULL;
 	data->content = NULL;
 	data->chunked_content = NULL;
 	data->content_len = 0;
+
 	data->status = -1;
 	data->type = HTTP_GET; //< default is get
 	data->state = MB_HTTP_STATE_INIT;
@@ -138,6 +141,10 @@ void mb_http_data_free(MbHttpData * data) {
 		}
 		purple_debug_info(MB_HTTPID, "freeing all params\n");
 		g_list_free(data->params);
+	}
+
+	if(data->content_type) {
+		g_free(data->content_type);
 	}
 	if(data->content) {
 		purple_debug_info(MB_HTTPID, "freeing request\n");
@@ -191,6 +198,11 @@ void mb_http_data_truncate(MbHttpData * data)
 		}
 		g_list_free(data->params);
 		data->params = NULL;
+	}
+
+	if(data->content_type) {
+		g_free(data->content_type);
+		data->content_type = NULL;
 	}
 	if(data->content) {
 		g_string_free(data->content, TRUE);
@@ -291,6 +303,11 @@ void mb_http_data_set_host(MbHttpData * data, const gchar * host)
 		g_free(data->host);
 	}
 	data->host = g_strdup(host);
+}
+
+void mb_http_data_set_content_type(MbHttpData * data, const gchar * type) {
+	if(data->content_type) g_free(data->content_type);
+	data->content_type = g_strdup(type);
 }
 
 void mb_http_data_set_content(MbHttpData * data, const gchar * content, gssize len)
@@ -484,7 +501,7 @@ void mb_http_data_decode_param_from_content(MbHttpData *data) {
 
 void mb_http_data_prepare_write(MbHttpData * data)
 {
-	gchar * cur_packet;
+	gchar * cur_packet, * param_content = NULL;
 	gint packet_len, len;
 
 	if(data->path == NULL) return;
@@ -507,12 +524,28 @@ void mb_http_data_prepare_write(MbHttpData * data)
 	}
 	//printf("cur_packet = %s\n", cur_packet);
 	cur_packet += len;
+
+	// parameter
 	if(data->params) {
-		(*cur_packet) = '?';
-		cur_packet++;
-		len = mb_http_data_encode_param(data, cur_packet,  packet_len - (cur_packet - data->packet));
-		cur_packet += len;
+		if(data->content_type && data->type == HTTP_POST && (strcmp(data->content_type, "application/x-www-form-urlencoded") == 0)) {
+			// Special case
+			// put all parameters in content in this case
+			param_content = g_malloc0(data->params_len + 1);
+			data->content_len = mb_http_data_encode_param(data, param_content, data->params_len);
+			// XXX: in this case, abandon what content was
+			g_string_free(data->content, TRUE);
+			data->content = g_string_new(param_content);
+			g_free(param_content);
+		} else {
+			// put all parameters after path
+			(*cur_packet) = '?';
+			cur_packet++;
+			len = mb_http_data_encode_param(data, cur_packet,  packet_len - (cur_packet - data->packet));
+			cur_packet += len;
+		}
 	}
+
+	// Trailing "HTTP/1.1\r\n"
 	(*cur_packet) = ' ';
 	len = sprintf(cur_packet, " HTTP/1.1\r\n");
 	cur_packet += len;
@@ -520,6 +553,14 @@ void mb_http_data_prepare_write(MbHttpData * data)
 	// headers part
 	data->cur_packet = cur_packet;
 	g_hash_table_foreach(data->headers, mb_http_data_header_assemble, data);
+
+	// Content type (which is actually another header)
+	if(data->content_type) {
+		len = sprintf(data->cur_packet, "Content-Type: %s\r\n", (char *)data->content_type);
+		data->cur_packet += len;
+	}
+
+	// Fixed headers
 	cur_packet = data->cur_packet;
 	if(data->fixed_headers) {
 		strcpy(cur_packet, data->fixed_headers);
