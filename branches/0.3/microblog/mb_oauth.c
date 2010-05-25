@@ -81,14 +81,20 @@ void mb_oauth_set_token(struct _MbAccount * ma, const gchar * oauth_token, const
 
 void mb_oauth_set_pin(struct _MbAccount * ma, const gchar * pin) {
 
-	gchar * tmp, * p, * q;
+	gchar * tmp, *new, * p, * q;
 
 	if(ma->oauth.pin) g_free(ma->oauth.pin);
 
+	if(!pin) {
+		return;
+	}
+
 	tmp = g_strdup(pin);
 
+	/*
 	p = tmp;
 	q = &tmp[strlen(tmp)];
+
 	// Trim leading blanks
 	while (*p != '\0' && g_ascii_isspace(*p)) {
 		p += 1;
@@ -98,14 +104,18 @@ void mb_oauth_set_pin(struct _MbAccount * ma, const gchar * pin) {
 	while (q > p && g_ascii_isspace(*(q - 1))) {
 		q -= 1;
 	}
-
-	// Don't bother with null strings */
+	*/
+	new = g_strstrip(tmp);
+	ma->oauth.pin = g_strdup(g_strstrip(tmp));
+	/*
+	// Don't bother with null strings
 	if (p == q) {
 		ma->oauth.pin = NULL;
 	} else {
 		(*q) = '\0';
 		ma->oauth.pin = g_strdup(p);
 	}
+	*/
 	g_free(tmp);
 }
 
@@ -158,6 +168,9 @@ static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gch
 	mb_conn_data_set_retry(conn_data, 3);
 
 	conn_data->request->type = type;
+	if(type == HTTP_POST) {
+		mb_http_data_set_content_type(conn_data->request, "application/x-www-form-urlencoded");
+	}
 	conn_data->request->port = port;
 
 	mb_http_data_set_host(conn_data->request, host);

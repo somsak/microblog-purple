@@ -75,8 +75,9 @@ typedef struct _MbHttpData {
 	// param part
 	GList * params;
 	gint params_len;
-	
+
 	// content
+	gchar * content_type;
 	GString * content;
 	// Chunked, in case of Transfer-Encoding: chunked
 	GString * chunked_content;
@@ -313,6 +314,11 @@ extern void mb_http_data_prepare_write(MbHttpData * data);
    	Parse red to MbHttpData
  */
 extern void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len);
+
+/**
+ * Set content type header
+ */
+extern void mb_http_data_set_content_type(MbHttpData * data, const gchar * type);
 
 #ifdef __cplusplus
 }

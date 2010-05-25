@@ -959,6 +959,9 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char *
 	
 	if(response->status != 200) {
 		purple_debug_info(DBGID, "http error\n");
+		if(response->content_len > 0) {
+			purple_debug_info(DBGID, "response = %s\n", response->content->str);
+		}
 		//purple_debug_info(DBGID, "http data = #%s#\n", response->content->str);
 		return -1;
 	}
@@ -1002,14 +1005,14 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 {
 	MbAccount * ma = gc->proto_data;
 	MbConnData * conn_data = NULL;
-	gchar * post_data = NULL, * tmp_msg_txt = NULL;
-	gint msg_len, len;
+	gchar * tmp_msg_txt = NULL;
+	gint msg_len;
 	gchar * path;
 	
 	purple_debug_info(DBGID, "send_im\n");
 
 	// prepare message to send
-	tmp_msg_txt = g_strdup(purple_url_encode(g_strchomp(purple_markup_strip_html(message))));
+	tmp_msg_txt = g_strdup(g_strchomp(purple_markup_strip_html(message)));
 	if(ma->tag) {
 		gchar * new_msg_txt;
 
@@ -1052,15 +1055,21 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 		}
 	}
 	
-	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
+//	mb_http_data_set_header(conn_data->request, "Content-Type", "application/x-www-form-urlencoded");
+	mb_http_data_set_content_type(conn_data->request, "application/x-www-form-urlencoded");
 
+	mb_http_data_add_param(conn_data->request, "status", tmp_msg_txt);
+	mb_http_data_add_param(conn_data->request, "source", TW_AGENT_SOURCE);
+
+	/*
 	post_data = g_malloc(TW_MAXBUFF);
 	len = snprintf(post_data, TW_MAXBUFF, "status=%s&source=" TW_AGENT_SOURCE, tmp_msg_txt);
 	mb_http_data_set_content(conn_data->request, post_data, len);
+	*/
+	//	g_free(post_data);
 	
 	mb_conn_process_request(conn_data);
 	g_free(path);
-	g_free(post_data);
 	g_free(tmp_msg_txt);
 	
 	return msg_len;
