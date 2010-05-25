@@ -300,7 +300,7 @@ GList * twitterim_actions(PurplePlugin *plugin, gpointer context)
 
 PurplePluginProtocolInfo twitter_prpl_info = {
 	/* options */
-	OPT_PROTO_UNIQUE_CHATNAME,
+	OPT_PROTO_UNIQUE_CHATNAME | OPT_PROTO_PASSWORD_OPTIONAL | OPT_PROTO_REGISTER_NOSCREENNAME,
 	NULL,                   /* user_splits */
 	NULL,                   /* protocol_options */
 	//NO_BUDDY_ICONS          /* icon_spec */
