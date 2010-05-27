@@ -103,6 +103,7 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 {
 	MbConnData * conn_data = NULL;
 	gboolean use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
+	gint retry = purple_account_get_int(ma->account, mc_name(TC_GLOBAL_RETRY), mc_def_int(TC_GLOBAL_RETRY));
 	gint port;
 	gchar * user_name = NULL, * host = NULL;
 	const char * password;
@@ -117,7 +118,7 @@ static MbConnData * twitter_init_connection(MbAccount * ma, gint type, const cha
 	password = purple_account_get_password(ma->account);
 
 	conn_data = mb_conn_data_new(ma, host, port, handler, use_https);
-	mb_conn_data_set_retry(conn_data, 3);
+	mb_conn_data_set_retry(conn_data, retry);
 
 	conn_data->request->type = type;
 	conn_data->request->port = port;
@@ -911,6 +912,42 @@ gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * e
 	if(response->status == HTTP_OK) {
 		gint interval = purple_account_get_int(conn_data->ma->account, mc_name(TC_MSG_REFRESH_RATE), mc_def_int(TC_MSG_REFRESH_RATE));
 
+		// extract the username and set it
+		if(response->content_len > 0) {
+			xmlnode * top = NULL, * screen_name = NULL;
+			gchar * screen_name_str = NULL;
+			gchar * user_name = NULL, * host = NULL;
+
+			top = xmlnode_from_str(response->content->str, -1);
+			if(top != NULL) {
+				screen_name = xmlnode_get_child(top, "screen_name");
+				if(screen_name) {
+					screen_name_str = xmlnode_get_data_unescaped(screen_name);
+				}
+			}
+			xmlnode_free(top);
+			if(screen_name_str) {
+				purple_debug_info(DBGID, "old username = %s\n", purple_account_get_username(conn_data->ma->account));
+				twitter_get_user_host(conn_data->ma, &user_name, &host);
+				if(host) {
+					// libpurple host is embed in username, so we need to keep it
+					gchar * tmp;
+
+					tmp = g_strdup_printf("%s@%s", screen_name_str, host);
+					purple_account_set_username(conn_data->ma->account, tmp);
+					g_free(tmp);
+				} else {
+					purple_account_set_username(conn_data->ma->account, screen_name_str);
+				}
+				g_free(user_name);
+				g_free(host);
+			} else {
+				purple_debug_info(DBGID, "WARNING! will use username in setting instead\n");
+			}
+			g_free(screen_name_str);
+		}
+
+		// now prepare for timeline refresher
 		purple_connection_set_state(conn_data->ma->gc, PURPLE_CONNECTED);
 		conn_data->ma->state = PURPLE_CONNECTED;
 		twitter_get_buddy_list(conn_data->ma);

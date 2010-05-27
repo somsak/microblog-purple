@@ -201,8 +201,6 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_mb_conf[TC_OAUTH_TOKEN].def_str = NULL;
 	_mb_conf[TC_OAUTH_SECRET].conf = g_strdup("twitter_oauth_secret");
 	_mb_conf[TC_OAUTH_SECRET].def_str = NULL;
-	_mb_conf[TC_XAUTH_DONE].conf = g_strdup("twitter_xauth_done");
-	_mb_conf[TC_XAUTH_DONE].def_bool = FALSE;
 
 	// and now for non-option global
 	_mb_conf[TC_FRIENDS_USER].def_str = g_strdup("twitter.com");
