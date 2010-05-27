@@ -125,6 +125,7 @@ static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gch
 {
 	MbConnData * conn_data = NULL;
 	gboolean use_https = purple_account_get_bool(ma->account, mc_name(TC_USE_HTTPS), mc_def_bool(TC_USE_HTTPS));
+	gint retry = purple_account_get_int(ma->account, mc_name(TC_GLOBAL_RETRY), mc_def_int(TC_GLOBAL_RETRY));
 	gint port;
 	gchar * user = NULL, * host = NULL;
 
@@ -141,7 +142,7 @@ static MbConnData * mb_oauth_init_connection(MbAccount * ma, int type, const gch
 	}
 
 	conn_data = mb_conn_data_new(ma, host, port, handler, use_https);
-	mb_conn_data_set_retry(conn_data, 3);
+	mb_conn_data_set_retry(conn_data, retry);
 
 	conn_data->request->type = type;
 	if(type == HTTP_POST) {
