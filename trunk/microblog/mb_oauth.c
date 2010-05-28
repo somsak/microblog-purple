@@ -280,7 +280,7 @@ static gint mb_oauth_request_token_handler(MbConnData * conn_data, gpointer data
 	MbHttpParam * param = NULL;
 	gint retval = 0;
 
-	purple_debug_info(DBGID, "%s called", __FUNCTION__);
+	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
 	purple_debug_info(DBGID, "got response %s\n", conn_data->response->content->str);
 
 	if(error) {

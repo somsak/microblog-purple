@@ -173,7 +173,11 @@ time_t mb_mktime(char * time_str)
 #endif
 	// Always return GMT time (not sure subtracting is right, but that's ultimately
 	// irrelevant for twitter at least, twitter.com always returns +0000)
+#ifndef __WIN32
 	retval = timegm(&msg_time) - cur_timezone;
+#else
+	retval = mktime(&msg_time) - cur_timezone;
+#endif
 	purple_debug_info(DBGID, "final msg_time = %ld\n", retval);
 	return retval;
 }

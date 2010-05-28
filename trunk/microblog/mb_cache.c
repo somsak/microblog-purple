@@ -26,10 +26,28 @@
  *      Author: somsak
  */
 
-#include <util.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+ 
+#ifndef G_GNUC_NULL_TERMINATED
+#  if __GNUC__ >= 4
+#    define G_GNUC_NULL_TERMINATED __attribute__((__sentinel__))
+#  else
+#    define G_GNUC_NULL_TERMINATED
+#  endif /* __GNUC__ >= 4 */
+#endif /* G_GNUC_NULL_TERMINATED */
+
+
+#ifdef _WIN32
+#	include <win32dep.h>
+#else
+#	include <arpa/inet.h>
+#	include <sys/socket.h>
+#	include <netinet/in.h>
+#endif
+
+#include <util.h>
 
 #include "twitter.h"
 
