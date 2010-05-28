@@ -1,6 +1,6 @@
 /*
  * Twitgin - A GUI support of libtwitter/microblog-purple for Conversation dialog
- * Copyright (C) 2008-2010 Chanwit Kaewkasi <chanwit@gmail.com>
+ * Copyright (C) 2008-2010 Chanwit Kaewkasi  <chanwit@gmail.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
