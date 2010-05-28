@@ -359,7 +359,7 @@ void mb_http_data_add_param(MbHttpData * data, const gchar * key, const gchar * 
 	p->key = g_strdup(purple_url_encode(key));
 	p->value = g_strdup(purple_url_encode(value));
 	data->params = g_list_append(data->params, p);
-	data->params_len += strlen(p->key) + strlen(p->value) + 2; //< length of key + value + "& or ?"
+	data->params_len += strlen(p->key) + strlen(p->value) + 3; //< length of key + value + "& or ?"
 }
 
 void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value)
@@ -446,16 +446,19 @@ int mb_http_data_encode_param(MbHttpData *data, char * buf, int len)
 {
 	GList * it;
 	MbHttpParam * p;
-	int cur_len = 0, ret_len;
+	int cur_len = 0, ret_len = 0;
 	char * cur_buf = buf;
 
+	purple_debug_info(MB_HTTPID, "%s called, len = %d\n", __FUNCTION__, len);
 	if(data->params) {
 		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
 			p = it->data;
 			purple_debug_info(MB_HTTPID, "%s: key = %s, value = %s\n", __FUNCTION__, p->key, p->value);
 			ret_len = snprintf(cur_buf, len - cur_len, "%s=%s&", p->key, p->value);
+			purple_debug_info(MB_HTTPID, "len = %d, cur_len = %d, cur_buf = ##%s##\n", len, cur_len, cur_buf);
 			cur_len += ret_len;
 			if(cur_len >= len) {
+				purple_debug_info(MB_HTTPID, "len is too small, len = %d, cur_len = %d\n", len, cur_len);
 				return cur_len;
 			}
 			cur_buf += ret_len;
