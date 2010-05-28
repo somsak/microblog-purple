@@ -230,3 +230,7 @@ void mb_conn_error(MbConnData * data, PurpleConnectionError error, const char * 
 		purple_connection_error_reason(data->ma->gc, error, description);
 	}
 }
+
+gboolean mb_conn_max_retry_reach(MbConnData * data) {
+	return (gboolean)(data->retry >= data->max_retry);
+}

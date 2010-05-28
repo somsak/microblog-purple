@@ -72,6 +72,8 @@ static TwCmd * tw_cmd = NULL;
 
 PurplePlugin * prpl_plugin = NULL;
 
+void twitterim_remove_oauth(PurplePluginAction * action);
+
 static void plugin_init(PurplePlugin *plugin)
 {
 	purple_debug_info("twitterim", "plugin_init\n");
@@ -281,20 +283,23 @@ const char * twitterim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 GList * twitterim_actions(PurplePlugin *plugin, gpointer context)
 {
 	GList *m = NULL;
-	/*
 	PurplePluginAction *act;
 
-	act = purple_plugin_action_new(_("Set Facebook status..."), twitterim_set_status_cb);
+	act = purple_plugin_action_new(_("Remove access credential (Oauth Token)"), twitterim_remove_oauth);
 	m = g_list_append(m, act);
-	
-	act = purple_plugin_action_new(_("Search for buddies..."), twitterim_search_users);
-	m = g_list_append(m, act);
-	*/
-	
+
 	return m;
 }
 
+void twitterim_remove_oauth(PurplePluginAction * action) {
+	PurpleConnection * gc = action->context;
 
+	purple_account_remove_setting(gc->account, _mb_conf[TC_OAUTH_TOKEN].conf);
+	purple_account_remove_setting(gc->account, _mb_conf[TC_OAUTH_SECRET].conf);
+	purple_notify_formatted(gc->account, _("Access credential removed"),
+			_("Your access credential was removed"), NULL,
+			_("Access credential will be requested again at the next log-in time"), NULL, NULL);
+}
 
 PurplePluginProtocolInfo twitter_prpl_info = {
 	/* options */

@@ -158,6 +158,8 @@ extern MbConfig * _mb_conf;
 #define mc_def_int(name) ma->mb_conf[name].def_int
 #define mc_def_bool(name) ma->mb_conf[name].def_bool
 
+typedef unsigned long long int mb_status_t;
+
 typedef struct _MbAccount {
 	PurpleAccount *account;
 	PurpleConnection *gc;
@@ -165,12 +167,12 @@ typedef struct _MbAccount {
 	PurpleConnectionState state;
 	GSList * conn_data_list;
 	guint timeline_timer;
-	unsigned long long last_msg_id;
+	mb_status_t last_msg_id;
 	time_t last_msg_time;
 	GHashTable * sent_id_hash;
 	gchar * tag;
 	gint tag_pos;
-	unsigned long long reply_to_status_id;
+	mb_status_t reply_to_status_id;
 	MbCache * cache;
 	gint auth_type;
 	MbConfig * mb_conf;
@@ -205,7 +207,7 @@ typedef struct _TwitterBuddy {
 #define TW_MSGFLAG_DOTAG 0x2
 
 typedef struct _TwitterMsg {
-	unsigned long long id;
+	mb_status_t id;
 	gchar * avatar_url;
 	gchar * from;
 	gchar * msg_txt;
@@ -242,7 +244,7 @@ extern void twitter_get_user_host(const MbAccount * ta, char ** user_name, char 
 
 extern void twitter_fetch_new_messages(MbAccount * ta, TwitterTimeLineReq * tlr);
 extern gboolean twitter_fetch_all_new_messages(gpointer data);
-extern void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbAccount * ma);
+extern void * twitter_on_replying_message(gchar * proto, mb_status_t msg_id, MbAccount * ma);
 extern void twitter_favorite_message(MbAccount * ta, gchar * msg_id);
 extern void twitter_retweet_message(MbAccount * ta, gchar * msg_id);
 
