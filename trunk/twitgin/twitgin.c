@@ -193,7 +193,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
 			gchar * sender, *tmp;
 			gchar * name_to_reply;
-			unsigned long long msg_id = 0;
+			mb_status_t msg_id = 0;
 
 			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
 			purple_debug_info(DBGID, "conv = %p\n", conv);
@@ -285,6 +285,7 @@ gboolean twitgin_on_tweet_send(PurpleAccount * account, const char * who, char *
 	MbAccount * ma = account->gc->proto_data;
 	char * retval;
 	TwitterMsg twitter_msg;
+	gchar * username = NULL;
 
 	// Do not edit msg from these
 	if ((!is_twitter_conversation(conv)) || (flags & PURPLE_MESSAGE_SYSTEM) ) {
@@ -295,20 +296,34 @@ gboolean twitgin_on_tweet_send(PurpleAccount * account, const char * who, char *
 		if (flags & PURPLE_MESSAGE_SEND) {
 			purple_debug_info(DBGID, "data being displayed = %s, from = %s, flags = %x\n", (*msg), who, flags);
 			purple_debug_info(DBGID, "conv account = %s, name = %s, title = %s\n", purple_account_get_username(conv->account), conv->name, conv->title);
-			purple_debug_info(DBGID, "data not from myself\n");
+			purple_debug_info(DBGID, "sending text IM\n");
+
 			twitter_msg.id = 0;
 			twitter_msg.avatar_url = NULL;
-			twitter_msg.from = NULL; //< force the plug-in not displaying own name
+//			twitter_msg.from = NULL; //< force the plug-in not displaying own name
+			twitter_get_user_host(ma, &username, NULL);
+			twitter_msg.from = username;
 			twitter_msg.msg_txt = (*msg);
-			twitter_msg.msg_time = 0;
+			twitter_msg.msg_time = time(NULL);
 			twitter_msg.flag = 0;
 			twitter_msg.flag |= TW_MSGFLAG_DOTAG;
+
 			purple_debug_info(DBGID, "going to modify message\n");
 			retval = twitter_reformat_msg(ma, &twitter_msg, conv); //< do not reply to myself
 			purple_debug_info(DBGID, "new data = %s\n", retval);
-			g_free(*msg);
-			(*msg) = retval;
-			return FALSE;
+
+			purple_conv_im_write(PURPLE_CONV_IM(conv),
+					twitter_msg.from, retval,
+					PURPLE_MESSAGE_RECV | PURPLE_MESSAGE_TWITGIN | PURPLE_MESSAGE_RAW | PURPLE_MESSAGE_NO_LOG | PURPLE_MESSAGE_NICK,
+					twitter_msg.msg_time);
+			g_free(username);
+
+			// Discard the message, let the reformat message handle it
+			return TRUE;
+			//			g_free(*msg);
+			//			(*msg) = retval;
+			//			return FALSE;
+
 			/*
 		} else if( (flags & PURPLE_MESSAGE_SYSTEM) || (flags & PURPLE_MESSAGE_NO_LOG) ||
 				(flags & PURPLE_MESSAGE_ERROR))
@@ -427,15 +442,29 @@ static void twitter_update_link(MbAccount * ta, GString * msg, char sym, const c
 	g_free(user_name);
 }
 
+/**
+ * Build a link to status ID base on protocol number
+ *
+ * @param ma MbAccount in action
+ * @param msg message
+ * @param data generic data
+ */
+gchar * twitter_build_status_link(MbAccount * ma, const TwitterMsg * msg, gpointer data) {
+	if(strcmp(ma->account->protocol_id, "prpl-mbpurple-twitter") == 0) {
+		return g_strdup_printf("http://twitter.com/%s/status/%llu", msg->from, (unsigned long long)msg->id);
+	}
+	return NULL;
+}
+
 /*
  * Reformat text message and makes it looks nicer
  *
  * @retval newly allocated buffer of string, need to be freed after used
  */
-char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConversation * conv)
+char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConversation * conv)
 {
 	gchar * username = NULL;
-	const gchar * uri_txt = mb_get_uri_txt(ta->account);
+	const gchar * uri_txt = mb_get_uri_txt(ma->account);
 	gchar * fmt_txt = NULL;
 	gchar * linkify_txt = NULL;
 	gchar * fav_txt = NULL;
@@ -450,21 +479,21 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 	gboolean from_eq_username = FALSE;
 	//const char * embed_rt_txt = NULL;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
-	const gchar * account = (const gchar *)purple_account_get_username(ta->account);
+	const gchar * account = (const gchar *)purple_account_get_username(ma->account);
 
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 
-	twitter_get_user_host(ta, &username, NULL);
+	twitter_get_user_host(ma, &username, NULL);
 	output = g_string_new("");
 
 	// tag for the first thing
 	purple_debug_info(DBGID, "checking for tag\n");
-	if( (msg->flag & TW_MSGFLAG_DOTAG) && ta->tag ) {
-		purple_debug_info(DBGID, "do the tagging of message, for the tag %s\n", ta->tag);
-		if(ta->tag_pos == MB_TAG_PREFIX) {
-			src = g_strdup_printf("%s %s", ta->tag, msg->msg_txt);
+	if( (msg->flag & TW_MSGFLAG_DOTAG) && ma->tag ) {
+		purple_debug_info(DBGID, "do the tagging of message, for the tag %s\n", ma->tag);
+		if(ma->tag_pos == MB_TAG_PREFIX) {
+			src = g_strdup_printf("%s %s", ma->tag, msg->msg_txt);
 		} else {
-			src = g_strdup_printf("%s %s", msg->msg_txt, ta->tag);
+			src = g_strdup_printf("%s %s", msg->msg_txt, ma->tag);
 		}
 	} else {
 		purple_debug_info(DBGID, "not doing the tagging of message\n");
@@ -478,43 +507,48 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 			from_eq_username = TRUE;
 			purple_debug_info(DBGID, "self generated message, %s, %s\n", msg->from, username);
 		}
+	}
+	// switch colour for ourself
+	if(from_eq_username) {
+		name_color = g_strdup("darkred");
+	} else {
+		name_color = g_strdup("darkblue");
+	}
+	g_string_append_printf(output, "<font color=\"%s\"><b>", name_color);
+	//	self-filter is not possible now
+	//	if(strcmp(msg->from, username) != 0) {
+	uri_txt = mb_get_uri_txt(ma->account);
+	if(reply_link && conv && uri_txt) {
 		if(from_eq_username) {
-			name_color = g_strdup("darkred");
-		} else {
-			name_color = g_strdup("darkblue");
+			g_string_append_printf(output, "<i>");
 		}
-		g_string_append_printf(output, "<font color=\"%s\"><b>", name_color);
-		//	self-filter is not possible now
-		//	if(strcmp(msg->from, username) != 0) {
-		uri_txt = mb_get_uri_txt(ta->account);
-		if(reply_link && conv && uri_txt) {
-			if(from_eq_username) {
-				g_string_append_printf(output, "<i>");
-			}
-			/*
+		/*
 			purple_debug_info(DBGID, "current output = %s\n", output->str);
 			purple_debug_info(DBGID, "url text = %s\n", mb_get_uri_txt(ta->account));
 			purple_debug_info(DBGID, "conversation name = %s\n", conv_name);
 			purple_debug_info(DBGID, "from = %s\n", msg->from);
 			purple_debug_info(DBGID, "username = %s\n", username);
 			purple_debug_info(DBGID, "id = %llu\n", msg->id);
-			*/
-
+		 */
+		if(msg->id > 0) {
 #if PURPLE_VERSION_CHECK(2, 6, 0)
 			g_string_append_printf(output, "<a href=\"%s:///reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv->name, msg->from, account, msg->id, msg->from);
 #else
 			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv->name, msg->from, account, msg->id, msg->from);
 #endif
-			if(from_eq_username) {
-				g_string_append_printf(output, "</i>");
-			}
 		} else {
 			g_string_append_printf(output, "%s:", msg->from);
 		}
-		//	}
-		g_string_append_printf(output, "</b></font> ");
-		g_free(name_color);
+		if(from_eq_username) {
+			g_string_append_printf(output, "</i>");
+		}
+	} else {
+		g_string_append_printf(output, "%s:", msg->from);
 	}
+	//	}
+	g_string_append_printf(output, "</b></font> ");
+	g_free(name_color);
+
 
 	purple_debug_info(DBGID, "display msg = %s\n", output->str);
 	purple_debug_info(DBGID, "source msg = %s\n", src);
@@ -542,7 +576,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 			old_char = src[j];
 			src[j] = '\0';
 			name = &src[i];
-			twitter_update_link(ta, output, sym, name);
+			twitter_update_link(ma, output, sym, name);
 			src[j] = old_char;
 			i = j;
 			previous_char = src[i-1];
@@ -567,7 +601,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 
 	if(uri_txt) {
 		// display favorite link, if enabled
-		if(msg->id > 0 && purple_prefs_get_bool(TW_PREF_FAV_LINK)) {
+		if( (msg->id > 0) && purple_prefs_get_bool(TW_PREF_FAV_LINK)) {
 #if PURPLE_VERSION_CHECK(2, 6, 0)
 			fav_txt = g_strdup_printf(" <a href=\"%s:///fav?src=%s&account=%s&id=%llu\">*</a>", uri_txt, conv->name, account, msg->id);
 #else
@@ -576,7 +610,7 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 		}
 
 		// display rt link, if enabled
-		if(msg->id > 0 && purple_prefs_get_bool(TW_PREF_RT_LINK) && !msg->is_protected) {
+		if( (msg->id > 0) && purple_prefs_get_bool(TW_PREF_RT_LINK) && !msg->is_protected) {
 			// text for retweet url
 			//embed_rt_txt = purple_url_encode(msg->msg_txt);
 			//purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_rt_txt);
@@ -591,14 +625,15 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 		}
 	}
 	if(conv && (msg->msg_time > 0)) {
-		//display link to message status in the timestamp
-		if(purple_prefs_get_bool(TW_PREF_MS_LINK)) {
+		gchar * url = twitter_build_status_link(ma, msg, NULL);
 
+		//display link to message status in the timestamp
+		if((msg->id > 0) && purple_prefs_get_bool(TW_PREF_MS_LINK) && url) {
 			datetime_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\"><a href=\"http://twitter.com/%s/status/%llu\">%s</a></FONT> ", msg->from, msg->id, format_datetime(conv, msg->msg_time));
-		}
-		else {
+		} else {
 			datetime_txt = g_strdup_printf("<FONT COLOR=\"#cc0000\">%s</FONT> ", format_datetime(conv, msg->msg_time));
 		}
+		if(url) g_free(url);
 	}
 
 	displaying_txt = g_strdup_printf("%s%s%s%s", datetime_txt ? datetime_txt : "",
@@ -615,7 +650,6 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 
 	return displaying_txt;
 }
-
 
 #if PURPLE_VERSION_CHECK(2, 6, 0)
 static gboolean twitgin_url_clicked_cb(GtkIMHtml * imhtml, GtkIMHtmlLink * link)

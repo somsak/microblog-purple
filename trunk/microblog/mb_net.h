@@ -105,6 +105,14 @@ extern void mb_conn_error(MbConnData * data, PurpleConnectionError error, const 
  */
 extern gchar * mb_conn_url_unparse(MbConnData * data);
 
+/**
+ * Test if the maximu retry is already reached
+ *
+ * @param data MbConnData in action
+ * @return TRUE if max retry is reached, otherwise false
+ */
+extern gboolean mb_conn_max_retry_reach(MbConnData * data);
+
 #ifdef __cplusplus
 }
 #endif

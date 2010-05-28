@@ -94,7 +94,6 @@ gint twitter_oauth_request_finish(MbAccount * ma, MbConnData * data, gpointer us
 void twitter_verify_account(MbAccount * ma, gpointer data);
 gint twitter_verify_authen(MbConnData * conn_data, gpointer data, const char * error);
 
-
 /**
  * Convenient function to initialize new connection and set necessary value
  */
@@ -339,7 +338,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url, * user_is_protected;
 	gchar * from, * msg_txt, * avatar_url = NULL, *xml_str = NULL, * is_protected = NULL;
 	TwitterMsg * cur_msg = NULL;
-	unsigned long long cur_id;
+	mb_status_t cur_id;
 	time_t msg_time_t;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
@@ -648,10 +647,10 @@ MbAccount * mb_account_new(PurpleAccount * acct)
 
 	// Oauth stuff
 	mb_oauth_init(ma, mc_def(TC_CONSUMER_KEY), mc_def(TC_CONSUMER_SECRET));
-	oauth_token = purple_account_get_string(ma->account, mc_name(TC_OAUTH_TOKEN), mc_def(TC_OAUTH_TOKEN));
-	oauth_secret = purple_account_get_string(ma->account, mc_name(TC_OAUTH_SECRET), mc_def(TC_OAUTH_SECRET));
+	oauth_token = purple_account_get_string(ma->account, mc_name(TC_OAUTH_TOKEN), NULL);
+	oauth_secret = purple_account_get_string(ma->account, mc_name(TC_OAUTH_SECRET), NULL);
 
-	if(oauth_token && oauth_secret) {
+	if(oauth_token && oauth_secret && (strlen(oauth_token) > 0) && (strlen(oauth_secret) > 0)) {
 		mb_oauth_set_token(ma, oauth_token, oauth_secret);
 	}
 
@@ -675,7 +674,7 @@ static void mb_close_connection(gpointer key, gpointer value, gpointer user_data
 static gboolean foreach_remove_expire_idhash(gpointer key, gpointer val, gpointer userdata)
 {
 	MbAccount * ma = (MbAccount *)userdata;
-	unsigned long long msg_id;
+	mb_status_t msg_id;
 
 	msg_id = strtoull(key, NULL, 10);
 	if(ma->last_msg_id >= msg_id) {
@@ -773,7 +772,7 @@ void twitter_request_access(MbAccount * ma)
 			// If oauth access request is not done yet, do it now
 			oauth_token = purple_account_get_string(ma->account, mc_name(TC_OAUTH_TOKEN), mc_def(TC_OAUTH_TOKEN));
 			oauth_secret = purple_account_get_string(ma->account, mc_name(TC_OAUTH_SECRET), mc_def(TC_OAUTH_SECRET));
-			if(!oauth_token || !oauth_secret) {
+			if(!oauth_token || !oauth_secret || (strlen(oauth_token) <= 0) || (strlen(oauth_secret) <= 0)) {
 				mb_oauth_init(ma, mc_def(TC_CONSUMER_KEY), mc_def(TC_CONSUMER_SECRET));
 				path = purple_account_get_string(ma->account, mc_name(TC_REQUEST_TOKEN_URL), mc_def(TC_REQUEST_TOKEN_URL));
 				mb_oauth_request_token(ma, path, HTTP_GET, twitter_request_authorize, NULL);
@@ -986,13 +985,14 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char *
 {
 	MbAccount * ma = conn_data->ma;
 	MbHttpData * response = conn_data->response;
-	gchar * id_str = NULL;
+	gchar * id_str = NULL, * who = (gchar *)data;
 	xmlnode * top, *id_node;
 	
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 
 	if(error) {
 		// don't need to handle network error
+		g_free(who);
 		return -1;
 	}
 	
@@ -1002,9 +1002,16 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char *
 			purple_debug_info(DBGID, "response = %s\n", response->content->str);
 		}
 		//purple_debug_info(DBGID, "http data = #%s#\n", response->content->str);
+		if(mb_conn_max_retry_reach(conn_data)) {
+			serv_got_im(ma->gc, who, _("error sending status"), PURPLE_MESSAGE_SYSTEM, time(NULL));
+		}
+		g_free(who);
 		return -1;
 	}
 	
+	// We don't need who from this point on
+	g_free(who);
+
 	if(!purple_account_get_bool(ma->account, mc_name(TC_HIDE_SELF), mc_def_bool(TC_HIDE_SELF))) {
 		return 0;
 	}
@@ -1048,7 +1055,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	gint msg_len;
 	gchar * path;
 	
-	purple_debug_info(DBGID, "send_im\n");
+	purple_debug_info(DBGID, "%s called, who = %s, message = %s, flag = %d\n", __FUNCTION__, who, message, flags);
 
 	// prepare message to send
 	tmp_msg_txt = g_strdup(g_strchomp(purple_markup_strip_html(message)));
@@ -1070,6 +1077,7 @@ int twitter_send_im(PurpleConnection *gc, const gchar *who, const gchar *message
 	// connection
 	path = g_strdup(purple_account_get_string(ma->account, mc_name(TC_STATUS_UPDATE), mc_def(TC_STATUS_UPDATE)));
 	conn_data = twitter_init_connection(ma, HTTP_POST, path, twitter_send_im_handler);
+	conn_data->handler_data = g_strdup(who);
 
 	if(ma->reply_to_status_id > 0) {
 		int i;
@@ -1134,7 +1142,7 @@ void twitter_set_status(PurpleAccount *acct, PurpleStatus *status)
 
 }
 
-void * twitter_on_replying_message(gchar * proto, unsigned long long msg_id, MbAccount * ma)
+void * twitter_on_replying_message(gchar * proto, mb_status_t msg_id, MbAccount * ma)
 {
 	purple_debug_info(DBGID, "%s called!\n", __FUNCTION__);
 	purple_debug_info(DBGID, "setting reply_to_id (was %llu) to %llu\n", ma->reply_to_status_id, msg_id);
