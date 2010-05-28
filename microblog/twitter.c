@@ -407,7 +407,7 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 			
 			purple_debug_info(DBGID, "from = %s, msg = %s\n", from, msg_txt);
 			cur_msg->id = cur_id;
-			cur_msg->from = from; //< actually we don't need this for now
+			cur_msg->from = from;
 			cur_msg->avatar_url = avatar_url; //< actually we don't need this for now
 			cur_msg->msg_time = msg_time_t;
 			if(is_protected && (strcmp(is_protected, "false") == 0) ) {
@@ -464,7 +464,7 @@ gint twitter_fetch_new_messages_handler(MbConnData * conn_data, gpointer data, c
 	}
 	if(response->status != HTTP_OK) {
 		twitter_free_tlr(tlr);
-		if(response->status == HTTP_BAD_REQUEST) {
+		if((response->status == HTTP_BAD_REQUEST) || (response->status == HTTP_UNAUTHORIZE)) {
 			// rate limit exceed?
 			if(response->content_len > 0) {
 				gchar * error_str = NULL;
@@ -996,7 +996,7 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char *
 		return -1;
 	}
 	
-	if(response->status != 200) {
+	if(response->status != HTTP_OK) {
 		purple_debug_info(DBGID, "http error\n");
 		if(response->content_len > 0) {
 			purple_debug_info(DBGID, "response = %s\n", response->content->str);

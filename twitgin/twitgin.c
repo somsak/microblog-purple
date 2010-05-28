@@ -172,7 +172,7 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 		purple_debug_info(DBGID, "no src specified\n");
 		switch(proto_id) {
 			case TWITTER_PROTO :
-				src = "twitter.com";
+				src = "api.twitter.com";
 				break;
 			case IDENTICA_PROTO :
 				src = "identi.ca";
@@ -501,9 +501,9 @@ char * twitter_reformat_msg(MbAccount * ta, const TwitterMsg * msg, PurpleConver
 			*/
 
 #if PURPLE_VERSION_CHECK(2, 6, 0)
-			g_string_append_printf(output, "<a href=\"%s:///reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv->name, msg->from, username, msg->id, msg->from);
+			g_string_append_printf(output, "<a href=\"%s:///reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv->name, msg->from, account, msg->id, msg->from);
 #else
-			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv->name, msg->from, username, msg->id, msg->from);
+			g_string_append_printf(output, "<a href=\"%s:reply?src=%s&to=%s&account=%s&id=%llu\">%s</a>:", uri_txt, conv->name, msg->from, account, msg->id, msg->from);
 #endif
 			if(from_eq_username) {
 				g_string_append_printf(output, "</i>");
