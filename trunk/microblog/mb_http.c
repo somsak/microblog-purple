@@ -356,10 +356,12 @@ void mb_http_data_add_param(MbHttpData * data, const gchar * key, const gchar * 
 	MbHttpParam * p = mb_http_param_new();
 
 	purple_debug_info(MB_HTTPID, "adding parameter %s = %s\n", key, value);
-	p->key = g_strdup(purple_url_encode(key));
-	p->value = g_strdup(purple_url_encode(value));
+	//p->key = g_strdup(purple_url_encode(key));
+	p->key = g_strdup(key);
+	//p->value = g_strdup(purple_url_encode(value));
+	p->value = g_strdup(value);
 	data->params = g_list_append(data->params, p);
-	data->params_len += strlen(p->key) + strlen(p->value) + 3; //< length of key + value + "& or ?"
+	data->params_len += (5*strlen(p->key) + 5*strlen(p->value) + 5); //< length of key + value + "& or ?", x3 in case all character must be url_encode
 }
 
 void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value)
@@ -397,24 +399,25 @@ const gchar * mb_http_data_find_param(MbHttpData * data, const gchar * key)
 gboolean mb_http_data_rm_param(MbHttpData * data, const gchar * key)
 {
 	MbHttpParam * p;
-	GList *it, *found = NULL;
+	GList *it = NULL;
+	gboolean retval = FALSE;
 	
-	for(it = g_list_first(data->params); it; it = g_list_next(it)) {
+	purple_debug_info(MB_HTTPID, "%s called, key = %s\n", __FUNCTION__, key);
+	it = g_list_first(data->params);
+	while(it) {
 		p = it->data;
 		if(strcmp(p->key, key) == 0) {
-			found = it;
-			break;
+			p = it->data;
+			data->params_len -= (5*strlen(p->key) + 5*strlen(p->value) - 5);
+			mb_http_param_free(p);
+			data->params = g_list_delete_link(data->params, it);
+			it = g_list_first(data->params);
+			retval = TRUE;
+		} else {
+			it = g_list_next(it);
 		}
 	}
-	if(found) {
-		p = found->data;
-		data->params_len -= strlen(p->key) + strlen(p->value) - 2;
-		data->params = g_list_delete_link(data->params, found);
-		mb_http_param_free(p);
-		return TRUE;
-	} else {
-		return FALSE;
-	}
+	return retval;
 }
 
 /*
@@ -442,7 +445,7 @@ void mb_http_data_sort_param(MbHttpData * data) {
 	data->params = g_list_sort(data->params, _string_compare_key);
 }
 
-int mb_http_data_encode_param(MbHttpData *data, char * buf, int len)
+int mb_http_data_encode_param(MbHttpData *data, char * buf, int len, gboolean url_encode)
 {
 	GList * it;
 	MbHttpParam * p;
@@ -451,10 +454,18 @@ int mb_http_data_encode_param(MbHttpData *data, char * buf, int len)
 
 	purple_debug_info(MB_HTTPID, "%s called, len = %d\n", __FUNCTION__, len);
 	if(data->params) {
+		gchar * encoded_val = NULL;
 		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
 			p = it->data;
 			purple_debug_info(MB_HTTPID, "%s: key = %s, value = %s\n", __FUNCTION__, p->key, p->value);
-			ret_len = snprintf(cur_buf, len - cur_len, "%s=%s&", p->key, p->value);
+			// Only encode value here, so _ in key will not be translated
+			if(url_encode) {
+				encoded_val = g_strdup(purple_url_encode(p->value));
+			} else {
+				encoded_val = g_strdup(p->value);
+			}
+			ret_len = snprintf(cur_buf, len - cur_len, "%s=%s&", p->key, encoded_val);
+			g_free(encoded_val);
 			purple_debug_info(MB_HTTPID, "len = %d, cur_len = %d, cur_buf = ##%s##\n", len, cur_len, cur_buf);
 			cur_len += ret_len;
 			if(cur_len >= len) {
@@ -534,7 +545,7 @@ void mb_http_data_prepare_write(MbHttpData * data)
 			// Special case
 			// put all parameters in content in this case
 			param_content = g_malloc0(data->params_len + 1);
-			data->content_len = mb_http_data_encode_param(data, param_content, data->params_len);
+			data->content_len = mb_http_data_encode_param(data, param_content, data->params_len, TRUE);
 			// XXX: in this case, abandon what content was
 			g_string_free(data->content, TRUE);
 			data->content = g_string_new(param_content);
@@ -543,7 +554,7 @@ void mb_http_data_prepare_write(MbHttpData * data)
 			// put all parameters after path
 			(*cur_packet) = '?';
 			cur_packet++;
-			len = mb_http_data_encode_param(data, cur_packet,  packet_len - (cur_packet - data->packet));
+			len = mb_http_data_encode_param(data, cur_packet,  packet_len - (cur_packet - data->packet), TRUE);
 			cur_packet += len;
 		}
 	}
@@ -942,7 +953,8 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	mb_http_data_free(hdata);
 	hdata =mb_http_data_new();
 
-	fp = fopen("input1-2.xml", "r");
+
+	fp = fopen("test_input.xml", "r");
 	while(!feof(fp)) {
 		retval = fread(buf, sizeof(char), sizeof(buf), fp);
 		mb_http_data_post_read(hdata, buf, retval);
@@ -951,11 +963,12 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	printf("http status = %d\n", hdata->status);
 	g_hash_table_foreach(hdata->headers, print_hash_value, NULL);
 	printf("http content length = %d\n", hdata->content_len);
-	printf("http content = %s\n", hdata->content->str);
+	if(hdata->content_len > 0)
+		printf("http content = %s\n", hdata->content->str);
 	
 	// test again, after truncated
 	mb_http_data_truncate(hdata);
-	fp = fopen("input1-2.xml", "r");
+	fp = fopen("test_input.xml", "r");
 	while(!feof(fp)) {
 		retval = fread(buf, sizeof(char), sizeof(buf), fp);
 		mb_http_data_post_read(hdata, buf, retval);
@@ -965,9 +978,10 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	printf("http status = %d\n", hdata->status);
 	g_hash_table_foreach(hdata->headers, print_hash_value, NULL);
 	printf("http content length = %d\n", hdata->content_len);
-	printf("http content = %s\n", hdata->content->str);
-	mb_http_data_free(hdata);
+	if(hdata->content_len > 0)
+		printf("http content = %s\n", hdata->content->str);
 
+	mb_http_data_free(hdata);
 	g_mem_profile();
 	
 	return 0;
