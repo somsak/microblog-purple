@@ -54,8 +54,13 @@ Section "MainSection" SEC01
     ;Check for pidgin installation
     Call GetPidginInstPath
     
+	; Removing deprecated file
+	Delete "$PidginDir\protocols\16\laconica.png"
+	Delete "$PidginDir\protocols\22\laconica.png"
+	Delete "$PidginDir\protocols\48\laconica.png"
+	
     SetOverwrite try
-    
+	
 	; Icon
 	SetOutPath "$PidginDir\pixmaps\pidgin"
 	File "/oname=protocols\16\twitter.png" "microblog\twitter16.png"
@@ -64,9 +69,9 @@ Section "MainSection" SEC01
 	File "/oname=protocols\16\identica.png" "microblog\identica16.png"
 	File "/oname=protocols\22\identica.png" "microblog\identica22.png"
 	File "/oname=protocols\48\identica.png" "microblog\identica48.png"
-	File "/oname=protocols\16\laconica.png" "microblog\laconica16.png"
-	File "/oname=protocols\22\laconica.png" "microblog\laconica22.png"
-	File "/oname=protocols\48\laconica.png" "microblog\laconica48.png"
+	File "/oname=protocols\16\statusnet.png" "microblog\statusnet16.png"
+	File "/oname=protocols\22\statusnet.png" "microblog\statusnet22.png"
+	File "/oname=protocols\48\statusnet.png" "microblog\statusnet48.png"
 
 	;CA Certs
 	SetOverwrite try
@@ -77,22 +82,23 @@ Section "MainSection" SEC01
     SetOverwrite try
 	copy:
 		ClearErrors
-		Delete "$PidginDir\plugins\libtwitter.dll"
+		;Delete "$PidginDir\plugins\libtwitter.dll"
+		Delete "$PidginDir\plugins\liblaconica.dll"
 		IfErrors dllbusy
 		SetOutPath "$PidginDir\plugins"
 		File "microblog\libtwitter.dll"
 		File "microblog\libidentica.dll"
-		File "microblog\liblaconica.dll"
+		File "microblog\libstatusnet.dll"
 		File "twitgin\twitgin.dll"
 		;SetOutPath "$PidginDir"
 		;File "microblog\mbchprpl.exe"
 		writeUninstaller "$PidginDir\pidgin-microblog-uninst.exe"
-		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}  - Twitter support for Pidgin"
+		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}  - Microblogging support for Pidgin"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
 		WriteRegStr "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}" "UninstallString" "$PidginDir\pidgin-microblog-uninst.exe"
 		Goto after_copy
 	dllbusy:
-		MessageBox MB_RETRYCANCEL "libtwitter.dll is busy. Please close Pidgin (including tray icon) and try again" IDCANCEL cancel
+		MessageBox MB_RETRYCANCEL "DLLs are busy. Please close Pidgin (including tray icon) and try again" IDCANCEL cancel
 		Goto copy
 	cancel:
 		Abort "Installation of pidgin-microblog aborted"
@@ -114,18 +120,20 @@ Section "Uninstall"
 		Delete "$PidginDir\protocols\16\identica.png"
 		Delete "$PidginDir\protocols\22\identica.png"
 		Delete "$PidginDir\protocols\48\identica.png"
-		Delete "$PidginDir\protocols\16\laconica.png"
-		Delete "$PidginDir\protocols\22\laconica.png"
-		Delete "$PidginDir\protocols\48\laconica.png"
+		Delete "$PidginDir\protocols\16\statusnet.png"
+		Delete "$PidginDir\protocols\22\statusnet.png"
+		Delete "$PidginDir\protocols\48\statusnet.png"
 		; main DLLs
 		Delete "$PidginDir\plugins\libtwitter.dll"
+		Delete "$PidginDir\plugins\libidentica.dll"
+		Delete "$PidginDir\plugins\libstatusnet.dll"
 		Delete "$PidginDir\plugins\twitgin.dll"
 		IfErrors dllbusy
 		Delete "$PidginDir\pidgin-microblog-uninst.exe"
 		DeleteRegKey "${PRODUCT_UNINST_ROOT_KEY}" "${PRODUCT_UNINST_KEY}"
 		goto afteruninstall
 	dllbusy: 
-		MessageBox MB_RETRYCANCEL "libtwitter.dll is busy. Please close Pidgin (including tray icon) and try again" IDCANCEL cancel
+		MessageBox MB_RETRYCANCEL "DLLs are busy. Please close Pidgin (including tray icon) and try again" IDCANCEL cancel
 		Goto uninstall
 	cancel:
 		Abort "Uninstall of pidgin-microblog aborted"
