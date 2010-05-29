@@ -992,7 +992,9 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char *
 
 	if(error) {
 		// don't need to handle network error
-		g_free(who);
+		if(mb_conn_max_retry_reach(conn_data)) {
+			g_free(who);
+		}
 		return -1;
 	}
 	
@@ -1004,8 +1006,8 @@ gint twitter_send_im_handler(MbConnData * conn_data, gpointer data, const char *
 		//purple_debug_info(DBGID, "http data = #%s#\n", response->content->str);
 		if(mb_conn_max_retry_reach(conn_data)) {
 			serv_got_im(ma->gc, who, _("error sending status"), PURPLE_MESSAGE_SYSTEM, time(NULL));
+			g_free(who);
 		}
-		g_free(who);
 		return -1;
 	}
 	

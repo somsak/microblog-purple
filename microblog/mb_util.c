@@ -43,6 +43,7 @@
 #include <accountopt.h>
 #include <xmlnode.h>
 #include <version.h>
+#include <util.h>
 
 #ifdef _WIN32
 #	include <win32dep.h>
@@ -53,7 +54,6 @@
 #endif
 
 #define DBGID "mb_util"
-
 
 static const char * month_abb_names[] = {
 	"Jan",
@@ -159,7 +159,7 @@ time_t mb_mktime(char * time_str)
 	// what's left is year
 	msg_time.tm_year = strtoul(cur, NULL, 10) - 1900;
 
-#ifdef UTEST
+//#ifdef UTEST
 	purple_debug_info(DBGID, "msg_time.tm_wday = %d\n", msg_time.tm_wday);
 	purple_debug_info(DBGID, "msg_time.tm_mday = %d\n", msg_time.tm_mday);
 	purple_debug_info(DBGID, "msg_time.tm_mon = %d\n", msg_time.tm_mon);
@@ -170,13 +170,17 @@ time_t mb_mktime(char * time_str)
 	purple_debug_info(DBGID, "cur_timezone = %d\n", cur_timezone);
 	purple_debug_info(DBGID, "msg_time.tm_isdst = %d\n", msg_time.tm_isdst);
 	purple_debug_info(DBGID, "finished\n");
-#endif
+//#endif
+
+#ifndef __WIN32
 	// Always return GMT time (not sure subtracting is right, but that's ultimately
 	// irrelevant for twitter at least, twitter.com always returns +0000)
-#ifndef __WIN32
 	retval = timegm(&msg_time) - cur_timezone;
 #else
-	retval = mktime(&msg_time) - cur_timezone;
+	// Seems that on Windows mktime always return the correct date/time according to timezone
+	// Convert back to GMT first then convert to local time
+//	retval = purple_time_build(msg_time.tm_year + 1900, msg_time.tm_mon, msg_time.tm_mday, msg_time.tm_hour, msg_time.tm_min, msg_time.tm_sec);
+	retval = (mktime(&msg_time) - cur_timezone) + wpurple_get_tz_offset();
 #endif
 	purple_debug_info(DBGID, "final msg_time = %ld\n", retval);
 	return retval;

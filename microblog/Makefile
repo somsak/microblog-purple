@@ -6,8 +6,8 @@ all: build
 
 include ../global.mak
 
-TARGETS = liboldtwitter$(PLUGIN_SUFFIX) libtwitter$(PLUGIN_SUFFIX) libidentica$(PLUGIN_SUFFIX) liblaconica$(PLUGIN_SUFFIX)
-PRPLS = twitter identica laconica
+TARGETS = liboldtwitter$(PLUGIN_SUFFIX) libtwitter$(PLUGIN_SUFFIX) libidentica$(PLUGIN_SUFFIX) libstatusnet$(PLUGIN_SUFFIX)	
+PRPLS = twitter identica statusnet
 
 #PURPLE_CFLAGS = $(shell pkg-config --cflags purple)
 #PURPLE_LIBS = $(shell pkg-config --libs purple)
@@ -17,7 +17,6 @@ LD = $(CC)
 
 OLDTWITTER_C_SRC = dummy_twitterim.c
 OLDTWITTER_OBJ = $(OLDTWITTER_C_SRC:%.c=%.o)
-
 
 TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c mb_cache.c twitterim.c tw_util.c tw_cmd.c mb_oauth.c
 TWITTER_H_SRC = twitter.h mb_util.h mb_http.h mb_net.h tw_cmd.h mb_cache.h mb_oauth.h
@@ -29,27 +28,33 @@ IDENTICA_H_SRC = $(TWITTER_H_SRC)
 IDENTICA_IMG = identica16.png identica22.png identica48.png
 IDENTICA_OBJ = $(IDENTICA_C_SRC:%.c=%.o)
 
-laconica.o: identica.c
-	$(COMPILE.c) $(OUTPUT_OPTION) -DLACONICA $<
+statusnet.o: identica.c
+	$(COMPILE.c) $(OUTPUT_OPTION) -DSTATUSNET $<
 
-LACONICA_C_SRC = mb_util.c mb_http.c mb_net.c mb_cache.c twitter.c tw_util.c mb_oauth.c
-LACONICA_H_SRC = $(TWITTER_H_SRC)
-LACONICA_IMG = laconica16.png laconica22.png laconica48.png
-LACONICA_OBJ = $(LACONICA_C_SRC:%.c=%.o) laconica.o
+STATUSNET_C_SRC = mb_util.c mb_http.c mb_net.c mb_cache.c twitter.c tw_util.c mb_oauth.c
+STATUSNET_H_SRC = $(TWITTER_H_SRC)
+STATUSNET_IMG = statusnet16.png statusnet22.png statusnet48.png
+STATUSNET_OBJ = $(STATUSNET_C_SRC:%.c=%.o) statusnet.o
 
 DISTFILES = $(OLDTWITTER_C_SRC) \
 $(TWITTER_C_SRC) $(TWITTER_H_SRC) $(TWITTER_IMG) \
 $(IDENTICA_H_SRC) $(IDENTICA_C_SRC) $(IDENTICA_IMG) \
-$(LACONICA_H_SRC) $(LACONICA_C_SRC) $(LACONICA_IMG) \
+$(STATUSNET_H_SRC) $(STATUSNET_C_SRC) $(STATUSNET_IMG) \
 Makefile
 
-OBJECTS = $(OLDTWITTER_OBJ) $(TWITTER_OBJ) $(IDENTICA_OBJ) $(LACONICA_OBJ)
+OBJECTS = $(OLDTWITTER_OBJ) $(TWITTER_OBJ) $(IDENTICA_OBJ) $(STATUSNET_OBJ)
 
 .PHONY: all clean install uninstall
 
 build: $(TARGETS)
 
 install: $(TARGETS)
+	# remove old plug-in
+	rm -f $(PURPLE_PLUGIN_DIR)/liblaconica$(PLUGIN_SUFFIX)
+	for dir in 16 22 48; do \
+		rm -f $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/laconica.png; \
+	done
+	# install plug-in
 	for prpl in $(PRPLS); do \
 		rm -f $(PURPLE_PLUGIN_DIR)/lib$$prpl$(PLUGIN_SUFFIX); \
 	done
@@ -69,7 +74,7 @@ uninstall:
 	done
 	rm -f $(PURPLE_PLUGIN_DIR)/liboldtwitter$(PLUGIN_SUFFIX)
 	for dir in 16 22 48; do \
-		rm -f $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/{twitter,identica,laconica}.png ; \
+		rm -f $(PURPLE_PROTOCOL_PIXMAP_DIR)/$$dir/{twitter,identica,statusnet}.png ; \
 	done
 
 
@@ -85,8 +90,8 @@ libtwitter$(PLUGIN_SUFFIX): $(TWITTER_OBJ)
 libidentica$(PLUGIN_SUFFIX): $(IDENTICA_OBJ)
 	$(LD) $(LDFLAGS) -shared $(IDENTICA_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
 
-liblaconica$(PLUGIN_SUFFIX): $(LACONICA_OBJ)
-	$(LD) $(LDFLAGS) -shared $(LACONICA_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
+libstatusnet$(PLUGIN_SUFFIX): $(STATUSNET_OBJ)
+	$(LD) $(LDFLAGS) -shared $(STATUSNET_OBJ) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@
 
 mbchprpl$(EXE_SUFFIX): mbchprpl.o
 	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@ 
@@ -94,6 +99,9 @@ mbchprpl$(EXE_SUFFIX): mbchprpl.o
 xml_tester$(EXE_SUFFIX): xml_tester.c
 	$(CC) $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@ 
 
+test_mb_http$(EXE_SUFFIX): mb_http.c
+	$(CC) $(CFLAGS) -DUTEST $< $(LIB_PATHS) $(LIBS) $(LDFLAGS) $(PURPLE_LIBS) $(DLL_LD_FLAGS) -o $@ 	
+	
 mb_http.o: mb_http.c mb_http.h twitter.h Makefile
 mb_net.o: mb_net.c mb_net.h mb_http.h twitter.h Makefile
 mb_util.o: mb_util.c twitter.h Makefile

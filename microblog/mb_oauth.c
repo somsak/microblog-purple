@@ -244,7 +244,7 @@ static gchar * mb_oauth_gen_sigbase(MbHttpData * data, const gchar * url, int ty
 
 	// Concatenate all parameter
 	param_str = g_malloc(data->params_len + 1);
-	mb_http_data_encode_param(data, param_str, data->params_len);
+	mb_http_data_encode_param(data, param_str, data->params_len, TRUE);
     purple_debug_info(DBGID, "final merged param string = %s\n", param_str);
 
     encoded_url = g_strdup(purple_url_encode(url));
@@ -378,12 +378,11 @@ void mb_oauth_reset_nonce(MbOauth * oauth, struct _MbHttpData * http_data, const
 	gchar * nonce, * secret, * sig_base, * signature;
 
 	mb_http_data_rm_param(http_data, "oauth_nonce");
+	mb_http_data_rm_param(http_data, "oauth_signature");
 
 	nonce = mb_oauth_gen_nonce();
 	mb_http_data_add_param(http_data, "oauth_nonce", nonce);
 	g_free(nonce);
-
-	mb_http_data_rm_param(http_data, "oauth-signature");
 
 	// Re-Create signature
 	sig_base = mb_oauth_gen_sigbase(http_data, full_url, type);

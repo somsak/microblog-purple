@@ -63,7 +63,7 @@
 
 #include "twitter.h"
 
-#ifndef LACONICA
+#ifndef STATUSNET
 
 #define LOG_ID "idcim"
 #define _USER_GROUP "Identi.ca"
@@ -73,11 +73,11 @@
 
 #else
 
-#define LOG_ID "lcim"
-#define _FRIENDS_USER "laconi.ca"
-#define _PUBLIC_USER "lcpublic"
-#define _USER_USER "lcuser"
-#define _USER_GROUP "Laconi.ca"
+#define LOG_ID "status.net"
+#define _FRIENDS_USER "status.net"
+#define _PUBLIC_USER "Public"
+#define _USER_USER "Personal"
+#define _USER_GROUP "Status.net"
 
 
 #endif
@@ -107,7 +107,7 @@ static void plugin_destroy(PurplePlugin * plugin)
 gboolean plugin_load(PurplePlugin *plugin)
 {
 	PurpleAccountOption *option;
-#ifdef LACONICA
+#ifdef STATUSNET
 	PurpleAccountUserSplit * split;
 #endif
 	PurplePluginInfo *info = plugin->info;
@@ -140,13 +140,13 @@ gboolean plugin_load(PurplePlugin *plugin)
 	option = purple_account_option_int_new(_("Maximum number of retry"), _mb_conf[TC_GLOBAL_RETRY].conf, _mb_conf[TC_GLOBAL_RETRY].def_int);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 
-#ifndef LACONICA
+#ifndef STATUSNET
 	_mb_conf[TC_HOST].conf = g_strdup("hostname");
 	_mb_conf[TC_HOST].def_str = g_strdup("identi.ca");
 	option = purple_account_option_string_new(_("Identi.ca hostname"), _mb_conf[TC_HOST].conf, _mb_conf[TC_HOST].def_str);
 	prpl_info->protocol_options = g_list_append(prpl_info->protocol_options, option);
 #else
-	split = purple_account_user_split_new(_("Server"), "laconi.ca", '@');
+	split = purple_account_user_split_new(_("Server"), "status.net", '@');
 	prpl_info->user_splits = g_list_append(prpl_info->user_splits, split);
 	
 #endif
@@ -216,10 +216,10 @@ gboolean plugin_unload(PurplePlugin *plugin)
 
 const char * idcim_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 {
-#ifndef LACONICA
+#ifndef STATUSNET
 	return "identica";
 #else
-	return "laconica";
+	return "statusnet";
 #endif
 }
 
@@ -334,20 +334,20 @@ static PurplePluginInfo info = {
 	0, /* flags */
 	NULL, /* dependencies */
 	PURPLE_PRIORITY_DEFAULT, /* priority */
-#ifndef LACONICA
+#ifndef STATUSNET
 	"prpl-mbpurple-identica", /* id */
 	"Identi.ca", /* name */
 #else
-	"prpl-mbpurple-laconica", /* id */
-	"Laconi.ca", /* name */
+	"prpl-mbpurple-laconica", /* id */ //< Keep the old name for compatibility sake
+	"Status.net", /* name */
 #endif
 	MBPURPLE_VERSION, /* version */
-#ifndef LACONICA
+#ifndef STATUSNET
 	"Identi.ca data feeder", /* summary */
 	"Identi.ca data feeder", /* description */
 #else
-	"Laconi.ca data feeder", /* summary */
-	"Laconi.ca data feeder", /* description */
+	"Status.net data feeder", /* summary */
+	"Status.net data feeder", /* description */
 #endif
 	"Somsak Sriprayoonsakul <somsaks@gmail.com>", /* author */
 	"http://microblog-purple.googlecode.com/", /* homepage */
@@ -364,7 +364,7 @@ static PurplePluginInfo info = {
 	NULL
 };
 
-#ifndef LACONICA
+#ifndef STATUSNET
 PURPLE_INIT_PLUGIN(idcim, plugin_init, info);
 #else
 PURPLE_INIT_PLUGIN(lcim, plugin_init, info);

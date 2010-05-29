@@ -290,8 +290,9 @@ extern void mb_http_data_sort_param(MbHttpData * data);
  * @param data MbHttpData in action
  * @param buf buffer
  * @param len maximum length of buffer
+ * @param url_encode if TRUE, do url_encode before creating string, otherwise just leave the value as-is
  */
-extern int mb_http_data_encode_param(MbHttpData *data, char * buf, int len);
+extern int mb_http_data_encode_param(MbHttpData *data, char * buf, int len, gboolean url_encode);
 
 /**
  * Decode CGI parameter into a list of params, stored into data->params
