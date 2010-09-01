@@ -53,7 +53,7 @@
 
 #include "mb_net.h"
 #include "mb_util.h"
-#include "mb_cache_util.h"
+#include "mb_cache.h"
 
 #ifdef _WIN32
 #	include <win32dep.h>

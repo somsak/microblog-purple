@@ -64,7 +64,7 @@
 #endif
 
 #include "twitter.h"
-#include "mb_cache_util.h"
+#include "mb_cache.h"
 
 MbConfig * _mb_conf = NULL;
 
@@ -119,10 +119,12 @@ gboolean plugin_load(PurplePlugin *plugin)
 	kv->value = g_strdup((char *)mb_auth_types_str[MB_OAUTH]);
 	auth_type_list = g_list_append(auth_type_list, kv);
 
+	/*
 	kv = g_new(PurpleKeyValuePair, 1);
 	kv->key = g_strdup("XAuth");
 	kv->value = g_strdup((char *)mb_auth_types_str[MB_XAUTH]);
 	auth_type_list = g_list_append(auth_type_list, kv);
+	*/
 
 	kv = g_new(PurpleKeyValuePair, 1);
 	kv->key = g_strdup("HTTP Basic Authentication (old method)");
@@ -212,8 +214,9 @@ gboolean plugin_load(PurplePlugin *plugin)
 	_mb_conf[TC_USER_GROUP].def_str = g_strdup("Twitter");
 
 	// OAuth stuff
-	_mb_conf[TC_CONSUMER_KEY].def_str = g_strdup("PCWAdQpyyR12ezp2fVwEhw");
-	_mb_conf[TC_CONSUMER_SECRET].def_str = g_strdup("EveLmCXJIg2R7BTCpm6OWV8YyX49nI0pxnYXh7JMvDg");
+	
+	_mb_conf[TC_CONSUMER_KEY].def_str = g_strdup(purple_prefs_get_string("TC_CONSUMER_KEY") ? purple_prefs_get_string("TC_CONSUMER_KEY") : "PCWAdQpyyR12ezp2fVwEhw");
+	_mb_conf[TC_CONSUMER_SECRET].def_str = g_strdup(purple_prefs_get_string("TC_CONSUMER_KEY") ? purple_prefs_get_string("TC_CONSUMER_KEY") : "EveLmCXJIg2R7BTCpm6OWV8YyX49nI0pxnYXh7JMvDg");
 
 	_mb_conf[TC_REQUEST_TOKEN_URL].conf = g_strdup("twitter_oauth_request_token_url");
 	_mb_conf[TC_REQUEST_TOKEN_URL].def_str = g_strdup("/oauth/request_token");
