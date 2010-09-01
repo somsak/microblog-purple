@@ -19,7 +19,7 @@ OLDTWITTER_C_SRC = dummy_twitterim.c
 OLDTWITTER_OBJ = $(OLDTWITTER_C_SRC:%.c=%.o)
 
 TWITTER_C_SRC = twitter.c mb_util.c mb_http.c mb_net.c mb_cache.c twitterim.c tw_util.c tw_cmd.c mb_oauth.c
-TWITTER_H_SRC = twitter.h mb_util.h mb_http.h mb_net.h tw_cmd.h mb_cache.h mb_oauth.h mb_cache.h mb_cache_util.h
+TWITTER_H_SRC = twitter.h mb_util.h mb_http.h mb_net.h tw_cmd.h mb_cache.h mb_oauth.h mb_cache.h
 TWITTER_IMG = twitter16.png twitter22.png twitter48.png
 TWITTER_OBJ = $(TWITTER_C_SRC:%.c=%.o)
 

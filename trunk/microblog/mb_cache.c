@@ -187,13 +187,13 @@ void mb_cache_free(MbCache * mb_cache)
  * @param ma MbAccount holding the cache
  * @param entry newly allocated MbCacheEntry
  */
-void mb_cache_insert(MbAccount * ma, MbCacheEntry * entry)
+void mb_cache_insert(struct _MbAccount * ma, MbCacheEntry * entry)
 {
 
 }
 
 // There will be no cache removal for now, since all cache must available almost all the time
 
-const MbCacheEntry * mb_cache_get(MbCache *tg_cache, MbAccount * ma, const gchar * user_name)
+const MbCacheEntry * mb_cache_get(const struct _MbAccount * ma, const gchar * user_name)
 {
 }
