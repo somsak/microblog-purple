@@ -153,8 +153,11 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 	PidginConversation * gtkconv;
 	int proto_id = 0;
 	gchar * src = NULL;
-	//const char * decoded_rt;
-	//char * unescaped_rt;
+	const char * decoded_rt;
+	char * unescaped_rt;
+	const char * decoded_ra;
+	char * unescaped_ra;
+	GString * others;
 
 	purple_debug_info(DBGID, "twittgin_uri_handler\n");	
 
@@ -189,6 +192,62 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
 		ma = (MbAccount *)acct->gc->proto_data;
 
+		if (!g_ascii_strcasecmp(cmd, "replyall")) {
+			gchar * sender, *tmp;
+			gchar * name_to_reply;
+			mb_status_t msg_id = 0;
+
+			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
+			purple_debug_info(DBGID, "conv = %p\n", conv);
+			gtkconv = PIDGIN_CONVERSATION(conv);
+			sender = g_hash_table_lookup(params, "to");
+			tmp = g_hash_table_lookup(params, "id");
+			if(tmp) {
+				msg_id = strtoull(tmp, NULL, 10);
+			}
+			purple_debug_info(DBGID, "sender = %s, id = %llu\n", sender, msg_id);
+			if(msg_id > 0) {
+				int i,j;
+				gchar * message;
+				gchar * username;
+				message = g_hash_table_lookup(params, "msg");
+				decoded_ra = purple_url_decode(message);
+				unescaped_ra = purple_unescape_html(decoded_ra);
+				twitter_get_user_host(ma, &username, NULL);
+				i=0;
+				others = g_string_new("");
+				while(unescaped_ra[i] != '\0') {
+					if (unescaped_ra[i] == '@') {
+						j=i;
+						do {
+							j++;
+						} while((unescaped_ra[j] != '\0') && (!isspace(unescaped_ra[j]) && !strchr("!@#$%^&*()-=+[]{};:'\"<>?,./`~", unescaped_ra[j])));
+
+						if((i+1) == j) {
+							// empty string
+							continue;
+						}
+						unescaped_ra[j] = '\0';
+						if (strcmp(&unescaped_ra[i+1], username) && strcmp(&unescaped_ra[i+1], sender)) {
+							g_string_append_printf(others, " %s", &unescaped_ra[i]);
+						}
+						i = j;
+					}
+					i++;
+				}
+				name_to_reply = g_strdup_printf("@%s %s", sender, others->str);
+
+				gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, name_to_reply, -1);
+				gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
+				g_free(unescaped_ra);
+				g_free(name_to_reply);
+				g_free(username);
+
+				purple_signal_emit(twitgin_plugin, "twitgin-replying-message", proto, msg_id);
+			}
+			return TRUE;
+		}
+
 		/* tw:rep?to=sender */
 		if (!g_ascii_strcasecmp(cmd, "reply")) {
 			gchar * sender, *tmp;
@@ -211,6 +270,24 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 				g_free(name_to_reply);
 				purple_signal_emit(twitgin_plugin, "twitgin-replying-message", proto, msg_id);
 			}
+			return TRUE;
+		}
+
+		if (!g_ascii_strcasecmp(cmd, "ort")) {
+			gchar * message, * from, * retweet_message;
+
+			conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_ANY, src, acct);
+			purple_debug_info(DBGID, "conv = %p\n", conv);
+			gtkconv = PIDGIN_CONVERSATION(conv);
+			message = g_hash_table_lookup(params, "msg");
+			from = g_hash_table_lookup(params, "from");
+			decoded_rt = purple_url_decode(message);
+			unescaped_rt = purple_unescape_html(decoded_rt);
+			retweet_message = g_strdup_printf("RT @%s: %s", from, unescaped_rt);
+			gtk_text_buffer_insert_at_cursor(gtkconv->entry_buffer, retweet_message, -1);
+			gtk_widget_grab_focus(GTK_WIDGET(gtkconv->entry));
+			g_free(unescaped_rt);
+			g_free(retweet_message);
 			return TRUE;
 		}
 
@@ -469,6 +546,8 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 	gchar * linkify_txt = NULL;
 	gchar * fav_txt = NULL;
 	gchar * rt_txt = NULL;
+	gchar * ort_txt = NULL;
+	gchar * ra_txt = NULL;
 	gchar * datetime_txt = NULL;
 	gchar * displaying_txt = NULL;
 	GString * output;
@@ -477,7 +556,8 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 	gchar sym, old_char, previous_char;
 	int i = 0, j = 0;
 	gboolean from_eq_username = FALSE;
-	//const char * embed_rt_txt = NULL;
+	const char * embed_ort_txt = NULL;
+	const char * embed_ra_txt = NULL;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
 	const gchar * account = (const gchar *)purple_account_get_username(ma->account);
 
@@ -603,9 +683,9 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 		// display favorite link, if enabled
 		if( (msg->id > 0) && purple_prefs_get_bool(TW_PREF_FAV_LINK)) {
 #if PURPLE_VERSION_CHECK(2, 6, 0)
-			fav_txt = g_strdup_printf(" <a href=\"%s:///fav?src=%s&account=%s&id=%llu\">*</a>", uri_txt, conv->name, account, msg->id);
+			fav_txt = g_strdup_printf(" <a href=\"%s:///fav?src=%s&account=%s&id=%llu\">*</a> ", uri_txt, conv->name, account, msg->id);
 #else
-			fav_txt = g_strdup_printf(" <a href=\"%s:fav?src=%s&account=%s&id=%llu\">*</a>", uri_txt, conv->name, account, msg->id);
+			fav_txt = g_strdup_printf(" <a href=\"%s:fav?src=%s&account=%s&id=%llu\">*</a> ", uri_txt, conv->name, account, msg->id);
 #endif
 		}
 
@@ -617,11 +697,37 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 
 #if PURPLE_VERSION_CHECK(2, 6, 0)
 			//rt_txt = g_strdup_printf(" <a href=\"%s:///rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, conv->name, account, msg->from, embed_rt_txt);
-			rt_txt = g_strdup_printf(" <a href=\"%s:///rt?src=%s&account=%s&id=%llu\">rt<a>", uri_txt, conv->name, account, msg->id);
+			rt_txt = g_strdup_printf(" <a href=\"%s:///rt?src=%s&account=%s&id=%llu\">rt</a> ", uri_txt, conv->name, account, msg->id);
 #else
 			//rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&from=%s&msg=%s\">rt<a>", uri_txt, conv->name, account, msg->from, embed_rt_txt);
-			rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&id=%llu\">rt<a>", uri_txt, conv->name, account, msg->id);
+			rt_txt = g_strdup_printf(" <a href=\"%s:rt?src=%s&account=%s&id=%llu\">rt</a> ", uri_txt, conv->name, account, msg->id);
 #endif
+		}
+
+		// display ort link, if enabled
+		if( (msg->id > 0) && purple_prefs_get_bool(TW_PREF_ORT_LINK) && !msg->is_protected) {
+			// text for retweet url
+			embed_ort_txt = purple_url_encode(msg->msg_txt);
+			purple_debug_info(DBGID, "url embed text for retweet = ##%s##\n", embed_ort_txt);
+
+#if PURPLE_VERSION_CHECK(2, 6, 0)
+			ort_txt = g_strdup_printf(" <a href=\"%s:///ort?src=%s&account=%s&from=%s&msg=%s\">ort</a> ", uri_txt, conv->name, account, msg->from, embed_ort_txt);
+#else
+			ort_txt = g_strdup_printf(" <a href=\"%s:ort?src=%s&account=%s&from=%s&msg=%s\">ort</a> ", uri_txt, conv->name, account, msg->from, embed_ort_txt);
+#endif
+		}
+
+		// display reply all link, if enabled
+		if( (msg->id > 0) && purple_prefs_get_bool(TW_PREF_REPLYALL_LINK) && !msg->is_protected) {
+			embed_ra_txt = purple_url_encode(msg->msg_txt);
+			purple_debug_info(DBGID, "url embed text for replyall = ##%s##\n", embed_ra_txt);
+
+#if PURPLE_VERSION_CHECK(2, 6, 0)
+			ra_txt = g_strdup_printf(" <a href=\"%s:///replyall?src=%s&to=%s&account=%s&id=%llu&msg=%s\">ra</a> ", uri_txt, conv->name, msg->from, account, msg->id, embed_ra_txt);
+#else
+			ra_txt = g_strdup_printf(" <a href=\"%s:replyall?src=%s&to=%s&account=%s&id=%llu&msg=%s\">ra</a> ", uri_txt, conv->name, msg->from, account, msg->id, embed_ra_txt);
+#endif
+
 		}
 	}
 	if(conv && (msg->msg_time > 0)) {
@@ -636,11 +742,13 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 		if(url) g_free(url);
 	}
 
-	displaying_txt = g_strdup_printf("%s%s%s%s", datetime_txt ? datetime_txt : "",
-			linkify_txt, fav_txt ? fav_txt : "", rt_txt ? rt_txt : "");
+	displaying_txt = g_strdup_printf("%s%s%s%s%s%s", datetime_txt ? datetime_txt : "",
+			linkify_txt, fav_txt ? fav_txt : "", rt_txt ? rt_txt : "", ort_txt ? ort_txt : "", ra_txt ? ra_txt : "");
 
 	if(fav_txt) g_free(fav_txt);
 	if(rt_txt) g_free(rt_txt);
+	if(ort_txt) g_free(ort_txt);
+	if(ra_txt) g_free(ra_txt);
 	if(datetime_txt) g_free(datetime_txt);
 
 	purple_debug_info(DBGID, "displaying text = ##%s##\n", displaying_txt);
@@ -771,10 +879,16 @@ static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_REPLY_LINK, _("Enable reply link"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_REPLYALL_LINK, _("Enable reply all link"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_FAV_LINK, _("Enable favorite link"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_RT_LINK, _("Enable retweet link"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_ORT_LINK, _("Enable old style retweet link"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_MS_LINK, _("Enable message status link"));
@@ -911,6 +1025,8 @@ static void plugin_init(PurplePlugin *plugin) {
 	purple_prefs_add_bool(TW_PREF_REPLY_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_FAV_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_RT_LINK, TRUE);
+	purple_prefs_add_bool(TW_PREF_ORT_LINK, TRUE);
+	purple_prefs_add_bool(TW_PREF_REPLYALL_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_MS_LINK, TRUE);
 	purple_prefs_add_int(TW_PREF_AVATAR_SIZE, 24);
 
