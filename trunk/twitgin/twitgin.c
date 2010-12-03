@@ -190,6 +190,12 @@ static gboolean twittgin_uri_handler(const char *proto, const char *cmd_arg, GHa
 
 	if ( acct && (proto_id > 0) ) {
 		purple_debug_info(DBGID, "found account with libtwitter, proto_id = %d\n", proto_id);
+
+		if (!(acct->gc)) {
+			purple_debug_info(DBGID, "account doesn't have a GC [whatever that is]; probably disconnected.");
+			return FALSE;
+		}
+
 		ma = (MbAccount *)acct->gc->proto_data;
 
 		if (!g_ascii_strcasecmp(cmd, "replyall")) {
