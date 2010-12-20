@@ -335,7 +335,7 @@ char * twitter_decode_error(const char * data)
 GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 {
 	GList * retval = NULL;
-	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url, * user_is_protected;
+	xmlnode * top = NULL, *id_node, *time_node, *status, * text, * user, * user_name, * image_url, * user_is_protected, * retweeted_status;
 	gchar * from, * msg_txt, * avatar_url = NULL, *xml_str = NULL, * is_protected = NULL;
 	TwitterMsg * cur_msg = NULL;
 	mb_status_t cur_id;
@@ -353,9 +353,8 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 	purple_debug_info(DBGID, "timezone = %ld\n", timezone);
 	
 	while(status) {
-		msg_txt = NULL;
-		from = NULL;
-		xml_str = NULL;
+		msg_txt = from = xml_str = NULL;
+		retweeted_status = NULL;
 		//skip = FALSE;
 		
 		// ID
@@ -379,10 +378,39 @@ GList * twitter_decode_messages(const char * data, time_t * last_msg_time)
 		g_free(xml_str);
 		
 		// message
+/*
 		text = xmlnode_get_child(status, "text");
 		if(text) {
 			msg_txt = xmlnode_get_data_unescaped(text);
 		}
+*/
+		retweeted_status = xmlnode_get_child(status, "retweeted_status");
+		if(retweeted_status) {
+			xmlnode * rt_text = NULL, * rt_user = NULL, * rt_user_name = NULL;
+
+			rt_text = xmlnode_get_child(retweeted_status, "text");
+			rt_user = xmlnode_get_child(retweeted_status, "user");
+
+			if(rt_user) {
+				rt_user_name = xmlnode_get_child(rt_user, "screen_name");
+			}
+
+			if(rt_user_name && rt_text) {
+				gchar * user, * text;
+
+				user = xmlnode_get_data(rt_user_name);
+				text = xmlnode_get_data_unescaped(rt_text);
+				msg_txt = g_strdup_printf("RT @%s: %s", user, text);
+				g_free(user);
+				g_free(text);
+			}
+		} else {
+			text = xmlnode_get_child(status, "text");
+			if(text) {
+				msg_txt = xmlnode_get_data_unescaped(text);
+			}
+ 		}
+	
 
 		// user name
 		user = xmlnode_get_child(status, "user");
