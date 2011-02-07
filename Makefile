@@ -14,14 +14,14 @@ default: subversion build
 
 build install uninstall clean : 
 	for dir in $(SUBDIRS); do \
-		make -C "$$dir" $@ || exit 1; \
+		$(MAKE) -C "$$dir" $@ || exit 1; \
 	done
 
 distdir: 
 	rm -rf $(PACKAGE)-$(VERSION)$(SUBVERSION)
 	mkdir $(PACKAGE)-$(VERSION)$(SUBVERSION)
 	for dir in $(SUBDIRS); do \
-		make -C "$$dir" dist; \
+		$(MAKE) -C "$$dir" dist; \
 	done
 	cp -f $(DISTFILES) $(PACKAGE)-$(VERSION)$(SUBVERSION)/
 
@@ -46,7 +46,7 @@ pidgin-microblog.zip: build
 		PURPLE_INSTALL_DIR=$(PWD)/$(PACKAGE)-$(VERSION)$(SUBVERSION) && \
 		mkdir -p $$PURPLE_PLUGIN_DIR && \
 		for dir in $(SUBDIRS); do \
-			make -C "$$dir" install PURPLE_INSTALL_DIR=$$PURPLE_INSTALL_DIR PURPLE_PLUGIN_DIR=$$PURPLE_PLUGIN_DIR; \
+			$(MAKE) -C "$$dir" install PURPLE_INSTALL_DIR=$$PURPLE_INSTALL_DIR PURPLE_PLUGIN_DIR=$$PURPLE_PLUGIN_DIR; \
 		done
 	zip -r $@ $(PACKAGE)-$(VERSION)$(SUBVERSION)
 	rm -rf $(PACKAGE)-$(VERSION)$(SUBVERSION)
