@@ -33,5 +33,8 @@
 #define TW_PREF_ORT_LINK TW_PREF_PREFIX "/ort_link"
 #define TW_PREF_MS_LINK TW_PREF_PREFIX "/ms_link"
 #define TW_PREF_AVATAR_SIZE TW_PREF_PREFIX "/avatar_size"
+#define TW_PREF_NEWLINE_BMSG TW_PREF_PREFIX "/newline_before_msg"
+#define TW_PREF_NEWLINE_AMSG TW_PREF_PREFIX "/newline_after_msg"
+#define TW_PREF_NEWLINE_BLINK TW_PREF_PREFIX "/newline_before_links"
 
 #endif

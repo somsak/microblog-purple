@@ -566,6 +566,7 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 	const char * embed_ra_txt = NULL;
 	gboolean reply_link = purple_prefs_get_bool(TW_PREF_REPLY_LINK);
 	const gchar * account = (const gchar *)purple_account_get_username(ma->account);
+   gboolean lb_before_links = FALSE, lb_after_msg = FALSE;
 
 	purple_debug_info(DBGID, "%s\n", __FUNCTION__);
 
@@ -634,6 +635,12 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 	//	}
 	g_string_append_printf(output, "</b></font> ");
 	g_free(name_color);
+
+   if(purple_prefs_get_bool(TW_PREF_NEWLINE_BMSG)) 
+   {  
+      g_string_append_printf(output, "<br/>");
+      purple_debug_info(DBGID, "added linebreak before the message");     
+   }
 
 
 	purple_debug_info(DBGID, "display msg = %s\n", output->str);
@@ -748,8 +755,27 @@ char * twitter_reformat_msg(MbAccount * ma, const TwitterMsg * msg, PurpleConver
 		if(url) g_free(url);
 	}
 
-	displaying_txt = g_strdup_printf("%s%s%s%s%s%s", datetime_txt ? datetime_txt : "",
-			linkify_txt, fav_txt ? fav_txt : "", rt_txt ? rt_txt : "", ort_txt ? ort_txt : "", ra_txt ? ra_txt : "");
+   if(purple_prefs_get_bool(TW_PREF_NEWLINE_AMSG))
+   {
+      lb_after_msg = TRUE;
+      purple_debug_info(DBGID, "added linebreak after the message");
+   }
+
+   if((purple_prefs_get_bool(TW_PREF_MS_LINK)
+       || purple_prefs_get_bool(TW_PREF_REPLYALL_LINK)
+       || purple_prefs_get_bool(TW_PREF_ORT_LINK)
+       || purple_prefs_get_bool(TW_PREF_RT_LINK)
+       || purple_prefs_get_bool(TW_PREF_FAV_LINK)) 
+       && purple_prefs_get_bool(TW_PREF_NEWLINE_BLINK))
+   {
+      lb_before_links = TRUE;
+      purple_debug_info(DBGID, "added linebreak before the links");
+   }
+
+	displaying_txt = g_strdup_printf("%s%s%s%s%s%s%s%s", datetime_txt ? datetime_txt : "",
+			linkify_txt, lb_before_links ? "<br/>" : "", fav_txt ? fav_txt : "", 
+         rt_txt ? rt_txt : "", ort_txt ? ort_txt : "", ra_txt ? ra_txt : "",
+         lb_after_msg ? "<br/>" : "");
 
 	if(fav_txt) g_free(fav_txt);
 	if(rt_txt) g_free(rt_txt);
@@ -900,6 +926,15 @@ static PurplePluginPrefFrame * get_plugin_pref_frame(PurplePlugin *plugin) {
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_MS_LINK, _("Enable message status link"));
 	purple_plugin_pref_frame_add(frame, ppref);
 
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_NEWLINE_BMSG, _("Insert linebreaks before the message"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_NEWLINE_AMSG, _("Insert linebreaks after the message"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
+	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_NEWLINE_BLINK, _("Insert linebreaks before the links"));
+	purple_plugin_pref_frame_add(frame, ppref);
+
 	/*
 	ppref = purple_plugin_pref_new_with_name_and_label(TW_PREF_AVATAR_SIZE, _("Avatar size"));
 	purple_plugin_pref_set_type(ppref, PURPLE_PLUGIN_PREF_CHOICE);
@@ -1035,6 +1070,9 @@ static void plugin_init(PurplePlugin *plugin) {
 	purple_prefs_add_bool(TW_PREF_REPLYALL_LINK, TRUE);
 	purple_prefs_add_bool(TW_PREF_MS_LINK, TRUE);
 	purple_prefs_add_int(TW_PREF_AVATAR_SIZE, 24);
+	purple_prefs_add_bool(TW_PREF_NEWLINE_BMSG, TRUE);
+	purple_prefs_add_bool(TW_PREF_NEWLINE_AMSG, TRUE);
+	purple_prefs_add_bool(TW_PREF_NEWLINE_BLINK, FALSE);
 
 	purple_signal_register(plugin, "twitgin-replying-message",
 			purple_marshal_POINTER__POINTER_INT64,
