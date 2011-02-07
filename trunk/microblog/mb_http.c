@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <sys/param.h>
 
 #include <purple.h>
 
@@ -515,27 +516,36 @@ void mb_http_data_decode_param_from_content(MbHttpData *data) {
 
 void mb_http_data_prepare_write(MbHttpData * data)
 {
-	gchar * cur_packet, * param_content = NULL;
-	gint packet_len, len;
+	gchar * cur_packet, * param_content = NULL, *url = NULL;
+	gint packet_len, url_len, len;
 
 	if(data->path == NULL) return;
 
 	// assemble all headers
 	// I don't sure how hash table will behave, so assemple everything should be better
-	packet_len = data->headers_len + data->params_len + strlen(data->path) + 100; //< for \r\n\r\n and GET|POST and other stuff
+	packet_len = data->headers_len + data->params_len + MAXHOSTNAMELEN + 10 + strlen(data->path) + 100; //< for \r\n\r\n and GET|POST and other stuff
 	if(data->content) {
 		packet_len += data->content->len;
 	}
 	if(data->packet) g_free(data->packet);
 	data->packet = g_malloc0(packet_len + 1);
 	cur_packet = data->packet;
-	
+
+        // GET and POST must use full URL when using proxies
+        // length calculated as length of "unknown" + 3 digits for "://" + 5
+        // digits for port + length of data->path + a few bytes extra
+        url_len = sizeof(gchar) * (MAXHOSTNAMELEN + 20 + strlen(data->path));
+        url = (gchar *) g_malloc0(url_len + 1);
+        mb_http_data_get_url(data, url, url_len);
+
 	// GET|POST and parameter part
 	if(data->type == HTTP_GET) {
-		len = sprintf(cur_packet, "GET %s", data->path);
+		len = sprintf(cur_packet, "GET %s", url);
 	} else {
-		len = sprintf(cur_packet, "POST %s", data->path);
+		len = sprintf(cur_packet, "POST %s", url);
 	}
+        g_free((gpointer) url);
+
 	//printf("cur_packet = %s\n", cur_packet);
 	cur_packet += len;
 
