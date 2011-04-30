@@ -281,11 +281,14 @@ static gint mb_oauth_request_token_handler(MbConnData * conn_data, gpointer data
 	gint retval = 0;
 
 	purple_debug_info(DBGID, "%s called\n", __FUNCTION__);
-	purple_debug_info(DBGID, "got response %s\n", conn_data->response->content->str);
 
 	if(error) {
+		purple_debug_info(DBGID, "got error: %s\n", error);
 		return -1;
 	}
+
+	purple_debug_info(DBGID, "got response %s\n", conn_data->response->content->str);
+
 	if(conn_data->response->status == HTTP_OK) {
 		purple_debug_info(DBGID, "going to decode the received message\n");
 		// Decode the parameter first
