@@ -793,6 +793,13 @@ void mb_http_data_set_basicauth(MbHttpData * data, const gchar * user, const gch
 {
 	gchar * merged_tmp, *encoded_tmp, *value_tmp;
 	gsize authen_len;
+
+	if(passwd == NULL) {
+		purple_debug_info(MB_HTTPID, "Password not set! Shouldn't we ask for it??!\n");
+		// TODO: This prevents crashing, however ...
+		// we should either ask for the users password or disable basic http altogether.
+		passwd = "";
+	}
 	
 	authen_len = strlen(user) + strlen(passwd) + 1;
 	merged_tmp = g_strdup_printf("%s:%s", user, passwd);
