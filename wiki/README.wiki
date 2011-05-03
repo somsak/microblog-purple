@@ -11,7 +11,7 @@ The plug-in is inspired by [http://code.google.com/p/pidgin-facebookchat/ Facebo
 
 = Installation =
 == Linux ==
-
+=== Ubuntu ===
 For Ubuntu, please try [https://launchpad.net/~ikuya-fruitsbasket/+archive/ppa/ Awashiro Ikuya's PPA repository]
 
 After setting-up PPA repository, Simply install `pidgin-microblog`.
@@ -20,12 +20,18 @@ After setting-up PPA repository, Simply install `pidgin-microblog`.
 sudo apt-get install pidgin-microblog
 }}}
 
+=== Gentoo ===
+In gentoo simply install microblog-purple using:
+{{{
+sudo emerge -v x11-plugins/pidgin-mbpurple
+}}}
+
 == Mac ==
 Assuming Adium is already installed, download the "TwitterIM.AdiumLibpurplePlugin.zip" and unpack.  Using Finder, click on the "Twitter.AdiumLibpurplePlugin" icon - MacOS will take it from there.
 
 = Building the code =
 == Windows build ==
- # Follow [http://developer.pidgin.im/wiki/BuildingWinPidgin Building on Windows HOWTO]
+ # Follow [http://developer.pidgin.im/wiki/BuildingWinPidgin Building on Windows HOWTO] - make sure you build pidgin successfully
  # Download microblog-purple source code, untar and place it in your $HOME.
  # `cd microblog-purple-x.x`
  # Edit global.mak, especially the PIDGIN_TREE_TOP variable to match your pidgin source directory. 
