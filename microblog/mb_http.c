@@ -31,6 +31,7 @@
 
 #ifdef _WIN32
 #	include <win32dep.h>
+#	define MAXHOSTNAMELEN 64
 #else
 #	include <arpa/inet.h>
 #	include <sys/socket.h>
