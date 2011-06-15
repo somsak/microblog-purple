@@ -1,6 +1,6 @@
 /*
     Copyright 2008-2010, Somsak Sriprayoonsakul <somsaks@gmail.com>
-    
+
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -13,10 +13,10 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	
-    Some part of the code is copied from facebook-pidgin protocols. 
+
+    Some part of the code is copied from facebook-pidgin protocols.
     For the facebook-pidgin projects, please see http://code.google.com/p/pidgin-facebookchat/.
-	
+
     Courtesy to eionrobb at gmail dot com
 */
 /**
@@ -44,7 +44,7 @@
 static MbHttpParam * mb_http_param_new(void)
 {
 	MbHttpParam * p = g_new(MbHttpParam, 1);
-	
+
 	p->key = NULL;
 	p->value = NULL;
 	return p;
@@ -62,7 +62,7 @@ static guint mb_strnocase_hash(gconstpointer a)
 	gint i;
 	gchar * tmp = g_strdup(a);
 	guint retval;
-	
+
 	for(i = 0; i < len; i++) {
 		tmp[i] = tolower(tmp[i]);
 	}
@@ -82,13 +82,13 @@ static gboolean mb_strnocase_equal(gconstpointer a, gconstpointer b)
 MbHttpData * mb_http_data_new(void)
 {
 	MbHttpData * data = g_new(MbHttpData, 1);
-	
+
 	// URL part, default to HTTP with port 80
 	data->host = NULL;
 	data->path = NULL;
 	data->proto = MB_HTTP;
 	data->port = 80;
-	
+
 	data->headers = g_hash_table_new_full(mb_strnocase_hash, mb_strnocase_equal, g_free, g_free);
 	data->headers_len = 0;
 	data->fixed_headers = NULL;
@@ -103,10 +103,10 @@ MbHttpData * mb_http_data_new(void)
 	data->status = -1;
 	data->type = HTTP_GET; //< default is get
 	data->state = MB_HTTP_STATE_INIT;
-	
+
 	data->packet = NULL;
 	data->cur_packet = NULL;
-	
+
 	return data;
 }
 void mb_http_data_free(MbHttpData * data) {
@@ -130,7 +130,7 @@ void mb_http_data_free(MbHttpData * data) {
 		g_free(data->fixed_headers);
 	}
 	data->headers_len = 0;
-	
+
 	if(data->params) {
 		purple_debug_info(MB_HTTPID, "freeing each parameter\n");
 		GList * it;
@@ -156,7 +156,7 @@ void mb_http_data_free(MbHttpData * data) {
 		purple_debug_info(MB_HTTPID, "freeing chunked request\n");
 		g_string_free(data->chunked_content, TRUE);
 	}
-	
+
 	if(data->packet) {
 		purple_debug_info(MB_HTTPID, "freeing packet\n");
 		g_free(data->packet);
@@ -193,7 +193,7 @@ void mb_http_data_truncate(MbHttpData * data)
 	if(data->params) {
 		GList * it;
 		MbHttpParam * p;
-		
+
 		for(it = g_list_first(data->params); it; it = g_list_next(it)) {
 			p = it->data;
 			mb_http_param_free(p);
@@ -221,7 +221,7 @@ void mb_http_data_set_url(MbHttpData * data, const gchar * url)
 {
 	gchar * tmp_url = g_strdup(url);
 	gchar * cur_it = NULL, *tmp_it = NULL, *host_and_port = NULL;
-	
+
 	cur_it = tmp_url;
 	for(;;) {
 		// looking for ://
@@ -237,7 +237,7 @@ void mb_http_data_set_url(MbHttpData * data, const gchar * url)
 			data->proto = MB_PROTO_UNKNOWN;
 		}
 		cur_it = tmp_it + 3;
-		
+
 		//now looking for host part
 		if( (tmp_it = strchr(cur_it, '/')) == NULL) {
 			break;
@@ -266,12 +266,12 @@ void mb_http_data_set_url(MbHttpData * data, const gchar * url)
 			data->host = g_strdup(host_and_port);
 			data->port = (gint)strtoul(tmp_it + 1, NULL, 10);
 		}
-		
+
 		// now the path
 		(*cur_it) = '/';
 		if(data->path) g_free(data->path);
 		data->path = g_strdup(cur_it);
-	
+
 		break;
 	}
 
@@ -346,7 +346,7 @@ void mb_http_data_set_fixed_headers(MbHttpData * data, const gchar * headers)
 static gint mb_http_data_param_key_pred(gconstpointer a, gconstpointer key)
 {
 	const MbHttpParam * p = (const MbHttpParam *)a;
-	
+
 	if(strcmp(p->key, (gchar *)key) == 0) {
 		return 0;
 	}
@@ -369,7 +369,7 @@ void mb_http_data_add_param(MbHttpData * data, const gchar * key, const gchar * 
 void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value)
 {
 	char tmp[100];
-	
+
 	snprintf(tmp, sizeof(tmp), "%d", value);
 	mb_http_data_add_param(data, key, tmp);
 }
@@ -377,7 +377,7 @@ void mb_http_data_add_param_int(MbHttpData * data, const gchar * key, gint value
 void mb_http_data_add_param_ull(MbHttpData * data, const gchar * key, unsigned long long value)
 {
 	char tmp[200];
-	
+
 	// Use g_snprintf for maximum compatibility
 	g_snprintf(tmp, sizeof(tmp), "%llu", value);
 	mb_http_data_add_param(data, key, tmp);
@@ -387,9 +387,9 @@ const gchar * mb_http_data_find_param(MbHttpData * data, const gchar * key)
 {
 	GList * retval;
 	MbHttpParam * p;
-	
+
 	retval = g_list_find_custom(data->params, key, mb_http_data_param_key_pred);
-	
+
 	if(retval) {
 		p = retval->data;
 		return p->value;
@@ -403,7 +403,7 @@ gboolean mb_http_data_rm_param(MbHttpData * data, const gchar * key)
 	MbHttpParam * p;
 	GList *it = NULL;
 	gboolean retval = FALSE;
-	
+
 	purple_debug_info(MB_HTTPID, "%s called, key = %s\n", __FUNCTION__, key);
 	it = g_list_first(data->params);
 	while(it) {
@@ -431,7 +431,7 @@ static void mb_http_data_header_assemble(gpointer key, gpointer value, gpointer 
 {
 	MbHttpData * data = udata;
 	gint len;
-	
+
 	len = sprintf(data->cur_packet, "%s: %s\r\n", (char *)key, (char *)value);
 	data->cur_packet += len;
 }
@@ -574,7 +574,7 @@ void mb_http_data_prepare_write(MbHttpData * data)
 	(*cur_packet) = ' ';
 	len = sprintf(cur_packet, " HTTP/1.1\r\n");
 	cur_packet += len;
-	
+
 	// headers part
 	data->cur_packet = cur_packet;
 	g_hash_table_foreach(data->headers, mb_http_data_header_assemble, data);
@@ -591,17 +591,17 @@ void mb_http_data_prepare_write(MbHttpData * data)
 		strcpy(cur_packet, data->fixed_headers);
 		cur_packet += strlen(data->fixed_headers);
 	}
-	
+
 	// content-length, if needed
 	if(data->content) {
 		len = sprintf(cur_packet, "Content-Length: %d\r\n", (int)data->content->len);
 		cur_packet += len;
 	}
-	
+
 	// end header part
 	len = sprintf(cur_packet, "\r\n");
 	cur_packet += len;
-	
+
 	// Content part
 	if(data->content) {
 	/*
@@ -611,12 +611,12 @@ void mb_http_data_prepare_write(MbHttpData * data)
 		memcpy(cur_packet, data->content->str, data->content->len);
 		cur_packet += data->content->len;
 	}
-	
+
 	data->packet_len = cur_packet - data->packet;
-	
+
 	// reset back to head of packet, ready to transfer
 	data->cur_packet = data->packet;
-	
+
 	purple_debug_info(MB_HTTPID, "prepared packet = %s\n", data->packet);
 }
 
@@ -627,7 +627,7 @@ void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len)
 	gchar * delim, * cur_pos, *content_start = NULL;
 	gchar * key, *value, *key_value_sep;
 	gboolean continue_to_next_state = FALSE;
-	
+
 	if(buf_len <= 0) return;
 	switch(data->state) {
 		case MB_HTTP_STATE_INIT :
@@ -639,7 +639,7 @@ void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len)
 			data->cur_packet = data->packet;
 			data->state = MB_HTTP_STATE_HEADER;
 			//break; //< purposely move to next step
-		case MB_HTTP_STATE_HEADER :	
+		case MB_HTTP_STATE_HEADER :
 			//printf("processing header\n");
 			// at this state, no data at all, so this should be the very first chunk of data
 			// reallocate buffer if we don't have enough
@@ -652,7 +652,7 @@ void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len)
 			}
 			memcpy(data->cur_packet, buf, buf_len);
 			whole_len = (data->cur_packet - data->packet) + buf_len;
-			
+
 			// decipher header
 			cur_pos = data->packet;
 			//printf("initial_cur_pos = #%s#\n", cur_pos);
@@ -677,13 +677,13 @@ void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len)
 						value = key_value_sep + 1;
 						key = g_strstrip(key);
 						value = g_strstrip(value);
-						
+
 						if(strcasecmp(key, "Content-Length") == 0) {
 							data->content_len = (gint)strtoul(value, NULL, 10);
 						} else if (strcasecmp(key, "Transfer-Encoding") == 0) {
 							// Actually I should check for the value
 							// AFAIK, Transfer-Encoding only valid value is chunked
-							// Anyways, this is for identi.ca 
+							// Anyways, this is for identi.ca
 							purple_debug_info(MB_HTTPID, "chunked data transfer\n");
 							if(data->chunked_content) {
 								g_string_free(data->chunked_content, TRUE);
@@ -720,16 +720,16 @@ void mb_http_data_post_read(MbHttpData * data, const gchar * buf, gint buf_len)
 				data->cur_packet = data->packet = NULL;
 				data->packet_len = 0;
 				data->state = MB_HTTP_STATE_CONTENT;
-			} else {			
+			} else {
 				// copy the rest of string to the beginning
 				if( (cur_pos - data->packet) < whole_len) {
 					gint tmp_len = whole_len - (cur_pos - data->packet);
 					gchar * tmp = g_malloc(tmp_len);
-					
+
 					memcpy(tmp, cur_pos, tmp_len);
 					memcpy(data->packet, tmp, tmp_len);
 					g_free(tmp);
-					
+
 					data->cur_packet = data->packet + tmp_len;
 				}
 			}
@@ -796,12 +796,12 @@ void mb_http_data_set_basicauth(MbHttpData * data, const gchar * user, const gch
 	gsize authen_len;
 
 	if(passwd == NULL) {
-		purple_debug_info(MB_HTTPID, "Password not set! Shouldn't we ask for it??!\n");
+		purple_debug_info(MB_HTTPID, "Password not set! Shouldn't we ask for it?\n");
 		// TODO: This prevents crashing, however ...
 		// we should either ask for the users password or disable basic http altogether.
 		passwd = "";
 	}
-	
+
 	authen_len = strlen(user) + strlen(passwd) + 1;
 	merged_tmp = g_strdup_printf("%s:%s", user, passwd);
 	encoded_tmp = purple_base64_encode((const guchar *)merged_tmp, authen_len);
@@ -837,7 +837,7 @@ static gint _do_read(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 	}
 	g_free(buffer);
 	purple_debug_info(MB_HTTPID, "before return in _do_read\n");
-	
+
 	return retval;
 }
 
@@ -854,7 +854,7 @@ gint mb_http_data_ssl_read(PurpleSslConnection * ssl, MbHttpData * data)
 static gint _do_write(gint fd, PurpleSslConnection * ssl, MbHttpData * data)
 {
 	gint retval, cur_packet_len;
-	
+
 	purple_debug_info(MB_HTTPID, "preparing HTTP data chunk\n");
 	if(data->packet == NULL) {
 		mb_http_data_prepare_write(data);
@@ -906,7 +906,7 @@ int main(int argc, char * argv[])
 	char buf[512];
 	FILE * fp;
 	size_t retval;
-	
+
 	g_mem_set_vtable(glib_mem_profiler_table);
 	// URL
 
@@ -917,7 +917,7 @@ int main(int argc, char * argv[])
 	printf("port = %d\n", hdata->port);
 	printf("proto = %d\n", hdata->proto);
 	printf("path = %s\n", hdata->path);
-	
+
 
 	mb_http_data_set_url(hdata, "http://twitter.com/statuses/update.atom");
 	printf("URL to set = %s\n", "http://twitter.com/statuses/update.atom");
@@ -925,7 +925,7 @@ int main(int argc, char * argv[])
 	printf("port = %d\n", hdata->port);
 	printf("proto = %d\n", hdata->proto);
 	printf("path = %s\n", hdata->path);
-	
+
 	// header
 	mb_http_data_set_header(hdata, "User-Agent", "CURL");
 	mb_http_data_set_header(hdata, "X-Twitter-Client", "1024");
@@ -935,20 +935,20 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	printf("Header %s = %s\n", "User-Agent", mb_http_data_get_header(hdata, "User-Agent"));
 	printf("Header %s = %s\n", "Content-Length", mb_http_data_get_header(hdata, "X-Twitter-Client"));
 	printf("Header %s = %s\n", "XXX", mb_http_data_get_header(hdata, "XXX"));
-	
+
 
 	// param
 	mb_http_data_add_param(hdata, "key1", "valuevalue1");
 	mb_http_data_add_param(hdata, "key2", "valuevalue1 bcadf");
 	mb_http_data_add_param(hdata, "key1", "valuevalue1");
 	mb_http_data_add_param_int(hdata, "keyint1", 1000000);
-	
+
 	printf("Param %s = %s\n", "key1", mb_http_data_find_param(hdata, "key1"));
 	printf("Param %s = %s\n", "key2", mb_http_data_find_param(hdata, "key2"));
-	
+
 	for(it = g_list_first(hdata->params); it; it = g_list_next(it)) {
 		MbHttpParam * p = it->data;
-		
+
 		printf("Key = %s, Value = %s\n", p->key, p->value);
 	}
 
@@ -958,12 +958,12 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	printf("After remove\n");
 	for(it = g_list_first(hdata->params); it; it = g_list_next(it)) {
 		MbHttpParam * p = it->data;
-		
+
 		printf("Key = %s, Value = %s\n", p->key, p->value);
 	}
 	printf("data->path = %s\n", hdata->path);
 	mb_http_data_prepare_write(hdata);
-	
+
 	printf("data prepared to write\n");
 	printf("%s\n", hdata->packet);
 	printf("packet_len = %d, strlen = %d\n", hdata->packet_len, strlen(hdata->packet));
@@ -983,7 +983,7 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 	printf("http content length = %d\n", hdata->content_len);
 	if(hdata->content_len > 0)
 		printf("http content = %s\n", hdata->content->str);
-	
+
 	// test again, after truncated
 	mb_http_data_truncate(hdata);
 	fp = fopen("test_input.xml", "r");
@@ -1001,7 +1001,7 @@ X-Twitter-ABC: 5sadlfjas;dfasdfasdf\r\n");
 
 	mb_http_data_free(hdata);
 	g_mem_profile();
-	
+
 	return 0;
 }
 #endif
