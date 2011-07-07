@@ -1,0 +1,23 @@
+#summary Help of Command-usage
+
+= Available Commands =
+
+ * replies:
+   * get replies timeline.
+ * refresh:
+   * refresh tweets now.
+ * refresh_rate:
+   * set refresh rate. /refreshrate 120 temporariy change refresh rate to 120 seconds
+ * tag:
+   * prepend everything with a specified tag, unset with /untag
+ * btag:
+   * append everything with a specified tag, unset with /untag
+ * untag:
+   * unset already set tag
+ * get:
+   * get specific user timeline. Use /get  to fetch.
+
+= Requested Commands =
+
+ * help
+   * see issue#247 and issue#13
