@@ -1,4 +1,4 @@
-#summary Help of Command-usage
+#summary Listing of available and requested commands
 
 = Available Commands =
 
